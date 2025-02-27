@@ -1,5 +1,5 @@
-use crate::constants::GAME_RATE;
 pub(crate) use crate::enums::gametab::GameTab;
+use crate::game::constants::GAME_RATE;
 use crate::game::settings::Settings;
 use crate::resources::bignumber::BigNumber;
 use crate::resources::resource::Resource;

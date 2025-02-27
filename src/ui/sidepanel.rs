@@ -1,6 +1,7 @@
-use std::sync::{Arc, Mutex};
+use crate::game::game::{Game, GameTab};
 use eframe::egui;
-use crate::game::game::{Game, GameTab}; // ✅ Import GameTab
+use std::sync::{Arc, Mutex};
+// ✅ Import GameTab
 
 pub fn show_side_panel(ctx: &egui::Context, game: Arc<Mutex<Game>>) {
     egui::SidePanel::left("side_panel") // ✅ Keep the sidebar

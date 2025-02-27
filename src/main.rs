@@ -5,7 +5,6 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 mod game;
-mod constants;
 mod ui;
 mod resources;
 mod enums;

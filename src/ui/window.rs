@@ -1,6 +1,8 @@
-use crate::constants::{FRAME_RATE, GAME_NAME};
+use crate::enums::gametab::GameTab;
+use crate::game::constants::{FRAME_RATE, GAME_NAME};
 use crate::game::game::Game;
 use crate::ui::geometry::show_geometry;
+use crate::ui::settingspanel::show_settings_panel;
 use crate::ui::sidepanel::show_side_panel;
 use crossbeam::channel::Receiver;
 use eframe::egui::Context;
@@ -8,8 +10,6 @@ use eframe::{egui, Frame};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
-use crate::enums::gametab::GameTab;
-use crate::ui::settingspanel::show_settings_panel;
 
 pub struct MyAppWindow {
     game: Arc<Mutex<Game>>,
