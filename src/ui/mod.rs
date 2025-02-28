@@ -1,4 +1,6 @@
 pub mod window;
 pub mod geometry;
-mod sidepanel;
+mod sidemenu;
 mod settingspanel;
+mod component;
+mod asset;

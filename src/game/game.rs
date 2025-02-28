@@ -24,7 +24,7 @@ impl Game {
                 Resource::with_defaults("Triangles"),
             ],
             settings: Settings::default(),
-            current_tab: GameTab::Geometry,
+            current_tab: GameTab::default(),
         }
     }
 

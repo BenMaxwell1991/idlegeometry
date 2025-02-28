@@ -5,4 +5,6 @@ edition = "2024"
 
 [dependencies]
 eframe = "0.31.0"
+egui_extras = { version = "0.31", features = ["all_loaders"] }
 crossbeam = "0.8.4"
+image = "0.25.5"
