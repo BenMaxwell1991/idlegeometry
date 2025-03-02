@@ -33,7 +33,7 @@ impl MyAppWindow {
                 let now = Instant::now();
                 let elapsed = now.duration_since(last_frame);
                 if elapsed >= frame_time {
-                    ctx.request_repaint(); // Request UI repaint
+                    ctx.request_repaint();
                     last_frame = now;
                 }
                 thread::sleep(frame_time.saturating_sub(elapsed));
@@ -62,12 +62,19 @@ impl eframe::App for MyAppWindow {
                 _ => {}
             }
         });
-
     }
 }
 
 pub fn create_window(game: Arc<Mutex<Game>>, receiver: Receiver<()>) -> eframe::Result {
-    let options = eframe::NativeOptions::default();
+    let settings = game.lock().unwrap().settings;
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([settings.window_width, settings.window_height])
+            .with_title(GAME_NAME),
+        vsync: settings.vsync,
+        centered: true,
+        ..Default::default()
+    };
 
     eframe::run_native(
         GAME_NAME,

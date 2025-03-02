@@ -1,18 +1,18 @@
 use crate::enums::gametab::GameTab;
 use crate::game::game::Game;
-use crate::ui::component::menu_button::MenuButton;
+use crate::ui::component::custom_button::CustomButton;
+use crate::ui::component::custom_heading::CustomHeading;
 use eframe::egui;
 use eframe::egui::TextureHandle;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use crate::ui::component::custom_button::CustomButton;
 
 pub fn show_side_menu(ctx: &egui::Context, game: Arc<Mutex<Game>>, icons: &HashMap<String, TextureHandle>) {
     egui::SidePanel::left("side_panel")
         .resizable(false)
         .default_width(150.0)
         .show(ctx, |ui| {
-            ui.heading("📌 Menu");
+            ui.add(CustomHeading::new("Menu"));
             ui.separator();
 
             if let Ok(mut game) = game.lock() {
@@ -32,21 +32,19 @@ pub fn show_side_menu(ctx: &egui::Context, game: Arc<Mutex<Game>>, icons: &HashM
                             Box::new(move || {
                                 game_ref.current_tab = tab;
                             })).show(ui);
+                        ui.separator();
                     } else {
                         eprintln!("Warning: Icon '{}' not found!", icon_name);
                     }
                 }
 
-                ui.separator();
-
-                if let Some(icon) = icons.get("shop") {
-                    MenuButton {
-                        text: "Exit Game",
-                        icon: icon.clone(),
-                        on_click: Box::new(|| {
+                if let Some(icon) = icons.get("exit") {
+                    CustomButton::new(
+                        icon.clone(),
+                        "Exit Game",
+                        Box::new(move || {
                             std::process::exit(0);
-                        }),
-                    }
+                        }))
                         .show(ui);
                 }
             }

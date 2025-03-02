@@ -7,12 +7,14 @@ pub const GEOMETRY_IMAGE_BYTES: &[u8] = include_bytes!("icon/geometry.png");
 pub const SETTINGS_IMAGE_BYTES: &[u8] = include_bytes!("icon/settings.png");
 pub const SHOP_IMAGE_BYTES: &[u8] = include_bytes!("icon/shop.png");
 pub const UPGRADE_IMAGE_BYTES: &[u8] = include_bytes!("icon/upgrade.png");
+pub const EXIT_IMAGE_BYTES: &[u8] = include_bytes!("icon/exit.png");
 
-const ICON_DATA: [(&str, &[u8]); 4] = [
+const ICON_DATA: [(&str, &[u8]); 5] = [
     ("geometry", GEOMETRY_IMAGE_BYTES),
     ("settings", SETTINGS_IMAGE_BYTES),
     ("shop", SHOP_IMAGE_BYTES),
     ("upgrade", UPGRADE_IMAGE_BYTES),
+    ("exit", EXIT_IMAGE_BYTES),
 ];
 
 pub fn load_icons(ctx: &egui::Context) -> HashMap<String, TextureHandle> {
