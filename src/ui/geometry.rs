@@ -1,21 +1,21 @@
 use crate::game::game::Game;
+use crate::ui::component::widget::custom_grid::CustomGrid;
+use crate::ui::component::widget::custom_heading::CustomHeading;
 use eframe::egui;
+use eframe::egui::{Color32, Layout, Vec2};
 use std::sync::{Arc, Mutex};
 
-pub fn show_geometry(ui: &mut egui::Ui, game: Arc<Mutex<Game>>) {
-    ui.heading("📊 Resource Dashboard");
+const RESOURCE_TEXT_COLOUR: Color32 = Color32::from_rgb(255, 255, 255);
 
-    if let Ok(game) = game.lock() {
-        egui::Grid::new("resource_grid")
-            .striped(true)
-            .show(ui, |ui| {
-                for resource in &game.resources {
-                    if resource.unlocked {
-                        ui.label(format!("{}:", resource.name));
-                        ui.label(&resource.amount.format_number(game.settings.number_format_mode));
-                        ui.end_row();
-                    }
-                }
-            });
-    }
+pub fn show_geometry(ui: &mut egui::Ui, game: Arc<Mutex<Game>>) {
+    ui.add(CustomHeading::new("1D Research"));
+    ui.separator();
+
+    ui.allocate_ui_with_layout(
+        Vec2::new(ui.available_width(), 0.0),
+        Layout::centered_and_justified(egui::Direction::LeftToRight),
+        |ui| {
+            ui.add(CustomGrid::new(game, "ResourceGrid"));
+        },
+    );
 }

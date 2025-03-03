@@ -12,9 +12,9 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             number_format_mode: NumberFormatMode::default(),
-            window_width: 1280.0,  // Default window size
+            window_width: 1280.0,
             window_height: 720.0,
-            vsync: true, // Default VSync setting
+            vsync: true,
         }
     }
 }

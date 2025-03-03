@@ -31,19 +31,9 @@ impl BigNumber {
 
     pub fn format_number(&self, mode: NumberFormatMode) -> String {
         match mode {
-            NumberFormatMode::Standard => {
-                if self.exponent < 6 {
-                    format!("{:.2}", self.mantissa * 10f64.powi(self.exponent as i32))
-                } else {
-                    format!("{:.5}e{}", self.mantissa, self.exponent)
-                }
-            }
-            NumberFormatMode::Scientific => {
-                format!("{:.3e}", self.mantissa * 10f64.powi(self.exponent as i32))
-            }
-            NumberFormatMode::Exponential => {
-                format!("{:.5}e{}", self.mantissa, self.exponent)
-            }
+            NumberFormatMode::Standard => standard_format(self.mantissa, self.exponent),
+            NumberFormatMode::Engineering => engineering_format(self.mantissa, self.exponent),
+            NumberFormatMode::Exponential => exponential_format(self.mantissa, self.exponent),
         }
     }
 
@@ -177,5 +167,32 @@ impl Div for BigNumber {
     fn div(mut self, other: Self) -> Self {
         self /= other;
         self
+    }
+}
+
+fn standard_format(mantissa: f64, exponent: i64) -> String {
+    if exponent == 0 {
+        format!("{:.3}", mantissa * 10f64.powi(exponent as i32) )
+    } else {
+        format!("{:.3}e{}", mantissa, exponent)
+    }
+}
+fn engineering_format(mantissa: f64, exponent: i64) -> String {
+    if matches!(exponent, -2..=2) {
+        format!("{:.3}", mantissa * 10f64.powi(exponent as i32))
+    } else {
+        let remainder = exponent % 3;
+        let adjusted_exponent = exponent - remainder;
+        let adjusted_mantissa = mantissa * 10f64.powi(remainder as i32);
+
+        format!("{:.3}e{}", adjusted_mantissa, adjusted_exponent)
+    }
+}
+
+fn exponential_format(mantissa: f64, exponent: i64) -> String {
+    if exponent == 0 {
+        format!("{:.3}", mantissa * 10f64.powi(exponent as i32))
+    } else {
+        format!("{:.3}e{}", mantissa, exponent)
     }
 }

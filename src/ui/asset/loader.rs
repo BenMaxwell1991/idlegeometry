@@ -46,9 +46,9 @@ pub fn load_icons_inverted(ctx: &egui::Context) -> HashMap<String, TextureHandle
             let (width, height) = rgba.dimensions();
 
             for pixel in rgba.chunks_exact_mut(4) {
-                pixel[0] = 255 - pixel[0]; // Red
-                pixel[1] = 255 - pixel[1]; // Green
-                pixel[2] = 255 - pixel[2]; // Blue
+                pixel[0] = 255 - pixel[0];
+                pixel[1] = 255 - pixel[1];
+                pixel[2] = 255 - pixel[2];
             }
 
             let color_image = ColorImage::from_rgba_unmultiplied(

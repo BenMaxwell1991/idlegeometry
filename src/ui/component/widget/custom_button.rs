@@ -1,8 +1,8 @@
-use crate::ui::component::label_no_interact::LabelNoInteract;
+use crate::ui::component::widget::label_no_interact::LabelNoInteract;
 use crate::ui::helper::colour_helper::lighten_colour;
 use eframe::egui::load::SizedTexture;
-use eframe::egui::{Align, Color32, Direction, FontId, Id, Image, Layout, Pos2, Response, Sense, Stroke, StrokeKind, TextureHandle, Ui, UiBuilder, Vec2};
-use eframe::emath::Rect;
+use eframe::egui::{Align, Color32, Direction, FontId, Id, Image, Layout, Response, Sense, Stroke, StrokeKind, TextureHandle, Ui, UiBuilder, Vec2, Widget};
+use eframe::emath::{Pos2, Rect};
 
 const BUTTON_SIZE: Vec2 = Vec2::new(200.0, 50.0);
 const TEXT_COLOUR: Color32 = Color32::WHITE;
@@ -29,14 +29,8 @@ pub struct CustomButton<'a> {
     pub align: Align,
 }
 
-
 impl<'a> CustomButton<'a> {
-
-    pub fn new(
-        icon: TextureHandle,
-        text: &'a str,
-        on_click: Box<dyn FnMut() + 'a>,
-    ) -> Self {
+    pub fn new(icon: TextureHandle, text: &'a str, on_click: Box<dyn FnMut() + 'a>) -> Self {
         Self {
             icon,
             text,
@@ -53,8 +47,10 @@ impl<'a> CustomButton<'a> {
             align: Align::Center,
         }
     }
+}
 
-    pub fn show(&mut self, ui: &mut Ui) -> Response {
+impl<'a> Widget for CustomButton<'a> {
+    fn ui(mut self, ui: &mut Ui) -> Response {
         let parent_rect = ui.available_rect_before_wrap();
         let mut rect = ui.allocate_exact_size(self.size, Sense::empty()).0;
 
@@ -99,8 +95,9 @@ impl<'a> CustomButton<'a> {
 
         response
     }
+}
 
-    // Determines whether the button is currently clicked.
+impl<'a> CustomButton<'a> {
     fn button_clicked(&mut self, ui: &mut Ui, response: &Response) -> bool {
         let button_id = Id::new((self.text, self.icon.id()));
         let mut click_started_inside = ui.data(|data| data.get_temp::<bool>(button_id)).unwrap_or(false);
@@ -115,7 +112,6 @@ impl<'a> CustomButton<'a> {
         is_mouse_down && click_started_inside
     }
 
-    // Determines whether the mouse_up happens within the widget if it has been clicked.
     fn released_inside(&mut self, ui: &mut Ui, response: &Response) -> bool {
         let button_id = Id::new((self.text, self.icon.id()));
         let click_started_inside = ui.data(|data| data.get_temp::<bool>(button_id)).unwrap_or(false);
@@ -125,15 +121,14 @@ impl<'a> CustomButton<'a> {
         is_mouse_up && click_started_inside && release_inside
     }
 
-    // Determine colour of button, allowing for hovering/pressed effects
-    fn determine_colour(&mut self, button_clicked: bool, point_hovering: bool) -> (Color32, Color32) {
+    fn determine_colour(&mut self, button_clicked: bool, hovering: bool) -> (Color32, Color32) {
         let mut background_colour = self.background_colour;
         let mut border_colour = self.border_colour;
 
         if self.click_effect && button_clicked {
             background_colour = lighten_colour(self.background_colour, -20);
             border_colour = lighten_colour(self.border_colour, -30);
-        } else if self.hover_effect && point_hovering {
+        } else if self.hover_effect && hovering {
             background_colour = lighten_colour(self.background_colour, 25);
             border_colour = lighten_colour(self.border_colour, 40);
         }
@@ -141,14 +136,15 @@ impl<'a> CustomButton<'a> {
         (background_colour, border_colour)
     }
 
-    // Calculate padding for centered text
     fn calculate_padding(&mut self, ui: &Ui) -> f32 {
         let label_width = ui.fonts(|f| {
             f.layout_no_wrap(
-                self.text.parse().unwrap(),
+                self.text.to_string(),
                 FontId::proportional(self.font_size),
                 Color32::WHITE,
-            ).size().x
+            )
+                .size()
+                .x
         });
 
         let desired_width = self.icon_size.x + label_width + self.gap_size;

@@ -1,4 +1,4 @@
-use crate::ui::component::label_no_interact::LabelNoInteract;
+use crate::ui::component::widget::label_no_interact::LabelNoInteract;
 use eframe::egui::{Color32, Response, Stroke, StrokeKind, Ui, Vec2, Widget};
 
 const HEADING_SIZE: Vec2 = Vec2::new(200.0, 50.0);
@@ -8,6 +8,7 @@ const BORDER_WIDTH: f32 = 1.0;
 const FONT_SIZE: f32 = 50.0;
 const FONT_COLOUR: Color32 = Color32::WHITE;
 const SHADOW_COLOUR: Color32 = Color32::from_rgba_premultiplied(100, 0, 100, 50);
+const SHADOW_OFFSET: Vec2 = Vec2::new(3.0, 3.0);
 
 pub struct CustomHeading<'a> {
     pub text: &'a str,
@@ -18,6 +19,7 @@ pub struct CustomHeading<'a> {
     pub font_size: f32,
     pub font_colour: Color32,
     pub shadow_colour: Color32,
+    pub shadow_offset: Vec2,
 }
 
 impl<'a> CustomHeading<'a> {
@@ -31,6 +33,7 @@ impl<'a> CustomHeading<'a> {
             font_size: FONT_SIZE,
             font_colour: FONT_COLOUR,
             shadow_colour: SHADOW_COLOUR,
+            shadow_offset: SHADOW_OFFSET,
         }
     }
 }
@@ -52,7 +55,7 @@ impl<'a> Widget for CustomHeading<'a> {
             );
         }
 
-        let label = LabelNoInteract::new(self.text, self.font_size, self.font_colour).with_shadow(self.shadow_colour, Vec2::new(4.0, 4.0));
+        let label = LabelNoInteract::new(self.text, self.font_size, self.font_colour).with_shadow(self.shadow_colour, self.shadow_offset);
         ui.put(rect, label);
 
         response

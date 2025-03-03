@@ -6,12 +6,14 @@ use crate::ui::geometry::show_geometry;
 use crate::ui::settingspanel::show_settings_panel;
 use crate::ui::sidemenu::show_side_menu;
 use crossbeam::channel::Receiver;
-use eframe::egui::{Context, TextureHandle};
+use eframe::egui::{Align, Color32, Context, Layout, TextureHandle};
 use eframe::{egui, Frame};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
+
+pub const BACKGROUND_COLOUR: Color32 = Color32::from_rgb(5, 5, 5);
 
 pub struct MyAppWindow {
     game: Arc<Mutex<Game>>,
@@ -48,6 +50,11 @@ impl eframe::App for MyAppWindow {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         while self.receiver.try_recv().is_ok() {}
 
+        ctx.set_visuals(egui::Visuals {
+            panel_fill: BACKGROUND_COLOUR,
+            ..egui::Visuals::dark()
+        });
+
         show_side_menu(ctx, Arc::clone(&self.game), &self.icons_inverted);
 
         let mut game_tab = GameTab::Geometry;
@@ -56,11 +63,15 @@ impl eframe::App for MyAppWindow {
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            match game_tab {
-                GameTab::Geometry => show_geometry(ui, Arc::clone(&self.game)),
-                GameTab::Settings => show_settings_panel(ui, Arc::clone(&self.game)),
-                _ => {}
-            }
+            ui.with_layout(Layout::top_down(Align::Center), |ui| {
+                ui.add_space(10.0);
+                match game_tab {
+                    GameTab::Geometry => show_geometry(ui, Arc::clone(&self.game)),
+                    GameTab::Settings => show_settings_panel(ui, Arc::clone(&self.game)),
+                    _ => {}
+                }
+            });
+
         });
     }
 }

@@ -1,7 +1,7 @@
 use crate::enums::gametab::GameTab;
 use crate::game::game::Game;
-use crate::ui::component::custom_button::CustomButton;
-use crate::ui::component::custom_heading::CustomHeading;
+use crate::ui::component::widget::custom_button::CustomButton;
+use crate::ui::component::widget::custom_heading::CustomHeading;
 use eframe::egui;
 use eframe::egui::TextureHandle;
 use std::collections::HashMap;
@@ -26,12 +26,12 @@ pub fn show_side_menu(ctx: &egui::Context, game: Arc<Mutex<Game>>, icons: &HashM
                 for (icon_name, text, tab) in buttons {
                     if let Some(icon) = icons.get(icon_name) {
                         let game_ref = &mut game;
-                        CustomButton::new(
+                        ui.add(CustomButton::new(
                             icon.clone(),
                             text,
                             Box::new(move || {
                                 game_ref.current_tab = tab;
-                            })).show(ui);
+                            })));
                         ui.separator();
                     } else {
                         eprintln!("Warning: Icon '{}' not found!", icon_name);
@@ -39,13 +39,12 @@ pub fn show_side_menu(ctx: &egui::Context, game: Arc<Mutex<Game>>, icons: &HashM
                 }
 
                 if let Some(icon) = icons.get("exit") {
-                    CustomButton::new(
+                    ui.add(CustomButton::new(
                         icon.clone(),
                         "Exit Game",
                         Box::new(move || {
                             std::process::exit(0);
-                        }))
-                        .show(ui);
+                        })));
                 }
             }
         });
