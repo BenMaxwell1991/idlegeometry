@@ -8,3 +8,6 @@ eframe = "0.31.0"
 egui_extras = { version = "0.31", features = ["all_loaders"] }
 crossbeam = "0.8.4"
 image = "0.25.5"
+serde = { version = "1.0.218", features = ["derive"] }
+serde_json = "1.0.140"
+uuid = { version = "1.15.1", features = ["v4"] }

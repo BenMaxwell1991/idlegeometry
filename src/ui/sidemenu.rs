@@ -7,7 +7,7 @@ use eframe::egui::TextureHandle;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-pub fn show_side_menu(ctx: &egui::Context, game: Arc<Mutex<Game>>, icons: &HashMap<String, TextureHandle>) {
+pub fn show_side_menu(ctx: &egui::Context, game: Arc<Mutex<Game>>, game_clone: &Game, icons: &HashMap<String, TextureHandle>) {
     egui::SidePanel::left("side_panel")
         .resizable(false)
         .default_width(150.0)

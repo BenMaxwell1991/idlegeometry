@@ -1,7 +1,8 @@
 use crate::enums::numberformatmode::NumberFormatMode;
+use serde::{Deserialize, Serialize};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct BigNumber {
     pub mantissa: f64,
     pub exponent: i64,
@@ -171,7 +172,7 @@ impl Div for BigNumber {
 }
 
 fn standard_format(mantissa: f64, exponent: i64) -> String {
-    if exponent == 0 {
+    if matches!(exponent, -27..=27) {
         format!("{:.3}", mantissa * 10f64.powi(exponent as i32) )
     } else {
         format!("{:.3}e{}", mantissa, exponent)

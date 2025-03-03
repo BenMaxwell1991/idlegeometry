@@ -1,13 +1,12 @@
 use crate::resources::bignumber::BigNumber;
-use std::time::Instant;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Resource {
     pub name: String,
     pub amount: BigNumber,
     pub rate: BigNumber,
     pub unlocked: bool,
-    last_updated: Instant,
 }
 
 impl Resource {
@@ -17,7 +16,6 @@ impl Resource {
             amount,
             rate,
             unlocked,
-            last_updated: Instant::now(),
         }
     }
 
@@ -27,6 +25,5 @@ impl Resource {
 
     pub fn update(&mut self, delta_time: f64) {
         self.amount += self.rate * BigNumber::new(delta_time);
-        self.last_updated = Instant::now();
     }
 }

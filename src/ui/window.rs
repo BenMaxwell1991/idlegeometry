@@ -2,11 +2,13 @@ use crate::enums::gametab::GameTab;
 use crate::game::constants::{FRAME_RATE, GAME_NAME};
 use crate::game::game::Game;
 use crate::ui::asset::loader::{load_icons, load_icons_inverted};
-use crate::ui::geometry::show_geometry;
-use crate::ui::settingspanel::show_settings_panel;
+use crate::ui::panel::geometry::show_geometry;
+use crate::ui::panel::settings::show_settings_panel;
+use crate::ui::panel::shop::show_shop;
+use crate::ui::panel::upgrades::show_upgrades;
 use crate::ui::sidemenu::show_side_menu;
 use crossbeam::channel::Receiver;
-use eframe::egui::{Align, Color32, Context, Layout, TextureHandle};
+use eframe::egui::{Align, Color32, Context, Layout, TextureHandle, Vec2};
 use eframe::{egui, Frame};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -35,10 +37,9 @@ impl MyAppWindow {
                 let now = Instant::now();
                 let elapsed = now.duration_since(last_frame);
                 if elapsed >= frame_time {
-                    ctx.request_repaint();
+                    ctx.request_repaint_after(frame_time);
                     last_frame = now;
                 }
-                thread::sleep(frame_time.saturating_sub(elapsed));
             }
         });
 
@@ -50,29 +51,47 @@ impl eframe::App for MyAppWindow {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         while self.receiver.try_recv().is_ok() {}
 
+         let game_clone: Game = {
+             let game = self.game.lock().unwrap();
+             game.clone()
+         };
+
+        set_window_size(ctx, &game_clone);
+
         ctx.set_visuals(egui::Visuals {
             panel_fill: BACKGROUND_COLOUR,
             ..egui::Visuals::dark()
         });
 
-        show_side_menu(ctx, Arc::clone(&self.game), &self.icons_inverted);
-
-        let mut game_tab = GameTab::Geometry;
-        if let Ok(game) = &self.game.lock() {
-            game_tab = game.current_tab;
-        }
+        show_side_menu(ctx, Arc::clone(&self.game), &game_clone, &self.icons_inverted);
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.with_layout(Layout::top_down(Align::Center), |ui| {
                 ui.add_space(10.0);
-                match game_tab {
-                    GameTab::Geometry => show_geometry(ui, Arc::clone(&self.game)),
+                match game_clone.current_tab {
+                    GameTab::Geometry => show_geometry(ui, Arc::clone(&self.game), &game_clone),
                     GameTab::Settings => show_settings_panel(ui, Arc::clone(&self.game)),
-                    _ => {}
+                    GameTab::Shop => show_shop(ui, Arc::clone(&self.game), &game_clone),
+                    GameTab::Upgrades => show_upgrades(ui, Arc::clone(&self.game), &game_clone),
                 }
             });
 
         });
+    }
+}
+
+fn set_window_size(ctx: &Context, game: &Game) {
+    static mut LAST_WINDOW_SIZE: (f32, f32) = (0.0, 0.0);
+
+    let current_size = (game.settings.window_width, game.settings.window_height);
+    unsafe {
+        if LAST_WINDOW_SIZE != current_size {
+            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(Vec2::from([
+                game.settings.window_width,
+                game.settings.window_height,
+            ])));
+            LAST_WINDOW_SIZE = current_size;
+        }
     }
 }
 

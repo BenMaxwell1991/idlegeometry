@@ -4,11 +4,12 @@ use crate::game::settings::Settings;
 use crate::resources::bignumber::BigNumber;
 use crate::resources::resource::Resource;
 use crossbeam::channel::Sender;
+use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Game {
     pub resources: Vec<Resource>,
     pub settings: Settings,
