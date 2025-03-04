@@ -1,6 +1,6 @@
 use crate::game::game_data::GameData;
-use crate::resources::resource::Resource;
 use crate::game::settings::Settings;
+use crate::resources::resource::Resource;
 use crate::ui::helper::layout_helper::centered_ui;
 use eframe::egui::{Color32, FontId, Grid, Id, RichText, Sense, Ui, Vec2, Widget};
 use std::sync::Arc;

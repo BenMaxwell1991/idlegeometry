@@ -1,13 +1,12 @@
 use crate::game::game_data::GameData;
-use crate::resources::resource::Resource;
-use crate::resources::bignumber::BigNumber;
 use crate::game::settings::Settings;
-use crate::enums::gametab::GameTab;
+use crate::resources::bignumber::BigNumber;
+use crate::resources::resource::Resource;
+use serde_json::Value;
 use std::fs;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
 use std::thread;
-use serde_json::Value;
+use std::time::Duration;
 
 const SAVE_FILE: &str = "saved_file";
 

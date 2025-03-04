@@ -1,7 +1,6 @@
-use crate::game::game::Game;
-use eframe::egui::{Color32, Id, Sense, Ui, Widget};
-use std::sync::{Arc, Mutex};
 use crate::game::game_data::GameData;
+use eframe::egui::{Color32, Id, Sense, Ui, Widget};
+use std::sync::Arc;
 
 pub struct GameGraphics {
     game_data: Arc<GameData>,

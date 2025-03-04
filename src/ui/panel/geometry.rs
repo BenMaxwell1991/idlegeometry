@@ -1,12 +1,11 @@
-use crate::game::game::Game;
+use crate::game::game_data::GameData;
 use crate::ui::component::widget::custom_grid::CustomGrid;
 use crate::ui::component::widget::custom_heading::CustomHeading;
 use crate::ui::component::widget::game_graphics::GameGraphics;
 use eframe::egui;
 use eframe::egui::{Align, Layout};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, OnceLock};
 use uuid::Uuid;
-use crate::game::game_data::GameData;
 
 static RESOURCE_GRID_ID: OnceLock<Uuid> = OnceLock::new();
 static GAME_GRAPHICS_ID: OnceLock<Uuid> = OnceLock::new();

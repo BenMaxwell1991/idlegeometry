@@ -3,7 +3,7 @@
     {
       "amount": {
         "exponent": 0,
-        "mantissa": 1.350201484000005
+        "mantissa": 7.751597706000025
       },
       "name": "Points",
       "rate": {
@@ -14,7 +14,7 @@
     },
     {
       "amount": {
-        "exponent": -3,
+        "exponent": -2,
         "mantissa": 0.0
       },
       "name": "Lines",
@@ -26,7 +26,7 @@
     },
     {
       "amount": {
-        "exponent": -3,
+        "exponent": -2,
         "mantissa": 0.0
       },
       "name": "Triangles",
@@ -41,7 +41,7 @@
     "autosave_interval": 5,
     "number_format_mode": "Engineering",
     "vsync": true,
-    "window_height": 720.0,
-    "window_width": 1280.0
+    "window_height": 600.0,
+    "window_width": 800.0
   }
 }

@@ -1,4 +1,3 @@
-use crate::game::game_data::GameData;
 use crate::game::game_loop::GameLoop;
 use crate::game::save_load::{auto_save, load_game_or_new};
 use crate::ui::window::create_window;
