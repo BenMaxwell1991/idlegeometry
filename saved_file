@@ -1,1 +1,47 @@
-{"resources":[{"name":"Points","amount":{"mantissa":1.355081372400002,"exponent":1},"rate":{"mantissa":1.0,"exponent":-2},"unlocked":true},{"name":"Lines","amount":{"mantissa":0.0,"exponent":-2},"rate":{"mantissa":0.0,"exponent":0},"unlocked":false},{"name":"Triangles","amount":{"mantissa":0.0,"exponent":-2},"rate":{"mantissa":0.0,"exponent":0},"unlocked":false}],"settings":{"number_format_mode":"Standard","window_width":1280.0,"window_height":720.0,"vsync":true,"autosave_interval":10},"current_tab":"Settings"}
+{
+  "resources": [
+    {
+      "amount": {
+        "exponent": 0,
+        "mantissa": 1.350201484000005
+      },
+      "name": "Points",
+      "rate": {
+        "exponent": -2,
+        "mantissa": 1.0
+      },
+      "unlocked": true
+    },
+    {
+      "amount": {
+        "exponent": -3,
+        "mantissa": 0.0
+      },
+      "name": "Lines",
+      "rate": {
+        "exponent": 0,
+        "mantissa": 0.0
+      },
+      "unlocked": false
+    },
+    {
+      "amount": {
+        "exponent": -3,
+        "mantissa": 0.0
+      },
+      "name": "Triangles",
+      "rate": {
+        "exponent": 0,
+        "mantissa": 0.0
+      },
+      "unlocked": false
+    }
+  ],
+  "settings": {
+    "autosave_interval": 5,
+    "number_format_mode": "Engineering",
+    "vsync": true,
+    "window_height": 720.0,
+    "window_width": 1280.0
+  }
+}

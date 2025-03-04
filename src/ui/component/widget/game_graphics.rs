@@ -1,16 +1,17 @@
 use crate::game::game::Game;
 use eframe::egui::{Color32, Id, Sense, Ui, Widget};
 use std::sync::{Arc, Mutex};
+use crate::game::game_data::GameData;
 
 pub struct GameGraphics {
-    game: Arc<Mutex<Game>>,
+    game_data: Arc<GameData>,
     id: Id,
 }
 
 impl GameGraphics {
-    pub fn new(game: Arc<Mutex<Game>>, id_salt: impl std::hash::Hash) -> Self {
+    pub fn new(game_data: Arc<GameData>, id_salt: impl std::hash::Hash) -> Self {
         Self {
-            game,
+            game_data,
             id: Id::new(id_salt),
         }
     }

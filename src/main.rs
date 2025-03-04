@@ -1,8 +1,9 @@
-use crate::game::game::Game;
+use crate::game::game_data::GameData;
+use crate::game::game_loop::GameLoop;
 use crate::game::save_load::{auto_save, load_game_or_new};
 use crate::ui::window::create_window;
 use crossbeam::channel;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::thread;
 
 mod game;
@@ -11,14 +12,15 @@ mod resources;
 mod enums;
 
 fn main() {
-    let game = Arc::new(Mutex::new(load_game_or_new()));
     let (sender, receiver) = channel::bounded(1);
+    let game_data = load_game_or_new();
+    let game_loop = GameLoop::new(Arc::clone(&game_data));
 
-    let game_ref_one = Arc::clone(&game);
-    let game_ref_two = Arc::clone(&game);
-    let game_ref_three = Arc::clone(&game);
+    let game_data_one = Arc::clone(&game_data);
+    let game_data_two = Arc::clone(&game_data);
 
-    thread::spawn(move || Game::start_game(game_ref_one, sender));
-    thread::spawn(move || auto_save(game_ref_two));
-    create_window(game_ref_three, receiver).expect("Failed to start UI");
+    thread::spawn(move || game_loop.start_game(sender));
+    thread::spawn(move || auto_save(game_data_one));
+
+    create_window(game_data_two, receiver).expect("Failed to start UI");
 }
