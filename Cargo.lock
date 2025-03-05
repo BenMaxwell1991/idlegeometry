@@ -1695,10 +1695,13 @@ dependencies = [
  "chrono",
  "crossbeam",
  "eframe",
+ "egui",
+ "egui-winit",
  "image",
  "serde",
  "serde_json",
  "uuid",
+ "winit",
 ]
 
 [[package]]

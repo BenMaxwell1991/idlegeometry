@@ -33,7 +33,7 @@ pub fn load_game_or_new() -> Arc<GameData> {
     if game_data.get_field::<Vec<Resource>>("resources").is_none() {
         println!("No saved game found, starting a new game.");
         game_data.set_field("resources", vec![
-            Resource::new("Points", BigNumber::new(0.0), BigNumber::new(0.01), true),
+            Resource::new("Points", BigNumber::new(0.0), BigNumber::new(0.01), BigNumber::new(0.0), true),
             Resource::with_defaults("Lines"),
             Resource::with_defaults("Triangles"),
         ]);

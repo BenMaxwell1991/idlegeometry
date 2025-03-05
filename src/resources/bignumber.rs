@@ -17,7 +17,6 @@ impl BigNumber {
         let mut mantissa = value;
         let mut exponent = 0;
 
-        // Normalize: Ensure mantissa is in range [1, 10)
         while mantissa.abs() < 1.0 {
             mantissa *= 10.0;
             exponent -= 1;
@@ -38,9 +37,13 @@ impl BigNumber {
         }
     }
 
-    /// Normalizes mantissa to be within [1, 10)
     fn normalize(&mut self) {
-        while self.mantissa.abs() < 1.0 && self.mantissa != 0.0 {
+        if self.mantissa == 0.0 {
+            self.exponent = 0;
+            return;
+        }
+
+        while self.mantissa.abs() < 1.0 {
             self.mantissa *= 10.0;
             self.exponent -= 1;
         }
@@ -48,6 +51,12 @@ impl BigNumber {
             self.mantissa /= 10.0;
             self.exponent += 1;
         }
+    }
+    pub fn to_f64(&self) -> f64 {
+        if self.mantissa == 0.0 {
+            return 0.0;
+        }
+        self.mantissa * 10f64.powi(self.exponent as i32)
     }
 }
 

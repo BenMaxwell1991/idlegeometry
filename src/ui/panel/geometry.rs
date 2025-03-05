@@ -5,7 +5,10 @@ use crate::ui::component::widget::game_graphics::GameGraphics;
 use eframe::egui;
 use eframe::egui::{Align, Layout};
 use std::sync::{Arc, OnceLock};
+use egui::{ProgressBar, Vec2};
 use uuid::Uuid;
+use crate::resources::resource::Resource;
+use crate::ui::component::widget::custom_progress_bar::CustomProgressBar;
 
 static RESOURCE_GRID_ID: OnceLock<Uuid> = OnceLock::new();
 static GAME_GRAPHICS_ID: OnceLock<Uuid> = OnceLock::new();
@@ -22,7 +25,24 @@ pub fn show_geometry(ui: &mut egui::Ui, game_data: Arc<GameData>) {
     ui.add_space(10.0);
     ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
         ui.columns(2, |columns| {
-            columns[0].add(CustomGrid::new(game_data_one, grid_id));
+            columns[0].with_layout(Layout::top_down(Align::Min), |ui| {
+                ui.add(CustomGrid::new(game_data_one, grid_id));
+
+
+                ui.add_space(ui.available_height() - 30.0);
+
+                let points = game_data.get_field::<Vec<Resource>>("resources")
+                    .unwrap().iter()
+                    .find(|resource| resource.name == "Points")
+                    .cloned();
+
+                if let Some(points) = points {
+                    ui.add_sized(Vec2::new(ui.available_width(), 30.0), CustomProgressBar::new(points));
+                } else {
+                    println!("No points found");
+                }
+            });
+
             columns[1].add(GameGraphics::new(game_data_two, graphics_id));
         });
     });

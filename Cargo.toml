@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+winit = "0.30.9"
+egui = "0.31.0"
+egui-winit = "0.31.0"
 eframe = "0.31.0"
 crossbeam = "0.8.4"
 image = "0.25.5"
