@@ -15,6 +15,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
+use steamworks::Client;
 
 pub const BACKGROUND_COLOUR: Color32 = Color32::from_rgb(5, 5, 5);
 
@@ -26,7 +27,7 @@ pub struct MyAppWindow {
 }
 
 impl MyAppWindow {
-    pub fn new(game_data: Arc<GameData>, receiver: Receiver<()>, ctx: egui::Context) -> Self {
+    pub fn new(game_data: Arc<GameData>, receiver: Receiver<()>, ctx: Context) -> Self {
         let frame_time = Duration::from_secs_f64(1.0 / FRAME_RATE);
 
         let icons = load_icons(&ctx);
@@ -78,7 +79,7 @@ impl eframe::App for MyAppWindow {
                 match current_tab {
                     GameTab::Geometry => show_geometry(ui, Arc::clone(&self.game_data)),
                     GameTab::Settings => show_settings_panel(ui, Arc::clone(&self.game_data)),
-                    GameTab::Shop => show_shop(ui, Arc::clone(&self.game_data)),
+                    GameTab::Shop => show_shop(ui, Arc::clone(&self.game_data), &self.icons_inverted),
                     GameTab::Upgrades => show_upgrades(ui, Arc::clone(&self.game_data)),
                 }
             });

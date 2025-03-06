@@ -1,16 +1,19 @@
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use steamworks::Client;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct GameData {
     store: Arc<RwLock<HashMap<String, Arc<RwLock<Box<dyn Any + Send + Sync>>>>>>,
+    steam_client: Arc<RwLock<Option<Client>>>,
 }
 
 impl GameData {
     pub fn new() -> Self {
         Self {
             store: Arc::new(RwLock::new(HashMap::new())),
+            steam_client: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -37,5 +40,14 @@ impl GameData {
                 }
             }
         }
+    }
+
+    pub fn set_steam_client(&self, client: Client) {
+        let mut steam_client_lock = self.steam_client.write().unwrap();
+        *steam_client_lock = Some(client);
+    }
+
+    pub fn get_steam_client(&self) -> Option<Client> {
+        self.steam_client.read().unwrap().clone()
     }
 }

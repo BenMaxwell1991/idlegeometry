@@ -1,6 +1,6 @@
 use crate::game::game_data::GameData;
+use crate::game::initialise::init;
 use crate::game::settings::Settings;
-use crate::resources::bignumber::BigNumber;
 use crate::resources::resource::Resource;
 use serde_json::Value;
 use std::fs;
@@ -29,21 +29,7 @@ pub fn load_game_or_new() -> Arc<GameData> {
         }
     }
 
-    // If data wasn't loaded, initialize default values
-    if game_data.get_field::<Vec<Resource>>("resources").is_none() {
-        println!("No saved game found, starting a new game.");
-        game_data.set_field("resources", vec![
-            Resource::new("Points", BigNumber::new(0.0), BigNumber::new(0.01), BigNumber::new(0.0), true),
-            Resource::with_defaults("Lines"),
-            Resource::with_defaults("Triangles"),
-        ]);
-    }
-
-    if game_data.get_field::<Settings>("settings").is_none() {
-        game_data.set_field("settings", Settings::default());
-    }
-
-    Arc::new(game_data)
+    Arc::new(init(game_data))
 }
 
 pub fn save_game(game_data: &Arc<GameData>) {

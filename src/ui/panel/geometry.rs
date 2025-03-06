@@ -1,14 +1,14 @@
 use crate::game::game_data::GameData;
+use crate::resources::resource::Resource;
 use crate::ui::component::widget::custom_grid::CustomGrid;
 use crate::ui::component::widget::custom_heading::CustomHeading;
+use crate::ui::component::widget::custom_progress_bar::CustomProgressBar;
 use crate::ui::component::widget::game_graphics::GameGraphics;
 use eframe::egui;
 use eframe::egui::{Align, Layout};
+use egui::Vec2;
 use std::sync::{Arc, OnceLock};
-use egui::{ProgressBar, Vec2};
 use uuid::Uuid;
-use crate::resources::resource::Resource;
-use crate::ui::component::widget::custom_progress_bar::CustomProgressBar;
 
 static RESOURCE_GRID_ID: OnceLock<Uuid> = OnceLock::new();
 static GAME_GRAPHICS_ID: OnceLock<Uuid> = OnceLock::new();
@@ -27,8 +27,6 @@ pub fn show_geometry(ui: &mut egui::Ui, game_data: Arc<GameData>) {
         ui.columns(2, |columns| {
             columns[0].with_layout(Layout::top_down(Align::Min), |ui| {
                 ui.add(CustomGrid::new(game_data_one, grid_id));
-
-
                 ui.add_space(ui.available_height() - 30.0);
 
                 let points = game_data.get_field::<Vec<Resource>>("resources")
@@ -37,7 +35,7 @@ pub fn show_geometry(ui: &mut egui::Ui, game_data: Arc<GameData>) {
                     .cloned();
 
                 if let Some(points) = points {
-                    ui.add_sized(Vec2::new(ui.available_width(), 30.0), CustomProgressBar::new(points));
+                    ui.add_sized(Vec2::new(ui.available_width(), 30.0), CustomProgressBar::new(points).show_percentage().set_on_click(Box::new(|| { println!("Button Clicked") })));
                 } else {
                     println!("No points found");
                 }

@@ -4,3 +4,4 @@ pub mod label_no_interact;
 pub mod custom_grid;
 pub mod game_graphics;
 pub mod custom_progress_bar;
+pub mod interactive_widget;
