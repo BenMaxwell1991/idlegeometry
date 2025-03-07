@@ -13,7 +13,7 @@ use uuid::Uuid;
 static RESOURCE_GRID_ID: OnceLock<Uuid> = OnceLock::new();
 static GAME_GRAPHICS_ID: OnceLock<Uuid> = OnceLock::new();
 
-pub fn show_geometry(ui: &mut egui::Ui, game_data: Arc<GameData>) {
+pub fn show_main_game(ui: &mut egui::Ui, game_data: Arc<GameData>) {
     let grid_id = RESOURCE_GRID_ID.get_or_init(Uuid::new_v4);
     let graphics_id = GAME_GRAPHICS_ID.get_or_init(Uuid::new_v4);
 

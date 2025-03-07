@@ -3,7 +3,7 @@ use crate::game::constants::{FRAME_RATE, GAME_NAME};
 use crate::game::game_data::GameData;
 use crate::game::settings::Settings;
 use crate::ui::asset::loader::{load_icons, load_icons_inverted};
-use crate::ui::panel::geometry::show_geometry;
+use crate::ui::panel::main_game::show_main_game;
 use crate::ui::panel::settings::show_settings_panel;
 use crate::ui::panel::shop::show_shop;
 use crate::ui::panel::upgrades::show_upgrades;
@@ -15,7 +15,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
-use steamworks::Client;
 
 pub const BACKGROUND_COLOUR: Color32 = Color32::from_rgb(5, 5, 5);
 
@@ -77,7 +76,7 @@ impl eframe::App for MyAppWindow {
             ui.with_layout(Layout::top_down(Align::Center), |ui| {
                 ui.add_space(10.0);
                 match current_tab {
-                    GameTab::Geometry => show_geometry(ui, Arc::clone(&self.game_data)),
+                    GameTab::Geometry => show_main_game(ui, Arc::clone(&self.game_data)),
                     GameTab::Settings => show_settings_panel(ui, Arc::clone(&self.game_data)),
                     GameTab::Shop => show_shop(ui, Arc::clone(&self.game_data), &self.icons_inverted),
                     GameTab::Upgrades => show_upgrades(ui, Arc::clone(&self.game_data)),
