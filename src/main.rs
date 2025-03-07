@@ -1,7 +1,8 @@
 use crate::game::game_loop::GameLoop;
-use crate::game::save_load::{auto_save, load_game_or_new};
+use crate::game::input_listener::InputListener;
 use crate::ui::window::create_window;
 use crossbeam::channel;
+use game::data::save_load::{auto_save, load_game_or_new};
 use std::sync::Arc;
 use std::thread;
 
@@ -23,10 +24,14 @@ fn main() {
     let game_data_one = Arc::clone(&game_data);
     let game_data_two = Arc::clone(&game_data);
     let game_data_three = Arc::clone(&game_data);
+    let game_data_four = Arc::clone(&game_data);
 
     let game_loop = GameLoop::new(game_data_one);
-    thread::spawn(move || game_loop.start_game(sender));
-    thread::spawn(move || auto_save(game_data_two));
+    let input_listener = InputListener::new(game_data_two);
 
-    create_window(game_data_three, receiver).expect("Failed to start UI");
+    thread::spawn(move || game_loop.start_game(sender));
+    thread::spawn(move || input_listener.listen());
+    thread::spawn(move || auto_save(game_data_three));
+
+    create_window(game_data_four, receiver).expect("Failed to start UI");
 }

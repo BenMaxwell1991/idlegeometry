@@ -1,4 +1,4 @@
-use crate::game::game_data::GameData;
+use crate::game::data::game_data::GameData;
 use crate::ui::component::widget::custom_button::CustomButton;
 use crate::ui::component::widget::custom_heading::CustomHeading;
 use eframe::egui;

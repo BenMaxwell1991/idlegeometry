@@ -1,5 +1,6 @@
 use crate::enums::gametab::GameTab;
-use crate::game::game_data::GameData;
+use crate::game::data::game_data::GameData;
+use crate::game::data::stored_data::CURRENT_TAB;
 use crate::ui::component::widget::custom_button::CustomButton;
 use crate::ui::component::widget::custom_heading::CustomHeading;
 use eframe::egui;
@@ -29,7 +30,7 @@ pub fn show_side_menu(ctx: &egui::Context, game_data: Arc<GameData>, icons: &Has
                         icon.clone(),
                         text,
                         Box::new(move || {
-                            game_data_clone.set_field("current_tab", tab);
+                            game_data_clone.set_field(CURRENT_TAB, tab);
                         }),
                     ));
                     ui.separator();

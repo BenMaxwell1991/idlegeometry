@@ -1,6 +1,7 @@
 use crate::enums::gametab::GameTab;
 use crate::game::constants::{FRAME_RATE, GAME_NAME};
-use crate::game::game_data::GameData;
+use crate::game::data::game_data::GameData;
+use crate::game::data::stored_data::{CURRENT_TAB, SETTINGS};
 use crate::game::settings::Settings;
 use crate::ui::asset::loader::{load_icons, load_icons_inverted};
 use crate::ui::panel::main_game::show_main_game;
@@ -38,7 +39,7 @@ impl MyAppWindow {
                 let now = Instant::now();
                 let elapsed = now.duration_since(last_frame);
                 if elapsed >= frame_time {
-                    ctx.request_repaint_after(frame_time);
+                    ctx.request_repaint();
                     last_frame = now;
                 }
             }
@@ -55,12 +56,10 @@ impl MyAppWindow {
 
 impl eframe::App for MyAppWindow {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
-        while self.receiver.try_recv().is_ok() {}
-
-        let settings = self.game_data.get_field::<Settings>("settings").unwrap_or_default();
+        let settings = self.game_data.get_field(SETTINGS).unwrap_or_default();
         let current_tab = self
             .game_data
-            .get_field::<GameTab>("current_tab")
+            .get_field(CURRENT_TAB)
             .unwrap_or(GameTab::default());
 
         set_window_size(ctx, &settings);
@@ -80,6 +79,7 @@ impl eframe::App for MyAppWindow {
                     GameTab::Settings => show_settings_panel(ui, Arc::clone(&self.game_data)),
                     GameTab::Shop => show_shop(ui, Arc::clone(&self.game_data), &self.icons_inverted),
                     GameTab::Upgrades => show_upgrades(ui, Arc::clone(&self.game_data)),
+                    GameTab::NullGameTab => (),
                 }
             });
         });
@@ -102,7 +102,7 @@ fn set_window_size(ctx: &Context, settings: &Settings) {
 }
 
 pub fn create_window(game_data: Arc<GameData>, receiver: Receiver<()>) -> eframe::Result {
-    let settings = game_data.get_field::<Settings>("settings").unwrap_or_default();
+    let settings = game_data.get_field(SETTINGS).unwrap_or_default();
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([settings.window_width, settings.window_height])

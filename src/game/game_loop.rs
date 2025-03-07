@@ -1,11 +1,14 @@
+use crate::enums::gametab::GameTab;
+use crate::enums::gametab::GameTab::NullGameTab;
 use crate::game::constants::GAME_RATE;
-use crate::game::game_data::GameData;
-use crate::resources::resource::Resource;
+use crate::game::data::game_data::GameData;
+use crate::game::data::stored_data::{CURRENT_TAB, KEY_STATE, PLAYER_POSITION, RESOURCES};
 use crossbeam::channel::Sender;
+use egui::Pos2;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
-use egui::{Key, Pos2};
 
 pub struct GameLoop {
     pub game_data: Arc<GameData>,
@@ -16,7 +19,7 @@ impl GameLoop {
     pub fn new(game_data: Arc<GameData>) -> Self {
         Self {
             game_data,
-            updated_at: Instant::now() ,
+            updated_at: Instant::now(),
         }
     }
 
@@ -24,7 +27,7 @@ impl GameLoop {
         let delta_time = Instant::now().duration_since(self.updated_at).as_secs_f64();
 
         // Resources
-        self.game_data.update_field::<Vec<Resource>>("resources", |resources| {
+        self.game_data.update_field(RESOURCES, |resources| {
             for resource in resources.iter_mut() {
                 resource.update(delta_time);
             }
@@ -32,24 +35,29 @@ impl GameLoop {
 
         // Movement
         self.handle_movement(delta_time);
-
         self.updated_at = Instant::now();
     }
 
-    fn handle_movement(&self, delta_time: f64) {
-        let movement_speed = 400.0;
+    fn handle_movement(&mut self, delta_time: f64) {
+        let current_tab = self.game_data.get_field(CURRENT_TAB).unwrap_or(NullGameTab);
 
-        let mut new_pos = self.game_data.get_field::<Pos2>("player_position").unwrap_or(Pos2::new(100.0, 100.0));
-        let input = self.game_data.get_field::<Vec<Key>>("pressed_keys").unwrap_or_default();
+        if current_tab == GameTab::Geometry {
+            let movement_speed = 400.0;
+            let mut new_pos = self.game_data.get_field(PLAYER_POSITION).unwrap_or(Pos2::new(100.0, 100.0));
 
-        if input.contains(&Key::W) { new_pos.y -= movement_speed * delta_time as f32; }
-        if input.contains(&Key::S) { new_pos.y += movement_speed * delta_time as f32; }
-        if input.contains(&Key::A) { new_pos.x -= movement_speed * delta_time as f32; }
-        if input.contains(&Key::D) { new_pos.x += movement_speed * delta_time as f32; }
+            if let Some(key_state) = self.game_data.get_field(KEY_STATE) {
+                if key_state.w.load(Ordering::SeqCst) { new_pos.y -= movement_speed * delta_time as f32; }
+                if key_state.s.load(Ordering::SeqCst) { new_pos.y += movement_speed * delta_time as f32; }
+                if key_state.a.load(Ordering::SeqCst) { new_pos.x -= movement_speed * delta_time as f32; }
+                if key_state.d.load(Ordering::SeqCst) { new_pos.x += movement_speed * delta_time as f32; }
+            } else {
+                println!("Cannot acquire key state")
+            }
 
-        self.game_data.update_field::<Pos2>("player_position", |pos| {
-            *pos = new_pos;
-        });
+            self.game_data.update_field(PLAYER_POSITION, |pos| {
+                *pos = new_pos;
+            });
+        }
     }
 
     pub fn start_game(mut self, sender: Sender<()>) {
@@ -57,11 +65,8 @@ impl GameLoop {
 
         loop {
             let now = Instant::now();
-            self.update();
 
-            if sender.send(()).is_err() {
-                eprintln!("Error: Failed to send game loop tick.");
-            }
+            self.update();
 
             let elapsed = now.elapsed();
             if elapsed < update_rate {

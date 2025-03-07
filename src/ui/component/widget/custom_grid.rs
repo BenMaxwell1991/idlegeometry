@@ -1,4 +1,5 @@
-use crate::game::game_data::GameData;
+use crate::game::data::game_data::GameData;
+use crate::game::data::stored_data::{RESOURCES, SETTINGS};
 use crate::game::settings::Settings;
 use crate::resources::resource::Resource;
 use crate::ui::helper::layout_helper::centered_ui;
@@ -24,8 +25,8 @@ impl CustomGrid {
 
 impl Widget for CustomGrid {
     fn ui(self, ui: &mut Ui) -> eframe::egui::Response {
-        let resources = self.game_data.get_field::<Vec<Resource>>("resources").unwrap_or_default();
-        let settings = self.game_data.get_field::<Settings>("settings").unwrap_or_default();
+        let resources = self.game_data.get_field(RESOURCES).unwrap_or_default();
+        let settings = self.game_data.get_field(SETTINGS).unwrap_or_default();
 
         let longest_row = longest_row(ui, &resources, &settings);
         centered_ui(ui, longest_row, |ui| {

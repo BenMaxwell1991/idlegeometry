@@ -1,5 +1,6 @@
-use crate::game::game_data::GameData;
-use crate::game::initialise::init;
+use crate::game::data::game_data::GameData;
+use crate::game::data::initialise::init;
+use crate::game::data::stored_data::{RESOURCES, SETTINGS};
 use crate::game::settings::Settings;
 use crate::resources::resource::Resource;
 use serde_json::Value;
@@ -17,13 +18,13 @@ pub fn load_game_or_new() -> Arc<GameData> {
         if let Ok(json_data) = serde_json::from_str::<Value>(&save_data) {
             if let Some(resources) = json_data.get("resources")
                 .and_then(|v| serde_json::from_value::<Vec<Resource>>(v.clone()).ok()) {
-                game_data.set_field("resources", resources);
+                game_data.set_field(RESOURCES, resources);
                 println!("Loaded resources successfully!");
             }
 
             if let Some(settings) = json_data.get("settings")
                 .and_then(|v| serde_json::from_value::<Settings>(v.clone()).ok()) {
-                game_data.set_field("settings", settings);
+                game_data.set_field(SETTINGS, settings);
                 println!("Loaded settings successfully!");
             }
         }
@@ -35,13 +36,13 @@ pub fn load_game_or_new() -> Arc<GameData> {
 pub fn save_game(game_data: &Arc<GameData>) {
     let mut save_map = serde_json::Map::new();
 
-    if let Some(resources) = game_data.get_field::<Vec<Resource>>("resources") {
+    if let Some(resources) = game_data.get_field(RESOURCES) {
         if let Ok(serialized) = serde_json::to_value(&resources) {
             save_map.insert("resources".to_string(), serialized);
         }
     }
 
-    if let Some(settings) = game_data.get_field::<Settings>("settings") {
+    if let Some(settings) = game_data.get_field(SETTINGS) {
         if let Ok(serialized) = serde_json::to_value(&settings) {
             save_map.insert("settings".to_string(), serialized);
         }
@@ -58,7 +59,7 @@ pub fn save_game(game_data: &Arc<GameData>) {
 
 pub fn auto_save(game_data: Arc<GameData>) {
     loop {
-        let autosave_interval = game_data.get_field::<Settings>("settings")
+        let autosave_interval = game_data.get_field(SETTINGS)
             .map(|s| s.autosave_interval)
             .unwrap_or(5);
 

@@ -1,6 +1,6 @@
 use crate::enums::numberformatmode::NumberFormatMode;
-use crate::game::game_data::GameData;
-use crate::game::settings::Settings;
+use crate::game::data::game_data::GameData;
+use crate::game::data::stored_data::SETTINGS;
 use crate::ui::component::widget::custom_heading::CustomHeading;
 use eframe::egui;
 use eframe::egui::{Align, ComboBox, Layout, Slider};
@@ -19,7 +19,7 @@ pub fn show_settings_panel(ui: &mut egui::Ui, game_data: Arc<GameData>) {
     let resolution_id = *RESOLUTION_ID.get_or_init(Uuid::new_v4);
 
     ui.with_layout(Layout::top_down(Align::Min), |ui| {
-        let settings = game_data.get_field::<Settings>("settings").unwrap_or_default();
+        let settings = game_data.get_field(SETTINGS).unwrap_or_default();
 
         ui.horizontal(|ui| {
             ui.label("Number Format Mode:");
@@ -30,17 +30,17 @@ pub fn show_settings_panel(ui: &mut egui::Ui, game_data: Arc<GameData>) {
                     if ui.selectable_label(settings.number_format_mode == NumberFormatMode::Standard, "Standard").clicked() {
                         let mut updated_settings = settings;
                         updated_settings.number_format_mode = NumberFormatMode::Standard;
-                        game_data_clone.set_field("settings", updated_settings);
+                        game_data_clone.set_field(SETTINGS, updated_settings);
                     }
                     if ui.selectable_label(settings.number_format_mode == NumberFormatMode::Engineering, "Engineering").clicked() {
                         let mut updated_settings = settings;
                         updated_settings.number_format_mode = NumberFormatMode::Engineering;
-                        game_data_clone.set_field("settings", updated_settings);
+                        game_data_clone.set_field(SETTINGS, updated_settings);
                     }
                     if ui.selectable_label(settings.number_format_mode == NumberFormatMode::Exponential, "Exponential").clicked() {
                         let mut updated_settings = settings;
                         updated_settings.number_format_mode = NumberFormatMode::Exponential;
-                        game_data_clone.set_field("settings", updated_settings);
+                        game_data_clone.set_field(SETTINGS, updated_settings);
                     }
                 });
         });
@@ -55,19 +55,19 @@ pub fn show_settings_panel(ui: &mut egui::Ui, game_data: Arc<GameData>) {
                         let mut updated_settings = settings;
                         updated_settings.window_width = 1920.0;
                         updated_settings.window_height = 1080.0;
-                        game_data_clone.set_field("settings", updated_settings);
+                        game_data_clone.set_field(SETTINGS, updated_settings);
                     }
                     if ui.selectable_label(settings.window_width == 1280.0, "1280 x 720").clicked() {
                         let mut updated_settings = settings;
                         updated_settings.window_width = 1280.0;
                         updated_settings.window_height = 720.0;
-                        game_data_clone.set_field("settings", updated_settings);
+                        game_data_clone.set_field(SETTINGS, updated_settings);
                     }
                     if ui.selectable_label(settings.window_width == 800.0, "800 x 600").clicked() {
                         let mut updated_settings = settings;
                         updated_settings.window_width = 800.0;
                         updated_settings.window_height = 600.0;
-                        game_data_clone.set_field("settings", updated_settings);
+                        game_data_clone.set_field(SETTINGS, updated_settings);
                     }
                 });
         });
@@ -78,7 +78,7 @@ pub fn show_settings_panel(ui: &mut egui::Ui, game_data: Arc<GameData>) {
             if ui.checkbox(&mut vsync, "Enabled").changed() {
                 let mut updated_settings = settings;
                 updated_settings.vsync = vsync;
-                game_data.set_field("settings", updated_settings);
+                game_data.set_field(SETTINGS, updated_settings);
             }
         });
 
@@ -88,7 +88,7 @@ pub fn show_settings_panel(ui: &mut egui::Ui, game_data: Arc<GameData>) {
             if ui.add(Slider::new(&mut autosave_interval, 1..=60).text("Seconds")).changed() {
                 let mut updated_settings = settings;
                 updated_settings.autosave_interval = autosave_interval;
-                game_data.set_field("settings", updated_settings);
+                game_data.set_field(SETTINGS, updated_settings);
             }
         });
     });

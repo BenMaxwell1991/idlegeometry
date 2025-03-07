@@ -1,5 +1,5 @@
-use crate::game::game_data::GameData;
-use crate::resources::resource::Resource;
+use crate::game::data::game_data::GameData;
+use crate::game::data::stored_data::RESOURCES;
 use crate::ui::component::widget::custom_grid::CustomGrid;
 use crate::ui::component::widget::custom_heading::CustomHeading;
 use crate::ui::component::widget::custom_progress_bar::CustomProgressBar;
@@ -29,7 +29,7 @@ pub fn show_main_game(ui: &mut egui::Ui, game_data: Arc<GameData>) {
                 ui.add(CustomGrid::new(game_data_one, grid_id));
                 ui.add_space(ui.available_height() - 30.0);
 
-                let points = game_data.get_field::<Vec<Resource>>("resources")
+                let points = game_data.get_field(RESOURCES)
                     .unwrap().iter()
                     .find(|resource| resource.name == "Points")
                     .cloned();

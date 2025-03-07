@@ -6,6 +6,7 @@ pub enum GameTab {
     Upgrades,
     Settings,
     Shop,
+    NullGameTab,
 }
 
 impl Default for GameTab {
