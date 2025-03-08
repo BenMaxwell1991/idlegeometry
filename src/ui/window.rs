@@ -9,7 +9,6 @@ use crate::ui::panel::settings::show_settings_panel;
 use crate::ui::panel::shop::show_shop;
 use crate::ui::panel::upgrades::show_upgrades;
 use crate::ui::sidemenu::show_side_menu;
-use crossbeam::channel::Receiver;
 use eframe::egui::{Align, Color32, Context, Layout, TextureHandle, Vec2};
 use eframe::{egui, Frame};
 use std::collections::HashMap;
@@ -21,13 +20,12 @@ pub const BACKGROUND_COLOUR: Color32 = Color32::from_rgb(5, 5, 5);
 
 pub struct MyAppWindow {
     game_data: Arc<GameData>,
-    receiver: Receiver<()>,
     icons: HashMap<String, TextureHandle>,
     icons_inverted: HashMap<String, TextureHandle>,
 }
 
 impl MyAppWindow {
-    pub fn new(game_data: Arc<GameData>, receiver: Receiver<()>, ctx: Context) -> Self {
+    pub fn new(game_data: Arc<GameData>, ctx: Context) -> Self {
         let frame_time = Duration::from_secs_f64(1.0 / FRAME_RATE);
 
         let icons = load_icons(&ctx);
@@ -47,7 +45,6 @@ impl MyAppWindow {
 
         Self {
             game_data,
-            receiver,
             icons,
             icons_inverted,
         }
@@ -101,7 +98,7 @@ fn set_window_size(ctx: &Context, settings: &Settings) {
     }
 }
 
-pub fn create_window(game_data: Arc<GameData>, receiver: Receiver<()>) -> eframe::Result {
+pub fn create_window(game_data: Arc<GameData>) -> eframe::Result {
     let settings = game_data.get_field(SETTINGS).unwrap_or_default();
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
@@ -118,7 +115,6 @@ pub fn create_window(game_data: Arc<GameData>, receiver: Receiver<()>) -> eframe
         Box::new(|cc| {
             Ok(Box::new(MyAppWindow::new(
                 game_data,
-                receiver,
                 cc.egui_ctx.clone(),
             )) as Box<dyn eframe::App>)
         }),

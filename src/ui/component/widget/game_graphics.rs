@@ -1,7 +1,7 @@
 use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::PLAYER_POSITION;
 use eframe::egui::{Color32, Id, Sense, Ui, Vec2, Widget};
-use egui::{Pos2, Rect, Stroke, StrokeKind};
+use egui::{Pos2, Rect, Response, Stroke, StrokeKind};
 use std::hash::Hash;
 use std::ops::Add;
 use std::sync::Arc;
@@ -21,20 +21,10 @@ impl GameGraphics {
 }
 
 impl Widget for GameGraphics {
-    fn ui(self, ui: &mut Ui) -> eframe::egui::Response {
+    fn ui(self, ui: &mut Ui) -> Response {
         let available_size = ui.available_size();
         let (rect, response) = ui.allocate_exact_size(available_size, Sense::click());
         let painter = ui.painter();
-
-        // // ✅ Capture input and store in GameData
-        // let mut pressed_keys = Vec::new();
-        // ui.input(|i| {
-        //     if i.key_down(Key::W) { pressed_keys.push(Key::W); }
-        //     if i.key_down(Key::S) { pressed_keys.push(Key::S); }
-        //     if i.key_down(Key::A) { pressed_keys.push(Key::A); }
-        //     if i.key_down(Key::D) { pressed_keys.push(Key::D); }
-        // });
-        // self.game_data.update_or_set("pressed_keys", pressed_keys.clone(), |keys| { *keys = pressed_keys.clone() });
 
         // Get player position (updated by GameLoop)
         let player_position = self.game_data.get_field(PLAYER_POSITION).unwrap_or(Pos2::new(100.0, 100.0)).add(rect.min.to_vec2());

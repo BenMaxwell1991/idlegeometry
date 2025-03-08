@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 egui = "0.31.0"
 eframe = "0.31.0"
-crossbeam = "0.8.4"
 image = "0.25.5"
 serde = { version = "1.0.218", features = ["derive"] }
 serde_json = "1.0.140"
@@ -14,4 +13,3 @@ uuid = { version = "1.15.1", features = ["v4"] }
 chrono = "0.4.40"
 steamworks = "0.11.0"
 device_query_revamped = "2.2.1"
-winapi = { version = "0.3.9", features = ["processthreadsapi", "winbase"] }

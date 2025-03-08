@@ -6,6 +6,7 @@ use egui::Pos2;
 use std::any::Any;
 use std::marker::PhantomData;
 use std::sync::Arc;
+use steamworks::Client;
 
 pub struct StoredData<T: Any + Send + Sync> {
     pub id: &'static str,
@@ -26,3 +27,4 @@ pub const PLAYER_POSITION: StoredData<Pos2> = StoredData::new("player_position")
 pub const SETTINGS: StoredData<Settings> = StoredData::new("settings");
 pub const KEY_STATE: StoredData<Arc<KeyState>> = StoredData::new("key_state");
 pub const RESOURCES: StoredData<Vec<Resource>> = StoredData::new("resources");
+pub const STEAM_CLIENT: StoredData<Client> = StoredData::new("steam_client");

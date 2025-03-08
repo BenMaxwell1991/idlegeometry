@@ -1,6 +1,7 @@
 use eframe::egui;
 use eframe::egui::ColorImage;
 use eframe::epaint::TextureHandle;
+use egui::Context;
 use std::collections::HashMap;
 
 pub const GEOMETRY_IMAGE_BYTES: &[u8] = include_bytes!("icon/geometry.png");
@@ -17,7 +18,7 @@ const ICON_DATA: [(&str, &[u8]); 5] = [
     ("exit", EXIT_IMAGE_BYTES),
 ];
 
-pub fn load_icons(ctx: &egui::Context) -> HashMap<String, TextureHandle> {
+pub fn load_icons(ctx: &Context) -> HashMap<String, TextureHandle> {
     let mut icons = HashMap::new();
 
     for (name, bytes) in ICON_DATA {
@@ -37,7 +38,7 @@ pub fn load_icons(ctx: &egui::Context) -> HashMap<String, TextureHandle> {
     icons
 }
 
-pub fn load_icons_inverted(ctx: &egui::Context) -> HashMap<String, TextureHandle> {
+pub fn load_icons_inverted(ctx: &Context) -> HashMap<String, TextureHandle> {
     let mut icons = HashMap::new();
 
     for (name, bytes) in ICON_DATA {

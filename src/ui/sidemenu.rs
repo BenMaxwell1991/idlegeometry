@@ -3,13 +3,12 @@ use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::CURRENT_TAB;
 use crate::ui::component::widget::custom_button::CustomButton;
 use crate::ui::component::widget::custom_heading::CustomHeading;
-use eframe::egui;
-use eframe::egui::TextureHandle;
+use egui::{Context, SidePanel, TextureHandle};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-pub fn show_side_menu(ctx: &egui::Context, game_data: Arc<GameData>, icons: &HashMap<String, TextureHandle>) {
-    egui::SidePanel::left("side_panel")
+pub fn show_side_menu(ctx: &Context, game_data: Arc<GameData>, icons: &HashMap<String, TextureHandle>) {
+    SidePanel::left("side_panel")
         .resizable(false)
         .default_width(150.0)
         .show(ctx, |ui| {

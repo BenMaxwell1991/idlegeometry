@@ -3,7 +3,6 @@ use crate::enums::gametab::GameTab::NullGameTab;
 use crate::game::constants::GAME_RATE;
 use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::{CURRENT_TAB, KEY_STATE, PLAYER_POSITION, RESOURCES};
-use crossbeam::channel::Sender;
 use egui::Pos2;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -60,7 +59,7 @@ impl GameLoop {
         }
     }
 
-    pub fn start_game(mut self, sender: Sender<()>) {
+    pub fn start_game(mut self) {
         let update_rate = Duration::from_millis(GAME_RATE);
 
         loop {

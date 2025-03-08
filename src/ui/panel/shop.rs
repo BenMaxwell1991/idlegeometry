@@ -1,4 +1,5 @@
 use crate::game::data::game_data::GameData;
+use crate::game::data::stored_data::STEAM_CLIENT;
 use crate::ui::component::widget::custom_button::CustomButton;
 use crate::ui::component::widget::custom_heading::CustomHeading;
 use eframe::egui;
@@ -11,7 +12,7 @@ pub fn show_shop(ui: &mut egui::Ui, game_data: Arc<GameData>, icons: &HashMap<St
     ui.add(CustomHeading::new("Shop Coming Soon"));
     ui.separator();
 
-    if let Some(steam_client) = game_data.get_steam_client() {
+    if let Some(steam_client) = game_data.get_field(STEAM_CLIENT) {
         user_name = steam_client.friends().name();
     }
 
@@ -24,13 +25,4 @@ pub fn show_shop(ui: &mut egui::Ui, game_data: Arc<GameData>, icons: &HashMap<St
                 .size(Vec2::new(300.0, 50.0))
         );
     }
-
-    //
-    // if ui.button("Buy 1,000 Gold ($4.99)").clicked() {
-    //     initiate_purchase(steam_client.clone(), "gold_pack_1000");
-    // }
-    //
-    // if ui.button("Buy 5,000 Gold ($19.99)").clicked() {
-    //     initiate_purchase(steam_client.clone(), "gold_pack_5000");
-    // }
 }

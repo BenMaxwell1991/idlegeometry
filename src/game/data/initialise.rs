@@ -10,6 +10,10 @@ use std::sync::Arc;
 
 pub fn init(game_data: GameData) -> GameData {
 
+    // let (steam_client, single) = steamworks::Client::init_app(480).expect("Failed to initialize Steam");
+    // println!("Logged in as: {}", steam_client.friends().name());
+    // game_data.set_field(STEAM_CLIENT, steam_client);
+
     game_data.set_field(KEY_STATE, Arc::new(KeyState::new()));
     game_data.set_field(CURRENT_TAB, GameTab::default());
     game_data.set_field(PLAYER_POSITION, Pos2::new(100.0, 100.0));
