@@ -1,8 +1,8 @@
 use crate::game::data::game_data::GameData;
 use crate::game::data::initialise::init;
 use crate::game::data::stored_data::{RESOURCES, SETTINGS};
+use crate::game::resources::resource::Resource;
 use crate::game::settings::Settings;
-use crate::resources::resource::Resource;
 use serde_json::Value;
 use std::fs;
 use std::sync::Arc;

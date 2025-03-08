@@ -1,5 +1,5 @@
-use crate::resources::bignumber::BigNumber;
-use crate::resources::resource::Resource;
+use crate::game::resources::bignumber::BigNumber;
+use crate::game::resources::resource::Resource;
 use crate::ui::component::widget::interactive_widget::InteractiveWidget;
 use eframe::egui::{Align2, Color32, Pos2, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget};
 use eframe::emath::Rect;

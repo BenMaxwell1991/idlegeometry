@@ -1,7 +1,9 @@
 use crate::enums::gametab::GameTab;
-use crate::game::key_state::KeyState;
+use crate::game::loops::key_state::KeyState;
+use crate::game::map::camera_state::CameraState;
+use crate::game::map::game_map::GameMap;
+use crate::game::resources::resource::Resource;
 use crate::game::settings::Settings;
-use crate::resources::resource::Resource;
 use egui::Pos2;
 use std::any::Any;
 use std::marker::PhantomData;
@@ -28,3 +30,5 @@ pub const SETTINGS: StoredData<Settings> = StoredData::new("settings");
 pub const KEY_STATE: StoredData<Arc<KeyState>> = StoredData::new("key_state");
 pub const RESOURCES: StoredData<Vec<Resource>> = StoredData::new("resources");
 pub const STEAM_CLIENT: StoredData<Client> = StoredData::new("steam_client");
+pub const GAME_MAP: StoredData<GameMap> = StoredData::new("game_map");
+pub const CAMERA_STATE: StoredData<CameraState> = StoredData::new("camera_state");

@@ -12,4 +12,5 @@ serde_json = "1.0.140"
 uuid = { version = "1.15.1", features = ["v4"] }
 chrono = "0.4.40"
 steamworks = "0.11.0"
+rdev = "0.5.3"
 device_query_revamped = "2.2.1"

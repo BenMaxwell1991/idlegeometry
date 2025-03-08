@@ -1,9 +1,10 @@
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::PLAYER_POSITION;
+use crate::game::data::stored_data::{CAMERA_STATE, GAME_MAP, PLAYER_POSITION};
+use crate::game::map::camera_state::CameraState;
+use crate::game::map::tile_type::TileType;
 use eframe::egui::{Color32, Id, Sense, Ui, Vec2, Widget};
-use egui::{Pos2, Rect, Response, Stroke, StrokeKind};
+use egui::{Pos2, Rect, Response};
 use std::hash::Hash;
-use std::ops::Add;
 use std::sync::Arc;
 
 pub struct GameGraphics {
@@ -26,26 +27,41 @@ impl Widget for GameGraphics {
         let (rect, response) = ui.allocate_exact_size(available_size, Sense::click());
         let painter = ui.painter();
 
-        // Get player position (updated by GameLoop)
-        let player_position = self.game_data.get_field(PLAYER_POSITION).unwrap_or(Pos2::new(100.0, 100.0)).add(rect.min.to_vec2());
+        let game_map = self.game_data.get_field(GAME_MAP).unwrap();
+        let camera_state = self.game_data.get_field(CAMERA_STATE).unwrap_or(CameraState::default());
+        let tile_size = game_map.tile_size * camera_state.zoom; // Apply zoom
 
-        // Draw grid
-        let cell_size = 40.0;
-        for x in (rect.min.x as i32..rect.max.x as i32).step_by(cell_size as usize) {
-            painter.vline(x as f32, rect.min.y..=rect.max.y, Stroke::new(1.0, Color32::GREEN));
-        }
-        for y in (rect.min.y as i32..rect.max.y as i32).step_by(cell_size as usize) {
-            painter.hline(rect.min.x..=rect.max.x, y as f32, Stroke::new(1.0, Color32::GREEN));
+        for (&(x, y), tile) in &game_map.tiles {
+            let world_pos = Pos2::new(x as f32 * game_map.tile_size, y as f32 * game_map.tile_size);
+            let screen_pos = world_to_screen(world_pos, &camera_state, &rect);
+
+            let tile_rect = Rect::from_min_size(screen_pos, Vec2::new(tile_size, tile_size));
+
+            let color = match tile.tile_type {
+                TileType::Wall => Color32::DARK_GRAY,
+                TileType::SpawnPoint => Color32::BLUE,
+                TileType::Empty => Color32::TRANSPARENT,
+            };
+
+            painter.rect_filled(tile_rect, 2.0, color);
         }
 
-        // Draw the player
-        let player_size = Vec2::new(10.0, 10.0);
-        let player_rect = Rect::from_center_size(player_position, player_size);
+
+        // Draw player
+        let player_position = self.game_data.get_field(PLAYER_POSITION).unwrap_or(Pos2::new(0.0, 0.0));
+        let player_screen_pos = world_to_screen(player_position, &camera_state, &rect);
+        let player_size = Vec2::new(10.0, 10.0) * camera_state.zoom;
+        let player_rect = Rect::from_center_size(player_screen_pos, player_size);
         painter.rect_filled(player_rect, 0.0, Color32::RED);
-
-        // Draw game area border
-        painter.rect_stroke(rect, 2.0, (3.0, Color32::PURPLE), StrokeKind::Middle);
 
         response
     }
+}
+
+
+fn world_to_screen(world_pos: Pos2, camera: &CameraState, rect: &Rect) -> Pos2 {
+    Pos2::new(
+        (world_pos.x - camera.camera_pos.x) * camera.zoom + rect.center().x,
+        (world_pos.y - camera.camera_pos.y) * camera.zoom + rect.center().y,
+    )
 }

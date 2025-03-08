@@ -1,4 +1,4 @@
-use crate::resources::bignumber::BigNumber;
+use crate::game::resources::bignumber::BigNumber;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

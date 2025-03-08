@@ -1,13 +1,12 @@
-use crate::game::game_loop::GameLoop;
-use crate::game::input_listener::InputListener;
 use crate::ui::window::create_window;
 use game::data::save_load::{auto_save, load_game_or_new};
+use game::loops::game_loop::GameLoop;
+use game::loops::input_listener::InputListener;
 use std::sync::Arc;
 use std::thread;
 
 mod game;
 mod ui;
-mod resources;
 mod enums;
 
 fn main() {
