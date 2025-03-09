@@ -58,6 +58,13 @@ impl BigNumber {
         }
         self.mantissa * 10f64.powi(self.exponent as i32)
     }
+
+    pub fn to_f32(&self) -> f32 {
+        if self.mantissa == 0.0 {
+            return 0.0;
+        }
+        (self.mantissa as f32) * 10f32.powi(self.exponent as i32)
+    }
 }
 
 // Implement `+=` for BigNumber (Addition)

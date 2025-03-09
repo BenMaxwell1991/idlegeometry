@@ -1,5 +1,6 @@
 use crate::ui::component::widget::label_no_interact::LabelNoInteract;
 use eframe::egui::{Color32, Response, Stroke, StrokeKind, Ui, Vec2, Widget};
+use egui::Sense;
 
 const HEADING_SIZE: Vec2 = Vec2::new(200.0, 50.0);
 const BACKGROUND_COLOUR: Option<Color32> = None;
@@ -40,7 +41,7 @@ impl<'a> CustomHeading<'a> {
 
 impl<'a> Widget for CustomHeading<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
-        let (rect, response) = ui.allocate_exact_size(self.size, eframe::egui::Sense::hover());
+        let (rect, response) = ui.allocate_exact_size(self.size, Sense::hover());
 
         if let Some(background_colour) = self.background_colour {
             ui.painter().rect_filled(rect, 5.0, background_colour);

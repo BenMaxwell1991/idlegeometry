@@ -1,5 +1,6 @@
 use crate::game::resources::bignumber::BigNumber;
 use serde::{Deserialize, Serialize};
+use std::sync::LazyLock;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Resource {
@@ -41,3 +42,36 @@ impl Resource {
         self.required = BigNumber::new(required);
     }
 }
+
+pub static DEFAULT_MOVE_SPEED: LazyLock<Resource> = LazyLock::new(|| {
+    Resource::new(
+        "movement_speed",
+        BigNumber::new(400.0),
+        BigNumber::new(0.0),
+        BigNumber::new(0.0),
+        BigNumber::new(0.0),
+        true,
+    )
+});
+
+pub static DEFAULT_HEALTH: LazyLock<Resource> = LazyLock::new(|| {
+    Resource::new(
+        "health",
+        BigNumber::new(10.0),
+        BigNumber::new(0.0),
+        BigNumber::new(0.0),
+        BigNumber::new(0.0),
+        true,
+    )
+});
+
+pub static DEFAULT_MANA: LazyLock<Resource> = LazyLock::new(|| {
+    Resource::new(
+        "mana",
+        BigNumber::new(10.0),
+        BigNumber::new(0.0),
+        BigNumber::new(0.0),
+        BigNumber::new(0.0),
+        false,
+    )
+});

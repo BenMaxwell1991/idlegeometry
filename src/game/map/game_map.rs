@@ -3,8 +3,6 @@ use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct GameMap {
-    pub width: usize,
-    pub height: usize,
     pub tiles: HashMap<(usize, usize), GameTile>,
     pub tile_size: f32,
 }
@@ -23,7 +21,7 @@ impl GameMap {
             }
         }
 
-        Self { width, height, tiles, tile_size }
+        Self { tiles, tile_size }
     }
 
     pub fn get_tile(&self, x: usize, y: usize) -> GameTile {

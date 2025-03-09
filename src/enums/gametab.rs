@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum GameTab {
-    Geometry,
+    Adventure,
     Upgrades,
     Settings,
     Shop,
@@ -11,6 +11,6 @@ pub enum GameTab {
 
 impl Default for GameTab {
     fn default() -> Self {
-        GameTab::Geometry
+        GameTab::Adventure
     }
 }

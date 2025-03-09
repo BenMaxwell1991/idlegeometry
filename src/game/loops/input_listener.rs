@@ -8,14 +8,14 @@ use std::time::Duration;
 
 pub struct InputListener {
     game_data: Arc<GameData>,
-    target_zoom: Arc<Mutex<f32>>, // Smooth zoom target
+    target_zoom: Arc<Mutex<f32>>,
 }
 
 impl InputListener {
     pub fn new(game_data: Arc<GameData>) -> Self {
         Self {
             game_data,
-            target_zoom: Arc::new(Mutex::new(1.0)), // Initial zoom = 1.0
+            target_zoom: Arc::new(Mutex::new(1.0)),
         }
     }
 

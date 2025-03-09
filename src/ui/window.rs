@@ -1,9 +1,9 @@
 use crate::enums::gametab::GameTab;
 use crate::game::constants::{FRAME_RATE, GAME_NAME};
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::{CURRENT_TAB, SETTINGS};
+use crate::game::data::stored_data::{CURRENT_TAB, GAME_IN_FOCUS, SETTINGS};
 use crate::game::settings::Settings;
-use crate::ui::asset::loader::{load_icons, load_icons_inverted};
+use crate::ui::asset::loader::{load_icons, load_icons_inverted, load_sprite_sheets};
 use crate::ui::panel::main_game::show_main_game;
 use crate::ui::panel::settings::show_settings_panel;
 use crate::ui::panel::shop::show_shop;
@@ -30,6 +30,7 @@ impl MyAppWindow {
 
         let icons = load_icons(&ctx);
         let icons_inverted = load_icons_inverted(&ctx);
+        load_sprite_sheets(&ctx, &game_data);
 
         thread::spawn(move || {
             let mut last_frame = Instant::now();
@@ -53,6 +54,8 @@ impl MyAppWindow {
 
 impl eframe::App for MyAppWindow {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
+        self.game_data.update_or_set(GAME_IN_FOCUS, false, |in_focus| { *in_focus = ctx.input(|i| i.focused) });
+
         let settings = self.game_data.get_field(SETTINGS).unwrap_or_default();
         let current_tab = self
             .game_data
@@ -70,9 +73,8 @@ impl eframe::App for MyAppWindow {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.with_layout(Layout::top_down(Align::Center), |ui| {
-                ui.add_space(10.0);
                 match current_tab {
-                    GameTab::Geometry => show_main_game(ui, Arc::clone(&self.game_data)),
+                    GameTab::Adventure => show_main_game(ui, Arc::clone(&self.game_data)),
                     GameTab::Settings => show_settings_panel(ui, Arc::clone(&self.game_data)),
                     GameTab::Shop => show_shop(ui, Arc::clone(&self.game_data), &self.icons_inverted),
                     GameTab::Upgrades => show_upgrades(ui, Arc::clone(&self.game_data)),

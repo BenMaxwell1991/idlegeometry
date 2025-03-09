@@ -12,11 +12,12 @@ pub fn show_side_menu(ctx: &Context, game_data: Arc<GameData>, icons: &HashMap<S
         .resizable(false)
         .default_width(150.0)
         .show(ctx, |ui| {
+            ui.add_space(5.0);
             ui.add(CustomHeading::new("Menu"));
             ui.separator();
 
             let buttons = vec![
-                ("geometry", "Geometry", GameTab::Geometry),
+                ("adventure", "Adventure", GameTab::Adventure),
                 ("upgrade", "Upgrades", GameTab::Upgrades),
                 ("settings", "Settings", GameTab::Settings),
                 ("shop", "Shop", GameTab::Shop),

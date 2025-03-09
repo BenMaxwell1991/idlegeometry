@@ -1,17 +1,23 @@
+use crate::game::data::game_data::GameData;
+use crate::game::data::stored_data::SPRITE_SHEETS;
+use crate::ui::asset::sprite::sprite_sheet::{SpriteSheet, SPRITE_DATA};
 use eframe::egui;
 use eframe::egui::ColorImage;
 use eframe::epaint::TextureHandle;
 use egui::Context;
 use std::collections::HashMap;
+use std::sync::Arc;
 
-pub const GEOMETRY_IMAGE_BYTES: &[u8] = include_bytes!("icon/geometry.png");
+// Icons
+pub const ADVENTURE_IMAGE_BYTES: &[u8] = include_bytes!("icon/adventure.png");
 pub const SETTINGS_IMAGE_BYTES: &[u8] = include_bytes!("icon/settings.png");
 pub const SHOP_IMAGE_BYTES: &[u8] = include_bytes!("icon/shop.png");
 pub const UPGRADE_IMAGE_BYTES: &[u8] = include_bytes!("icon/upgrade.png");
 pub const EXIT_IMAGE_BYTES: &[u8] = include_bytes!("icon/exit.png");
 
+
 const ICON_DATA: [(&str, &[u8]); 5] = [
-    ("geometry", GEOMETRY_IMAGE_BYTES),
+    ("adventure", ADVENTURE_IMAGE_BYTES),
     ("settings", SETTINGS_IMAGE_BYTES),
     ("shop", SHOP_IMAGE_BYTES),
     ("upgrade", UPGRADE_IMAGE_BYTES),
@@ -63,4 +69,15 @@ pub fn load_icons_inverted(ctx: &Context) -> HashMap<String, TextureHandle> {
     }
 
     icons
+}
+
+pub fn load_sprite_sheets(ctx: &Context, game_data: &Arc<GameData>) {
+    let mut sprite_sheets = HashMap::new();
+
+    for (name, bytes) in SPRITE_DATA {
+        let sprite_sheet = SpriteSheet::new(ctx, name, bytes, 16, 16);
+        sprite_sheets.insert(name.to_string(), sprite_sheet);
+    }
+
+    game_data.set_field(SPRITE_SHEETS, sprite_sheets);
 }
