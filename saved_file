@@ -2,8 +2,8 @@
   "resources": [
     {
       "amount": {
-        "exponent": 1,
-        "mantissa": 9.590141190300749
+        "exponent": 2,
+        "mantissa": 1.0000546042500391
       },
       "level": {
         "exponent": 0,

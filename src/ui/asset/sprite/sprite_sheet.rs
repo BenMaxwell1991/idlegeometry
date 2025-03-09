@@ -5,10 +5,12 @@ use image::{DynamicImage, RgbaImage};
 // Sprites
 pub const ADULT_GREEN_DRAGON: &str = "adult_green_dragon";
 pub const BABY_GREEN_DRAGON: &str = "baby_green_dragon";
+pub const YOUNG_RED_DRAGON: &str = "young_red_dragon";
 
-pub(crate) const SPRITE_DATA: [(&str, &[u8]); 2] = [
+pub(crate) const SPRITE_DATA: [(&str, &[u8]); 3] = [
     (ADULT_GREEN_DRAGON, include_bytes!("Basic Dragon Animations/Adult Green Dragon/AdultGreenDragon.png")),
     (BABY_GREEN_DRAGON, include_bytes!("Basic Dragon Animations/Baby Green Dragon/BabyGreenDragon.png")),
+    (YOUNG_RED_DRAGON, include_bytes!("Basic Dragon Animations/Young Red Dragon/YoungRedDragon.png")),
 ];
 
 #[derive(Clone)]

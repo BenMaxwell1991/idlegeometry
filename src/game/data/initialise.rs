@@ -10,10 +10,12 @@ use crate::game::settings::Settings;
 use crate::game::units::animation::Animation;
 use crate::game::units::unit::Unit;
 use crate::game::units::unit_type::UnitType;
-use crate::ui::asset::sprite::sprite_sheet::BABY_GREEN_DRAGON;
+use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, YOUNG_RED_DRAGON};
 use eframe::emath::Pos2;
 use std::sync::Arc;
 use std::time::Duration;
+use rand::{random, random_range};
+use crate::game::units::create_units::create_enemy_at_point;
 
 const TILE_SIZE: f32 = 40.0;
 const X_TILE_COUNT: usize = 50;
@@ -29,6 +31,7 @@ pub fn init(game_data: GameData) -> GameData {
 
     init_map(&game_data);
     init_player(&game_data);
+    init_enemies(&game_data);
     game_data.set_field(KEY_STATE, Arc::new(KeyState::new()));
     game_data.set_field(CURRENT_TAB, GameTab::default());
 
@@ -60,4 +63,21 @@ fn init_player(game_data: &GameData) {
     let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_secs(1));
     let units = vec!(Unit::new(UnitType::Player, Pos2::new(X_CENTER, Y_CENTER), stats, animation));
     game_data.set_field(UNITS, units)
+}
+
+fn init_enemies(game_data: &GameData) {
+    if let Some(map) = game_data.get_field(GAME_MAP) {
+        let mut units = game_data.get_field(UNITS).unwrap_or(Vec::new());
+        let map_x = map.width as f32 * map.tile_size;
+        let map_y = map.height as f32 * map.tile_size;
+
+        for i in 0..10 {
+            let pos = Pos2::new(random_range(0.0..=map_x), random_range(0.0..=map_y));
+            units.push(create_enemy_at_point(YOUNG_RED_DRAGON, pos));
+        }
+
+        game_data.set_field(UNITS, units)
+    }
+
+
 }
