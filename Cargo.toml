@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 egui = "0.31.0"
-eframe = "0.31.0"
+eframe = { version = "0.31.0", features = ["wgpu"] }
 image = "0.25.5"
 serde = { version = "1.0.218", features = ["derive"] }
 serde_json = "1.0.140"
@@ -15,3 +15,9 @@ steamworks = "0.11.0"
 rdev = "0.5.3"
 device_query_revamped = "2.2.1"
 rand = "0.9.0"
+rayon = "1.10.0"
+wgpu = "24.0.1"
+glow = "0.16.0"
+glutin = "0.32.2"
+bytemuck = "1.22.0"
+egui_glow = "0.31.1"

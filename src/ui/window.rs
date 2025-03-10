@@ -3,14 +3,15 @@ use crate::game::constants::{FRAME_RATE, GAME_NAME};
 use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::{CURRENT_TAB, GAME_IN_FOCUS, SETTINGS};
 use crate::game::settings::Settings;
-use crate::ui::asset::loader::{load_icons, load_icons_inverted, load_sprite_sheets};
+use crate::ui::asset::loader::{load_icons, load_icons_inverted, load_sprites};
 use crate::ui::panel::main_game::show_main_game;
 use crate::ui::panel::settings::show_settings_panel;
 use crate::ui::panel::shop::show_shop;
 use crate::ui::panel::upgrades::show_upgrades;
 use crate::ui::sidemenu::show_side_menu;
 use eframe::egui::{Align, Color32, Context, Layout, TextureHandle, Vec2};
-use eframe::{egui, Frame};
+use eframe::Renderer::Glow;
+use eframe::{egui, App, Frame};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::thread;
@@ -30,7 +31,7 @@ impl MyAppWindow {
 
         let icons = load_icons(&ctx);
         let icons_inverted = load_icons_inverted(&ctx);
-        load_sprite_sheets(&ctx, &game_data);
+        load_sprites(&ctx, &game_data);
 
         thread::spawn(move || {
             let mut last_frame = Instant::now();
@@ -52,7 +53,7 @@ impl MyAppWindow {
     }
 }
 
-impl eframe::App for MyAppWindow {
+impl App for MyAppWindow {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         self.game_data.update_or_set(GAME_IN_FOCUS, false, |in_focus| { *in_focus = ctx.input(|i| i.focused) });
 
@@ -108,6 +109,7 @@ pub fn create_window(game_data: Arc<GameData>) -> eframe::Result {
             .with_title(GAME_NAME),
         vsync: settings.vsync,
         centered: true,
+        renderer: Glow,
         ..Default::default()
     };
 
@@ -115,10 +117,10 @@ pub fn create_window(game_data: Arc<GameData>) -> eframe::Result {
         GAME_NAME,
         options,
         Box::new(|cc| {
-            Ok(Box::new(MyAppWindow::new(
-                game_data,
-                cc.egui_ctx.clone(),
-            )) as Box<dyn eframe::App>)
+            if let Some(gl_ctx) = cc.gl.as_ref().cloned() {
+                *game_data.gl_context.write().unwrap() = Some(gl_ctx);
+            }
+            Ok(Box::new(MyAppWindow::new(game_data, cc.egui_ctx.clone())) as Box<dyn App>)
         }),
     )
 }

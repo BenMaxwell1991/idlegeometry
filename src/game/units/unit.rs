@@ -4,6 +4,7 @@ use crate::game::units::animation::Animation;
 use crate::game::units::unit_type::UnitType;
 use egui::Pos2;
 use serde::{Deserialize, Serialize};
+use crate::game::units::attack::Attack;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Unit {
@@ -12,6 +13,7 @@ pub struct Unit {
     pub position: Pos2,
     pub stats: Vec<Resource>,
     pub animation: Animation,
+    pub attacks: Vec<Attack>,
 }
 
 impl Unit {
@@ -21,6 +23,7 @@ impl Unit {
             position,
             stats,
             animation,
+            attacks: Vec::new(),
         }
     }
 }

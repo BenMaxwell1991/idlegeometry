@@ -77,7 +77,7 @@ impl InputListener {
                 key_state.d.store(keys.contains(&Keycode::D), Ordering::SeqCst);
             }
 
-            thread::sleep(Duration::from_millis(2));
+            thread::sleep(Duration::from_millis(5));
         }
     }
 }

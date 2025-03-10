@@ -11,11 +11,13 @@ mod enums;
 
 fn main() {
     let game_data = load_game_or_new();
+    println!("Initialised all Game Data");
 
     let game_data_one = Arc::clone(&game_data);
     let game_data_two = Arc::clone(&game_data);
     let game_data_three = Arc::clone(&game_data);
     let game_data_four = Arc::clone(&game_data);
+    let game_data_five = Arc::clone(&game_data);
 
     let game_loop = GameLoop::new(game_data_one);
     let input_listener = InputListener::new(game_data_two);
@@ -24,5 +26,5 @@ fn main() {
     thread::spawn(move || input_listener.listen());
     thread::spawn(move || auto_save(game_data_three));
 
-    create_window(game_data_four).expect("Failed to start UI");
+    create_window(game_data_five).expect("Failed to start UI");
 }

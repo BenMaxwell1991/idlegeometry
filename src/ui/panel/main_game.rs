@@ -25,7 +25,7 @@ pub fn show_main_game(ui: &mut egui::Ui, game_data: Arc<GameData>) {
     // Get Drawing Rects
     let game_rect = ui.available_rect_before_wrap();
     let (hud_rect, progress_rect) = get_hud_rects(&game_rect);
-
+    
     // Draw Game Graphics
     ui.put(game_rect, GameGraphics::new(game_data_one, graphics_id));
 
