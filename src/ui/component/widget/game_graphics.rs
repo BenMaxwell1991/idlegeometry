@@ -2,14 +2,11 @@ use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::{CAMERA_STATE, GAME_MAP, SPRITE_SHEETS};
 use crate::game::map::camera_state::CameraState;
 use crate::game::map::tile_type::TileType;
+use crate::game::units::unit_type::UnitType;
 use eframe::egui::{Color32, Id, Sense, Ui, Vec2, Widget};
 use egui::{Painter, Pos2, Rect, Response, Stroke, StrokeKind};
 use std::hash::Hash;
 use std::sync::Arc;
-use std::time::Instant;
-use eframe::emath::vec2;
-use crate::game::units::unit::Unit;
-use crate::game::units::unit_type::UnitType;
 
 pub struct GameGraphics {
     game_data: Arc<GameData>,

@@ -12,7 +12,9 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
 use steamworks::Client;
+use crate::game::collision::spatial_hash_grid::SpatialHashGrid;
 use crate::game::units::attack::Attack;
+use crate::game::units::unit_map::UnitMap;
 
 pub struct StoredData<T: Any + Send + Sync> {
     pub id: &'static str,
@@ -40,4 +42,5 @@ pub const UNITS: StoredData<Vec<Unit>> = StoredData::new("units");
 pub const ATTACKS: StoredData<Vec<Attack>> = StoredData::new("attacks");
 pub const SPRITE_SHEETS: StoredData<HashMap<String, SpriteSheet>> = StoredData::new("sprite_sheets");
 pub const GAME_IN_FOCUS: StoredData<bool> = StoredData::new("game_in_focus");
-// pub const GAME_GRAPHICS: StoredData<Arc<GameGraphicsWGPU>> = StoredData::new("game_graphics");
+pub const SPATIAL_HASH_GRID: StoredData<SpatialHashGrid> = StoredData::new("spatial_hash_grid");
+pub const UNIT_MAP: StoredData<UnitMap> = StoredData::new("unit_map");

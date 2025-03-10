@@ -1,9 +1,12 @@
 use crate::enums::gametab::GameTab;
 use crate::enums::gametab::GameTab::NullGameTab;
+use crate::game::collision::detect_collision::check_unit_collision;
 use crate::game::constants::GAME_RATE;
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::{CAMERA_STATE, CURRENT_TAB, GAME_IN_FOCUS, KEY_STATE, RESOURCES};
+use crate::game::data::stored_data::{CAMERA_STATE, CURRENT_TAB, GAME_IN_FOCUS, KEY_STATE, RESOURCES, SPATIAL_HASH_GRID, UNIT_MAP};
 use crate::game::loops::key_state::KeyState;
+use crate::game::units::unit::{move_unit, Unit};
+use crate::game::units::unit_shape::UnitShape;
 use crate::game::units::unit_type::UnitType;
 use egui::{vec2, Pos2};
 use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
@@ -11,7 +14,9 @@ use std::cmp::min;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread;
+use std::thread::current;
 use std::time::{Duration, Instant};
+use uuid::Uuid;
 
 pub struct GameLoop {
     pub game_data: Arc<GameData>,
@@ -55,32 +60,75 @@ impl GameLoop {
             unit.animation.animation_frame = (unit.animation.animation_frame + delta_time as f32 / unit.animation.animation_length.as_secs_f32()).fract();
         });
     }
-
     fn handle_movement(&self, delta_time: f64) {
         let current_tab = self.game_data.get_field(CURRENT_TAB).unwrap_or(NullGameTab);
         let in_focus = self.game_data.get_field(GAME_IN_FOCUS).unwrap_or(false);
-        let key_state = self.game_data.get_field(KEY_STATE).unwrap_or(Arc::new(KeyState::new()));
 
-        if in_focus && current_tab == GameTab::Adventure {
-            if let Some(player) = self.game_data.units.write().unwrap().par_iter_mut().find_first(|u| u.unit_type == UnitType::Player) {
-                let movement_speed = player.stats.iter()
-                    .find(|stat| stat.name == "movement_speed")
-                    .unwrap()
-                    .amount.to_f32();
-                let distance = movement_speed * delta_time as f32;
+        let unit_movements: Vec<(Uuid, Pos2, Pos2, bool)> = {
+            let Some(spatial_grid) = self.game_data.get_field(SPATIAL_HASH_GRID) else { return; };
+            let Ok(game_units) = self.game_data.units.try_read() else { return; };
+            let key_state = self.game_data.get_field(KEY_STATE).unwrap_or(Arc::new(KeyState::new()));
 
-                if key_state.w.load(Ordering::SeqCst) { player.position.y -= distance; }
-                if key_state.s.load(Ordering::SeqCst) { player.position.y += distance; }
-                if key_state.a.load(Ordering::SeqCst) { player.position.x -= distance; }
-                if key_state.d.load(Ordering::SeqCst) { player.position.x += distance; }
+            let Some(player) = game_units.iter().find(|u| u.unit_type == UnitType::Player) else { return; };
+            let player_position = player.position;
 
-                self.update_camera_position(player.position);
+            game_units
+                .iter()
+                .filter(|unit| {
+                    !(unit.unit_type == UnitType::Player && !(current_tab == GameTab::Adventure && in_focus))
+                })
+                .map(|unit| {
+                    let movement_speed = unit.stats.iter()
+                        .find(|stat| stat.name == "movement_speed")
+                        .map(|stat| stat.amount.to_f32())
+                        .unwrap_or(0.0);
+
+                    let distance = movement_speed * delta_time as f32;
+                    let old_position = unit.position;
+                    let mut new_position = old_position;
+
+                    let collision_detected = match unit.unit_type {
+                        UnitType::Player => {
+                            if key_state.w.load(Ordering::SeqCst) { new_position.y -= distance; }
+                            if key_state.s.load(Ordering::SeqCst) { new_position.y += distance; }
+                            if key_state.a.load(Ordering::SeqCst) { new_position.x -= distance; }
+                            if key_state.d.load(Ordering::SeqCst) { new_position.x += distance; }
+
+                            let collision = check_unit_collision(&unit.id, new_position, &unit.unit_shape, &spatial_grid, &game_units);
+                            if !collision {
+                                self.update_camera_position(*new_position);
+                            }
+                            collision
+                        }
+                        UnitType::Enemy => {
+                            let direction_vec = player_position - old_position;
+                            let direction = direction_vec.normalized();
+                            new_position = old_position + direction * distance;
+
+                            check_unit_collision(&unit.id, new_position, &unit.unit_shape, &spatial_grid, &game_units)
+                        }
+                        _ => false,
+                    };
+
+                    (unit.id, old_position, new_position, collision_detected)
+                })
+                .collect()
+        };
+
+        if let Ok(mut game_units_write) = self.game_data.units.try_write() {
+            let mut spatial_grid = self.game_data.get_field(SPATIAL_HASH_GRID).unwrap();
+            let unit_map = self.game_data.get_field(UNIT_MAP).unwrap();
+
+            for (unit_id, old_position, new_position, collision_detected) in unit_movements {
+                if !collision_detected {
+                    move_unit(&unit_id, old_position, new_position, &mut game_units_write, &unit_map, &mut spatial_grid);
+                }
             }
         }
     }
 
     fn update_camera_position(&self, player_position: Pos2) {
-        let screen_size = self.game_data.graphic_window_size.read().unwrap().unwrap_or((vec2(0.0, 0.0)));
+        let screen_size = self.game_data.graphic_window_size.read().unwrap().unwrap_or(vec2(0.0, 0.0));
 
         self.game_data.update_field(CAMERA_STATE, |camera| {
             let screen_width = screen_size.x;
@@ -119,8 +167,8 @@ impl GameLoop {
 
         loop {
             let now = Instant::now();
-
             self.update();
+            println!("Game_Loop duration: {}", now.elapsed().as_secs_f64());
 
             let elapsed = now.elapsed();
             if elapsed < update_rate {

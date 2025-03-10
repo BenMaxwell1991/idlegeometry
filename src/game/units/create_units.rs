@@ -4,9 +4,10 @@ use crate::game::units::unit::Unit;
 use crate::game::units::unit_type::UnitType;
 use egui::Pos2;
 use std::time::Duration;
+use crate::game::units::unit_shape::UnitShape;
 
 pub fn create_enemy_at_point(handle: &str, pos2: Pos2) -> Unit {
     let stats = vec![DEFAULT_MOVE_SPEED.clone(), DEFAULT_HEALTH.clone(), DEFAULT_MANA.clone()];
     let animation = Animation::new(handle, Duration::from_secs(1));
-    Unit::new(UnitType::Enemy, pos2, stats, animation)
+    Unit::new(UnitType::Enemy, UnitShape::new(16.0, 16.0), pos2, stats, animation)
 }

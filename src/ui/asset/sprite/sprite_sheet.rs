@@ -1,8 +1,8 @@
-use std::fs;
-use std::path::{Path, PathBuf};
 use eframe::egui::{Context, TextureHandle};
 use egui::{ColorImage, TextureOptions};
 use image::{DynamicImage, RgbaImage};
+use std::fs;
+use std::path::PathBuf;
 
 // Sprites
 pub const ADULT_GREEN_DRAGON: &str = "adult_green_dragon";

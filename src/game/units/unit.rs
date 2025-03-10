@@ -1,14 +1,22 @@
+use crate::game::collision::spatial_hash_grid::SpatialHashGrid;
+use crate::game::data::game_data::GameData;
+use crate::game::data::stored_data::{SPATIAL_HASH_GRID, UNIT_MAP};
 use crate::game::resources::resource::Resource;
 use crate::game::serialise::pos2_serialisable::{deserialize_pos2, serialize_pos2};
 use crate::game::units::animation::Animation;
+use crate::game::units::attack::Attack;
+use crate::game::units::unit_map::UnitMap;
+use crate::game::units::unit_shape::UnitShape;
 use crate::game::units::unit_type::UnitType;
 use egui::Pos2;
 use serde::{Deserialize, Serialize};
-use crate::game::units::attack::Attack;
+use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Unit {
+    pub id: Uuid,
     pub unit_type: UnitType,
+    pub unit_shape: UnitShape,
     #[serde(serialize_with = "serialize_pos2", deserialize_with = "deserialize_pos2")]
     pub position: Pos2,
     pub stats: Vec<Resource>,
@@ -17,13 +25,71 @@ pub struct Unit {
 }
 
 impl Unit {
-    pub fn new(unit_type: UnitType, position: Pos2, stats: Vec<Resource>, animation: Animation) -> Self {
+    pub fn new(unit_type: UnitType, unit_shape: UnitShape, position: Pos2, stats: Vec<Resource>, animation: Animation) -> Self {
         Self {
+            id: Uuid::new_v4(),
             unit_type,
+            unit_shape,
             position,
             stats,
             animation,
             attacks: Vec::new(),
         }
     }
+}
+
+pub fn add_units(units: Vec<Unit>, game_data: &GameData) {
+    let mut game_units = game_data.units.write().unwrap();
+    game_data.update_field(UNIT_MAP, |unit_map| {
+        game_data.update_field(SPATIAL_HASH_GRID, |spatial_grid| {
+            game_units.reserve(units.len());
+            unit_map.map.reserve(units.len());
+
+            let unit_start_index = game_units.len();
+
+            for (i, unit) in units.into_iter().enumerate() {
+                let unit_index = unit_start_index + i;
+                let unit_id = unit.id;
+
+                unit_map.map.insert(unit_id, unit_index);
+                spatial_grid.insert_unit(unit_id, unit.position);
+                game_units.push(unit);
+            }
+        });
+    });
+}
+
+pub fn remove_units(unit_ids: Vec<Uuid>, game_data: &GameData) {
+    let mut game_units = game_data.units.write().unwrap();
+    game_data.update_field(UNIT_MAP, |unit_map| {
+        game_data.update_field(SPATIAL_HASH_GRID, |spatial_grid| {
+            for unit_id in &unit_ids {
+                unit_map.map.remove(unit_id);
+            }
+
+            spatial_grid.remove_units(&unit_ids);
+            game_units.retain(|unit| !unit_ids.contains(&unit.id));
+        });
+    });
+}
+
+pub fn move_unit(
+    unit_id: &Uuid,
+    old_position: Pos2,
+    new_position: Pos2,
+    game_units: &mut Vec<Unit>,
+    unit_map: &UnitMap,
+    spatial_grid: &mut SpatialHashGrid,
+) {
+    if let Some(&unit_index) = unit_map.map.get(unit_id) {
+        if let Some(unit) = game_units.get_mut(unit_index) {
+            spatial_grid.remove_unit(unit_id, old_position);
+            unit.position = new_position;
+            spatial_grid.insert_unit(*unit_id, new_position);
+        }
+    }
+}
+
+fn hash_position(pos: Pos2, cell_size: f32) -> (i32, i32) {
+    ((pos.x / cell_size) as i32, (pos.y / cell_size) as i32)
 }
