@@ -1,26 +1,24 @@
 use crate::enums::gametab::GameTab;
+use crate::game::constants::MAX_UNITS;
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::{ATTACKS, CAMERA_STATE, CURRENT_TAB, GAME_MAP, KEY_STATE, PLAYER_POSITION, RESOURCES, SETTINGS, SPATIAL_HASH_GRID, UNIT_MAP};
+use crate::game::data::stored_data::{ATTACKS, CAMERA_STATE, CURRENT_TAB, GAME_MAP, KEY_STATE, PLAYER_POSITION, RESOURCES, SETTINGS};
 use crate::game::loops::key_state::KeyState;
 use crate::game::map::camera_state::CameraState;
 use crate::game::map::game_map::GameMap;
 use crate::game::resources::bignumber::BigNumber;
-use crate::game::resources::resource::{Resource, DEFAULT_HEALTH, DEFAULT_MANA, DEFAULT_MOVE_SPEED};
+use crate::game::resources::resource::{Resource, DEFAULT_MOVE_SPEED, DEFAULT_STATS};
 use crate::game::settings::Settings;
 use crate::game::units::animation::Animation;
+use crate::game::units::attack::Attack;
 use crate::game::units::create_units::create_enemy_at_point;
 use crate::game::units::unit::{add_units, Unit};
+use crate::game::units::unit_shape::UnitShape;
 use crate::game::units::unit_type::UnitType;
 use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, SLASH_ATTACK, YOUNG_RED_DRAGON};
 use eframe::emath::Pos2;
 use rand::random_range;
 use std::sync::Arc;
 use std::time::Duration;
-use crate::game::collision::spatial_hash_grid::SpatialHashGrid;
-use crate::game::constants::MAX_UNITS;
-use crate::game::units::attack::Attack;
-use crate::game::units::unit_map::UnitMap;
-use crate::game::units::unit_shape::UnitShape;
 
 const TILE_SIZE: f32 = 40.0;
 const X_TILE_COUNT: usize = 50;
@@ -71,8 +69,8 @@ fn init_map(game_data: &GameData) {
     game_data.set_field(GAME_MAP, GameMap::new(X_TILE_COUNT, Y_TILE_COUNT, TILE_SIZE));
     game_data.set_field(PLAYER_POSITION, Pos2::new(X_CENTER, Y_CENTER));
     game_data.set_field(CAMERA_STATE, CameraState::new(Pos2::new(X_CENTER, Y_CENTER), 1.0));
-    game_data.set_field(SPATIAL_HASH_GRID, SpatialHashGrid::new().set_reserve(MAX_UNITS));
-    game_data.set_field(UNIT_MAP, UnitMap::new().set_reserve(MAX_UNITS));
+    game_data.unit_map.write().unwrap().set_reserve(MAX_UNITS);
+    game_data.spatial_hash_grid.write().unwrap().set_reserve(MAX_UNITS);
 }
 
 fn init_attacks(game_data: &GameData) {
@@ -87,9 +85,8 @@ fn init_attacks(game_data: &GameData) {
 }
 
 fn init_player(game_data: &GameData) {
-    let stats = vec![DEFAULT_MOVE_SPEED.clone(), DEFAULT_HEALTH.clone(), DEFAULT_MANA.clone()];
     let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_secs(1));
-    let mut player = Unit::new(UnitType::Player, UnitShape::new(16.0, 16.0), Pos2::new(X_CENTER, Y_CENTER), stats, animation);
+    let mut player = Unit::new(UnitType::Player, UnitShape::new(16.0, 16.0), Pos2::new(X_CENTER, Y_CENTER), DEFAULT_MOVE_SPEED, DEFAULT_STATS.clone(), animation);
 
     if let Some(attack) = game_data.get_field(ATTACKS).unwrap().iter().find(|attack| attack.name == SLASH_ATTACK) {
         player.attacks.push(attack.clone());
@@ -105,7 +102,7 @@ fn init_enemies(game_data: &GameData) {
         let map_x = map.width as f32 * map.tile_size;
         let map_y = map.height as f32 * map.tile_size;
 
-        for _i in 0..1000 {
+        for _i in 0..5000 {
             let pos = Pos2::new(random_range(0.0..=map_x), random_range(0.0..=map_y));
             units.push(create_enemy_at_point(YOUNG_RED_DRAGON, pos));
         }

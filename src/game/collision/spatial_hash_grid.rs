@@ -15,9 +15,8 @@ impl SpatialHashGrid {
         Self { grid: HashMap::new() }
     }
 
-    pub fn set_reserve(mut self, size: usize) -> Self {
+    pub fn set_reserve(&mut self, size: usize) {
         self.grid.reserve(size);
-        self
     }
 
     pub fn insert_unit(&mut self, unit_id: Uuid, position: Pos2) {

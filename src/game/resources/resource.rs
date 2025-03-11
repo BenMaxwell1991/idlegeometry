@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::game::resources::bignumber::BigNumber;
 use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
@@ -43,16 +44,7 @@ impl Resource {
     }
 }
 
-pub static DEFAULT_MOVE_SPEED: LazyLock<Resource> = LazyLock::new(|| {
-    Resource::new(
-        "movement_speed",
-        BigNumber::new(400.0),
-        BigNumber::new(0.0),
-        BigNumber::new(0.0),
-        BigNumber::new(0.0),
-        true,
-    )
-});
+pub const DEFAULT_MOVE_SPEED: f32 = 400.0;
 
 pub static DEFAULT_HEALTH: LazyLock<Resource> = LazyLock::new(|| {
     Resource::new(
@@ -74,4 +66,11 @@ pub static DEFAULT_MANA: LazyLock<Resource> = LazyLock::new(|| {
         BigNumber::new(0.0),
         false,
     )
+});
+
+pub static DEFAULT_STATS: LazyLock<HashMap<String, Resource>> = LazyLock::new(|| {
+    let mut stats = HashMap::new();
+    stats.insert(DEFAULT_HEALTH.name.clone(), DEFAULT_HEALTH.clone());
+    stats.insert(DEFAULT_MANA.name.clone(), DEFAULT_MANA.clone());
+    stats
 });

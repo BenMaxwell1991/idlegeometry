@@ -4,12 +4,19 @@ use game::loops::game_loop::GameLoop;
 use game::loops::input_listener::InputListener;
 use std::sync::Arc;
 use std::thread;
+use std::time::Duration;
+use rayon::ThreadPoolBuilder;
 
 mod game;
 mod ui;
 mod enums;
 
 fn main() {
+    ThreadPoolBuilder::new()
+        .num_threads(num_cpus::get_physical())  // Match number of CPU cores
+        .build_global()
+        .unwrap();
+
     let game_data = load_game_or_new();
     println!("Initialised all Game Data");
 
@@ -26,5 +33,8 @@ fn main() {
     thread::spawn(move || input_listener.listen());
     thread::spawn(move || auto_save(game_data_three));
 
+    // loop {
+    //     thread::sleep(Duration::from_millis(100));
+    // }
     create_window(game_data_five).expect("Failed to start UI");
 }

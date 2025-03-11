@@ -13,9 +13,8 @@ impl UnitMap {
         Self { map: HashMap::new() }
     }
 
-    pub fn set_reserve(mut self, size: usize) -> Self {
+    pub fn set_reserve(&mut self, size: usize) {
         self.map.reserve(size);
-        self
     }
 
     pub fn add_unit(&mut self, unit: &Unit, index: usize) {

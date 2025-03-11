@@ -42,5 +42,3 @@ pub const UNITS: StoredData<Vec<Unit>> = StoredData::new("units");
 pub const ATTACKS: StoredData<Vec<Attack>> = StoredData::new("attacks");
 pub const SPRITE_SHEETS: StoredData<HashMap<String, SpriteSheet>> = StoredData::new("sprite_sheets");
 pub const GAME_IN_FOCUS: StoredData<bool> = StoredData::new("game_in_focus");
-pub const SPATIAL_HASH_GRID: StoredData<SpatialHashGrid> = StoredData::new("spatial_hash_grid");
-pub const UNIT_MAP: StoredData<UnitMap> = StoredData::new("unit_map");
