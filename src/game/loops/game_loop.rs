@@ -4,7 +4,7 @@ use crate::game::constants::GAME_RATE;
 use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::{CAMERA_STATE, CURRENT_TAB, GAME_IN_FOCUS, KEY_STATE, RESOURCES};
 use crate::game::loops::key_state::KeyState;
-use crate::game::units::unit::move_unit;
+use crate::game::units::unit::{move_unit, move_units_batched};
 use crate::game::units::unit_type::UnitType;
 use egui::{vec2, Pos2};
 use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
@@ -131,12 +131,12 @@ impl GameLoop {
 
         println!("unit_movements created in {} micro seconds", now.elapsed().as_micros());
 
-        let now = Instant::now();
-        for (unit_id, old_position, new_position) in unit_movements {
-            move_unit(&unit_id, old_position, new_position, &self.game_data);
-        }
-        println!("Moved units in {} micro seconds", now.elapsed().as_micros());
-
+        // let now = Instant::now();
+        move_units_batched(&unit_movements, &self.game_data);
+        // for (unit_id, old_position, new_position) in unit_movements {
+        //     move_unit(&unit_id, old_position, new_position, &self.game_data);
+        // }
+        // println!("Moved units in {} micro seconds", now.elapsed().as_micros());
     }
 
     fn update_camera_position(&self, player_position: Pos2) {

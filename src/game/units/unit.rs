@@ -73,13 +73,47 @@ pub fn remove_units(unit_ids: Vec<Uuid>, game_data: &GameData) {
     game_units.retain(|unit| !unit_ids.contains(&unit.id));
 }
 
+pub fn move_units_batched(
+    unit_positions: &[(Uuid, Pos2, Pos2)],
+    game_data: &GameData,
+) {
+    let mut game_units = match game_data.units.write() {
+        Ok(gu) => gu,
+        Err(_) => return,
+    };
+
+    let unit_map = match game_data.unit_map.read() {
+        Ok(um) => um,
+        Err(_) => return,
+    };
+
+    let mut spatial_grid = match game_data.spatial_hash_grid.write() {
+        Ok(sg) => sg,
+        Err(_) => return,
+    };
+
+    let now = Instant::now();
+    for (unit_id, old_position, new_position) in unit_positions {
+        if let Some(&unit_index) = unit_map.map.get(unit_id) {
+            if let Some(unit) = game_units.get_mut(unit_index) {
+                // spatial_grid.remove_unit(unit_id, *old_position);
+                unit.position = *new_position;
+                // spatial_grid.insert_unit(*unit_id, *new_position);
+                spatial_grid.update_unit_position_in_grid(unit_id, *old_position, *new_position)
+                // println!("Spatial Grid Size: {}", spatial_grid.grid.iter().len());
+            }
+        }
+    }
+    println!("Moved units in {} micro seconds", now.elapsed().as_micros());
+}
+
+
 pub fn move_unit(
     unit_id: &Uuid,
     old_position: Pos2,
     new_position: Pos2,
     game_data: &GameData, // ✅ Pass GameData reference instead of separate fields
 ) {
-    let now = Instant::now();
     let mut game_units = match game_data.units.write() {
         Ok(gu) => gu,
         Err(_) => return, // Handle lock failure
@@ -94,7 +128,6 @@ pub fn move_unit(
         Ok(sg) => sg,
         Err(_) => return, // Handle lock failure
     };
-    println!("Got Locks in: {}", now.elapsed().as_nanos());
 
     if let Some(&unit_index) = unit_map.map.get(unit_id) {
         if let Some(unit) = game_units.get_mut(unit_index) {

@@ -7,7 +7,7 @@ const CELL_SIZE: f32 = 20.0;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SpatialHashGrid {
-    grid: HashMap<(i32, i32), Vec<Uuid>>,
+    pub grid: HashMap<(i32, i32), Vec<Uuid>>,
 }
 
 impl SpatialHashGrid {
@@ -55,6 +55,21 @@ impl SpatialHashGrid {
         }
     }
 
+    pub(crate) fn update_unit_position_in_grid(
+        &mut self,
+        unit_id: &Uuid,
+        old_position: Pos2,
+        new_position: Pos2,
+    ) {
+        let old_cell = hash_position(old_position, CELL_SIZE);
+        let new_cell = hash_position(new_position, CELL_SIZE);
+
+        if old_cell != new_cell {
+            self.remove_unit(unit_id, old_position);
+            self.insert_unit(*unit_id, new_position);
+        }
+    }
+
     pub fn remove_units(&mut self, unit_ids: &Vec<Uuid>) {
         for (_, ids) in self.grid.iter_mut() {
             ids.retain(|id| !unit_ids.contains(id));
@@ -66,6 +81,6 @@ impl SpatialHashGrid {
     }
 }
 
-fn hash_position(pos: Pos2, cell_size: f32) -> (i32, i32) {
+pub fn hash_position(pos: Pos2, cell_size: f32) -> (i32, i32) {
     ((pos.x / cell_size) as i32, (pos.y / cell_size) as i32)
 }

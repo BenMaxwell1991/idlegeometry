@@ -33,8 +33,8 @@ fn main() {
     thread::spawn(move || input_listener.listen());
     thread::spawn(move || auto_save(game_data_three));
 
-    // loop {
-    //     thread::sleep(Duration::from_millis(100));
-    // }
-    create_window(game_data_five).expect("Failed to start UI");
+    loop {
+        thread::sleep(Duration::from_millis(100));
+    }
+    // create_window(game_data_five).expect("Failed to start UI");
 }
