@@ -1,18 +1,19 @@
 use crate::game::collision::spatial_hash_grid::SpatialHashGrid;
 use crate::game::data::stored_data::StoredData;
 use crate::game::units::unit::Unit;
-use crate::game::units::unit_map::UnitMap;
 use egui::Vec2;
 use glow::Context;
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use eframe::emath::Pos2;
 
 #[derive(Clone)]
 pub struct GameData {
     pub store: Arc<RwLock<HashMap<String, Arc<RwLock<Box<dyn Any + Send + Sync>>>>>>,
-    pub units: Arc<RwLock<Vec<Unit>>>,
-    pub unit_map: Arc<RwLock<UnitMap>>,
+    pub units: Arc<RwLock<Vec<Option<Unit>>>>,
+    pub unit_positions: Arc<RwLock<Vec<Pos2>>>,
+    pub empty_unit_indexes: Arc<RwLock<Vec<u32>>>,
     pub spatial_hash_grid: Arc<RwLock<SpatialHashGrid>>,
     pub gl_context: Arc<RwLock<Option<Arc<Context>>>>,
     pub graphic_window_size: Arc<RwLock<Option<Vec2>>>
@@ -23,7 +24,8 @@ impl GameData {
         Self {
             store: Arc::new(RwLock::new(HashMap::new())),
             units: Arc::new(RwLock::new(Vec::new())),
-            unit_map: Arc::new(RwLock::new(UnitMap::new())),
+            unit_positions: Arc::new(RwLock::new(Vec::new())),
+            empty_unit_indexes: Arc::new(RwLock::new(Vec::new())),
             spatial_hash_grid: Arc::new(RwLock::new(SpatialHashGrid::new())),
             gl_context: Arc::new(RwLock::new(None)),
             graphic_window_size: Arc::new(RwLock::new(None)),

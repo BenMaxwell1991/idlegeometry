@@ -43,33 +43,43 @@ impl GameGraphics {
     }
 
     fn draw_units(&self, painter: &Painter, rect: &Rect, camera_state: &CameraState) {
-        let sprite_sheets = self.game_data.get_field(SPRITE_SHEETS).unwrap();
-        let units = self.game_data.units.read().unwrap();
-        let unit_screen_positions: Vec<_> = units.iter()
-            .map(|unit| world_to_screen(unit.position, camera_state, rect))
-            .collect();
+        let sprite_sheets = self.game_data.get_field(SPRITE_SHEETS);
+        let units_lock = self.game_data.units.read().unwrap();
+        let unit_positions_lock = self.game_data.unit_positions.read().unwrap();
 
         let mut images_to_draw = Vec::new();
         let mut rects_to_draw = Vec::new();
         let mut player_to_draw = Vec::new();
 
-        for (unit, unit_screen_position) in units.iter().zip(unit_screen_positions) {
-            if !rect.contains(unit_screen_position) { continue; }
+        for unit_option in units_lock.iter() {
+            if let Some(unit) = unit_option {
+                // match unit.unit_type {
+                //     UnitType::Player => println!("position: {:?}", unit.position),
+                //     _ => {}
+                // }
+                let unit_screen_position = world_to_screen(unit_positions_lock[unit.id as usize], camera_state, rect);
 
-            let unit_size = Vec2::new(20.0, 20.0) * camera_state.zoom;
-            let unit_rect = Rect::from_center_size(unit_screen_position, unit_size);
+                if !rect.contains(unit_screen_position) {
+                    continue;
+                }
 
-            if (unit_size.x < 5.0 || unit_size.y < 5.0) && unit.unit_type != UnitType::Player {
-                rects_to_draw.push(unit_rect);
-                continue;
-            }
+                let unit_size = Vec2::new(20.0, 20.0) * camera_state.zoom;
+                let unit_rect = Rect::from_center_size(unit_screen_position, unit_size);
 
-            if let Some(sprite_sheet) = sprite_sheets.get(&unit.animation.sprite_key) {
-                let frame_index = (unit.animation.animation_frame * sprite_sheet.get_frame_count() as f32).trunc() as usize;
-                let frame = sprite_sheet.get_frame(frame_index);
-                match unit.unit_type {
-                    UnitType::Player => { player_to_draw.push((frame.id(), unit_rect)); }
-                    UnitType::Enemy => { images_to_draw.push((frame.id(), unit_rect)); }
+                if (unit_size.x < 5.0 || unit_size.y < 5.0) && unit.unit_type != UnitType::Player {
+                    rects_to_draw.push(unit_rect);
+                    continue;
+                }
+
+                if let Some(sprite_sheets) = sprite_sheets.as_ref() {
+                    if let Some(sprite_sheet) = sprite_sheets.get(&unit.animation.sprite_key) {
+                        let frame_index = (unit.animation.animation_frame * sprite_sheet.get_frame_count() as f32).trunc() as usize;
+                        let frame = sprite_sheet.get_frame(frame_index);
+                        match unit.unit_type {
+                            UnitType::Player => player_to_draw.push((frame.id(), unit_rect)),
+                            UnitType::Enemy => images_to_draw.push((frame.id(), unit_rect)),
+                        }
+                    }
                 }
             }
         }

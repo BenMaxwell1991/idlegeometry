@@ -4,6 +4,7 @@ use crate::game::map::camera_state::CameraState;
 use crate::game::map::game_map::GameMap;
 use crate::game::resources::resource::Resource;
 use crate::game::settings::Settings;
+use crate::game::units::attack::Attack;
 use crate::game::units::unit::Unit;
 use crate::ui::asset::sprite::sprite_sheet::SpriteSheet;
 use egui::Pos2;
@@ -12,9 +13,6 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
 use steamworks::Client;
-use crate::game::collision::spatial_hash_grid::SpatialHashGrid;
-use crate::game::units::attack::Attack;
-use crate::game::units::unit_map::UnitMap;
 
 pub struct StoredData<T: Any + Send + Sync> {
     pub id: &'static str,

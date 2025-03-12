@@ -69,8 +69,6 @@ fn init_map(game_data: &GameData) {
     game_data.set_field(GAME_MAP, GameMap::new(X_TILE_COUNT, Y_TILE_COUNT, TILE_SIZE));
     game_data.set_field(PLAYER_POSITION, Pos2::new(X_CENTER, Y_CENTER));
     game_data.set_field(CAMERA_STATE, CameraState::new(Pos2::new(X_CENTER, Y_CENTER), 1.0));
-    game_data.unit_map.write().unwrap().set_reserve(MAX_UNITS);
-    game_data.spatial_hash_grid.write().unwrap().set_reserve(MAX_UNITS);
 }
 
 fn init_attacks(game_data: &GameData) {
@@ -86,27 +84,29 @@ fn init_attacks(game_data: &GameData) {
 
 fn init_player(game_data: &GameData) {
     let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_secs(1));
-    let mut player = Unit::new(UnitType::Player, UnitShape::new(16.0, 16.0), Pos2::new(X_CENTER, Y_CENTER), DEFAULT_MOVE_SPEED, DEFAULT_STATS.clone(), animation);
+    let mut player = Unit::new(UnitType::Player, UnitShape::new(16.0, 16.0), DEFAULT_MOVE_SPEED, DEFAULT_STATS.clone(), animation);
 
     if let Some(attack) = game_data.get_field(ATTACKS).unwrap().iter().find(|attack| attack.name == SLASH_ATTACK) {
         player.attacks.push(attack.clone());
     }
 
-    add_units(vec![player], game_data);
+    add_units(vec![player], vec![Pos2::new(X_CENTER, Y_CENTER)], game_data);
 }
 
 fn init_enemies(game_data: &GameData) {
     if let Some(map) = game_data.get_field(GAME_MAP) {
         let mut units = vec![];
+        let mut positions = vec![];
 
         let map_x = map.width as f32 * map.tile_size;
         let map_y = map.height as f32 * map.tile_size;
 
-        for _i in 0..5000 {
+        for _i in 0..999 {
             let pos = Pos2::new(random_range(0.0..=map_x), random_range(0.0..=map_y));
-            units.push(create_enemy_at_point(YOUNG_RED_DRAGON, pos));
+            units.push(create_enemy_at_point(YOUNG_RED_DRAGON));
+            positions.push(pos);
         }
 
-        add_units(units, game_data);
+        add_units(units, positions, game_data);
     }
 }
