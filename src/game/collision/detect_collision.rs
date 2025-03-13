@@ -3,6 +3,7 @@ use crate::game::maths::pos_2::{normalize_i64_upscaled, project_onto_i64, Pos2Fi
 use crate::game::units::unit_shape::UnitShape;
 use rayon::iter::*;
 use rayon::slice::ParallelSliceMut;
+use crate::game::units::unit_type::UnitType;
 
 pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2FixedPoint)], game_data: &GameData) {
     let spatial_grid = game_data.spatial_hash_grid.read().unwrap();
@@ -15,6 +16,8 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
         .for_each(|chunk| {
             for (unit_id, old_position, new_position) in chunk {
                 let Some(unit) = units.get(*unit_id as usize).and_then(|u| u.as_ref()) else { continue; };
+                if unit.unit_type == UnitType::Player {continue};
+
                 let unit_shape = &unit.unit_shape;
 
                 let nearby_unit_ids = spatial_grid.get_nearby_units(*new_position);
@@ -85,13 +88,11 @@ fn compute_collision_normal_upscaled(pos1: Pos2FixedPoint, shape1: &UnitShape, p
     let x_overlap = (max1.x - min2.x).min(max2.x - min1.x);
     let y_overlap = (max1.y - min2.y).min(max2.y - min1.y);
 
-    let total_overlap = (x_overlap as i64 + y_overlap as i64).max(1); // Avoid division by zero
+    let total_overlap = (x_overlap as i64 + y_overlap as i64).max(1);
 
-    // Compute the normal direction based on overlap ratio
     let mut normal_x = (x_overlap as i64 * FIXED_POINT_SCALE as i64) / total_overlap;
     let mut normal_y = (y_overlap as i64 * FIXED_POINT_SCALE as i64) / total_overlap;
 
-    // Assign sign based on collision direction
     if min1.x > min2.x { normal_x = -normal_x; }
     if min1.y > min2.y { normal_y = -normal_y; }
 

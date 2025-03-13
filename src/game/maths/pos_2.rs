@@ -1,3 +1,5 @@
+use crate::game::maths::integers::fast_inverse_sqrt_f32;
+
 pub const INVALID_POSITION: i32 = i32::MIN; // -2,147,483,648
 pub const FIXED_POINT_SCALE: i32 = 1024;
 pub const FIXED_POINT_SHIFT: i32 = 10;
@@ -102,21 +104,4 @@ pub fn project_onto_i64(a: Pos2FixedPoint, normal: Pos2FixedPoint) -> (i64, i64)
     let projected_y = scaled_y / normal_mag_sq;
 
     (projected_x, projected_y)
-}
-
-
-#[inline(always)]
-pub fn fast_inverse_sqrt_f32(x: f32) -> f32 {
-    if x <= 0.0 {
-        return 0.0;
-    }
-
-    let half_x = 0.5 * x;
-    let mut i: i32 = x.to_bits() as i32;
-    i = 0x5f3759df - (i >> 1);
-    let mut y = f32::from_bits(i as u32);
-
-    y = y * (1.5 - (half_x * y * y));
-
-    y
 }

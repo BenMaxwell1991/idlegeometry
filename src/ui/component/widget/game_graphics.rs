@@ -118,8 +118,8 @@ impl Widget for GameGraphics {
 
 fn world_to_screen(world_pos: Pos2FixedPoint, camera: &CameraState, rect: &Rect) -> Pos2 {
     Pos2::new(
-        ((world_pos.x - camera.camera_pos.x) as f32 * camera.get_zoom_scaled() / FIXED_POINT_SCALE as f32) + rect.center().x,
-        ((world_pos.y - camera.camera_pos.y) as f32 * camera.get_zoom_scaled() / FIXED_POINT_SCALE as f32) + rect.center().y,
+        ((world_pos.x as i64 - camera.camera_pos.x as i64) as f32 * camera.get_zoom_scaled() / FIXED_POINT_SCALE as f32) + rect.center().x,
+        ((world_pos.y as i64 - camera.camera_pos.y as i64) as f32 * camera.get_zoom_scaled() / FIXED_POINT_SCALE as f32) + rect.center().y,
     )
 }
 

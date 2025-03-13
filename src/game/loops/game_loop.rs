@@ -157,8 +157,8 @@ impl GameLoop {
             let screen_width = screen_size.x;
             let screen_height = screen_size.y;
 
-            let box_width = ((FIXED_POINT_SCALE as f32 * screen_width) / (2.0 * camera.get_zoom_scaled())) as i32;
-            let box_height = ((FIXED_POINT_SCALE as f32 * screen_height) / (2.0 * camera.get_zoom_scaled())) as i32;
+            let box_width = ((FIXED_POINT_SCALE as f32 * screen_width) / (3.0 * camera.get_zoom_scaled())) as i32;
+            let box_height = ((FIXED_POINT_SCALE as f32 * screen_height) / (3.0 * camera.get_zoom_scaled())) as i32;
 
             let min_x = camera.target_pos.x - (box_width >> 1);
             let max_x = camera.target_pos.x + (box_width >> 1);
