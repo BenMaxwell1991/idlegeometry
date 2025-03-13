@@ -8,14 +8,14 @@ use std::time::Duration;
 
 pub struct InputListener {
     game_data: Arc<GameData>,
-    target_zoom: Arc<Mutex<f32>>,
+    target_zoom: Arc<Mutex<i32>>,
 }
 
 impl InputListener {
     pub fn new(game_data: Arc<GameData>) -> Self {
         Self {
             game_data,
-            target_zoom: Arc::new(Mutex::new(1.0)),
+            target_zoom: Arc::new(Mutex::new(1_024)),
         }
     }
 
@@ -37,8 +37,8 @@ impl InputListener {
                 EventType::Wheel { delta_y, .. } => {
                     if delta_y != 0 {
                         let mut target_zoom = target_zoom_two.lock().unwrap();
-                        *target_zoom += delta_y as f32 * 0.1;
-                        *target_zoom = target_zoom.clamp(0.2, 5.0); // Keep within limits
+                        *target_zoom += (delta_y as i32) << 7;
+                        *target_zoom = target_zoom.clamp(256, 4_096); // Keep within limits
                     }
                 }
                 _ => (),
@@ -48,15 +48,15 @@ impl InputListener {
         }
     }
 
-    fn smooth_zoom(game_data: Arc<GameData>, target_zoom: Arc<Mutex<f32>>) {
-        let steps = 10;
-        let step_duration = Duration::from_millis(100) / steps;
+    fn smooth_zoom(game_data: Arc<GameData>, target_zoom: Arc<Mutex<i32>>) {
+        let steps_bits = 3;
+        let step_duration = Duration::from_millis(100 >> steps_bits);
 
         loop {
             let target_zoom = *target_zoom.lock().unwrap();
             game_data.update_field(CAMERA_STATE, |camera| {
                 let current_zoom = camera.zoom;
-                let zoom_step = (target_zoom - current_zoom) / steps as f32;
+                let zoom_step = (target_zoom - current_zoom) >> steps_bits;
                 camera.set_zoom(current_zoom + zoom_step);
             });
 

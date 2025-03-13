@@ -1,18 +1,15 @@
-use std::time::Instant;
+use crate::game::data::game_data::GameData;
+use crate::game::maths::pos_2::Pos2FixedPoint;
 use crate::game::units::unit_shape::UnitShape;
-use egui::Pos2;
 use rayon::iter::*;
 use rayon::slice::ParallelSliceMut;
-use crate::game::data::game_data::GameData;
 
-pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2, Pos2)], game_data: &GameData) {
+pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2FixedPoint)], game_data: &GameData) {
     let spatial_grid = game_data.spatial_hash_grid.read().unwrap();
     let unit_positions = game_data.unit_positions.read().unwrap();
     let units = game_data.units.read().unwrap();
+    let chunk_size = ((unit_positions_updates.len() / rayon::current_num_threads()).max(1)).max(1);
 
-    let chunk_size = (unit_positions_updates.len() / rayon::current_num_threads()).max(1);
-
-    let now = Instant::now();
     unit_positions_updates
         .par_chunks_mut(chunk_size)
         .for_each(|chunk| {
@@ -32,16 +29,15 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2, Pos2)], game_d
                     let other_unit_pos = unit_positions[other_unit_id as usize];
 
                     if rectangles_collide(*new_position, unit_shape, other_unit_pos, other_unit_shape) {
-                        *new_position = *old_position; // Revert movement on collision
-                        break; // Exit early once collision is detected
+                        *new_position = *old_position;
+                        break;
                     }
                 }
             }
         });
-    println!("Checked all collisions in: {}", now.elapsed().as_micros());
 }
 
-pub fn rectangles_collide(pos1: Pos2, shape1: &UnitShape, pos2: Pos2, shape2: &UnitShape) -> bool {
+pub fn rectangles_collide(pos1: Pos2FixedPoint, shape1: &UnitShape, pos2: Pos2FixedPoint, shape2: &UnitShape) -> bool {
     let (min1, max1) = shape1.bounding_box(pos1);
     let (min2, max2) = shape2.bounding_box(pos2);
 

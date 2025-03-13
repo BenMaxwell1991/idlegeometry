@@ -8,3 +8,4 @@ pub mod constants;
 pub mod serialise;
 pub mod collision;
 pub(crate) mod helper;
+pub mod maths;

@@ -1,18 +1,18 @@
 use crate::game::collision::spatial_hash_grid::SpatialHashGrid;
 use crate::game::data::stored_data::StoredData;
+use crate::game::maths::pos_2::Pos2FixedPoint;
 use crate::game::units::unit::Unit;
 use egui::Vec2;
 use glow::Context;
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use eframe::emath::Pos2;
 
 #[derive(Clone)]
 pub struct GameData {
     pub store: Arc<RwLock<HashMap<String, Arc<RwLock<Box<dyn Any + Send + Sync>>>>>>,
     pub units: Arc<RwLock<Vec<Option<Unit>>>>,
-    pub unit_positions: Arc<RwLock<Vec<Pos2>>>,
+    pub unit_positions: Arc<RwLock<Vec<Pos2FixedPoint>>>,
     pub empty_unit_indexes: Arc<RwLock<Vec<u32>>>,
     pub spatial_hash_grid: Arc<RwLock<SpatialHashGrid>>,
     pub gl_context: Arc<RwLock<Option<Arc<Context>>>>,

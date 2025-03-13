@@ -7,6 +7,7 @@ use eframe::egui::{Color32, Id, Sense, Ui, Vec2, Widget};
 use egui::{Painter, Pos2, Rect, Response, Stroke, StrokeKind};
 use std::hash::Hash;
 use std::sync::Arc;
+use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE, FIXED_POINT_SHIFT};
 
 pub struct GameGraphics {
     game_data: Arc<GameData>,
@@ -21,15 +22,15 @@ impl GameGraphics {
         }
     }
 
-    fn draw_map(&self, painter: &egui::Painter, rect: &Rect, camera_state: &CameraState) {
+    fn draw_map(&self, painter: &Painter, rect: &Rect, camera_state: &CameraState) {
         if let Some(game_map) = self.game_data.get_field(GAME_MAP) {
             let tile_size = game_map.tile_size * camera_state.zoom;
 
             for (&(x, y), tile) in &game_map.tiles {
-                let world_pos = Pos2::new(x as f32 * game_map.tile_size, y as f32 * game_map.tile_size);
+                let world_pos = Pos2FixedPoint::new(x as i32 * game_map.tile_size, y as i32 * game_map.tile_size);
                 let screen_pos = world_to_screen(world_pos, camera_state, rect);
 
-                let tile_rect = Rect::from_min_size(screen_pos, Vec2::new(tile_size, tile_size));
+                let tile_rect = Rect::from_min_size(screen_pos, Vec2::new(tile_size as f32, tile_size as f32));
 
                 let color = match tile.tile_type {
                     TileType::Wall => Color32::DARK_GRAY,
@@ -53,17 +54,20 @@ impl GameGraphics {
 
         for unit_option in units_lock.iter() {
             if let Some(unit) = unit_option {
-                // match unit.unit_type {
-                //     UnitType::Player => println!("position: {:?}", unit.position),
-                //     _ => {}
-                // }
+                if unit.unit_type == UnitType::Player {
+                    let test = unit_positions_lock[unit.id as usize];
+                    let test2 = camera_state;
+                    let test3 = rect;
+                    let x = 0;
+                }
+
                 let unit_screen_position = world_to_screen(unit_positions_lock[unit.id as usize], camera_state, rect);
 
                 if !rect.contains(unit_screen_position) {
                     continue;
                 }
 
-                let unit_size = Vec2::new(20.0, 20.0) * camera_state.zoom;
+                let unit_size = Vec2::new(20.0, 20.0) * camera_state.zoom as f32;
                 let unit_rect = Rect::from_center_size(unit_screen_position, unit_size);
 
                 if (unit_size.x < 5.0 || unit_size.y < 5.0) && unit.unit_type != UnitType::Player {
@@ -119,10 +123,10 @@ impl Widget for GameGraphics {
     }
 }
 
-fn world_to_screen(world_pos: Pos2, camera: &CameraState, rect: &Rect) -> Pos2 {
+fn world_to_screen(world_pos: Pos2FixedPoint, camera: &CameraState, rect: &Rect) -> Pos2 {
     Pos2::new(
-        (world_pos.x - camera.camera_pos.x) * camera.zoom + rect.center().x,
-        (world_pos.y - camera.camera_pos.y) * camera.zoom + rect.center().y,
+        (world_pos.x - camera.camera_pos.x) as f32 * camera.zoom as f32 + rect.center().x / FIXED_POINT_SCALE as f32,
+        (world_pos.y - camera.camera_pos.y) as f32 * camera.zoom as f32 + rect.center().y / FIXED_POINT_SCALE as f32,
     )
 }
 

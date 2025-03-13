@@ -6,11 +6,11 @@ pub struct GameMap {
     pub width: usize,
     pub height: usize,
     pub tiles: HashMap<(usize, usize), GameTile>,
-    pub tile_size: f32,
+    pub tile_size: i32,
 }
 
 impl GameMap {
-    pub fn new(width: usize, height: usize, tile_size: f32) -> Self {
+    pub fn new(width: usize, height: usize, tile_size: i32) -> Self {
         let mut tiles = HashMap::new();
 
         for x in 0..width {

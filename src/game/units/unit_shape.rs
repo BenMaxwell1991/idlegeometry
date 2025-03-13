@@ -1,24 +1,24 @@
-use egui::Pos2;
-use serde::{Serialize, Deserialize};
+use crate::game::maths::pos_2::Pos2FixedPoint;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UnitShape {
-    pub width: f32,
-    pub height: f32,
+    pub width: i32,
+    pub height: i32,
 }
 
 impl UnitShape {
-    pub fn new(width: f32, height: f32) -> Self {
+    pub fn new(width: i32, height: i32) -> Self {
         Self {
             width,
             height,
         }
     }
 
-    pub fn bounding_box(&self, position: Pos2) -> (Pos2, Pos2) {
+    pub fn bounding_box(&self, position: Pos2FixedPoint) -> (Pos2FixedPoint, Pos2FixedPoint) {
         (
-            Pos2::new(position.x - self.width / 2.0, position.y - self.height / 2.0),
-            Pos2::new(position.x + self.width / 2.0, position.y + self.height / 2.0),
+            Pos2FixedPoint::new((position.x - self.width) >> 1, (position.y - self.height) >> 1),
+            Pos2FixedPoint::new((position.x + self.width) >> 1, (position.y + self.height) >> 1),
         )
     }
 }

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use crate::game::resources::bignumber::BigNumber;
 use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
+use crate::game::maths::pos_2::FIXED_POINT_SCALE;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Resource {
@@ -44,7 +45,7 @@ impl Resource {
     }
 }
 
-pub const DEFAULT_MOVE_SPEED: f32 = 400.0;
+pub const DEFAULT_MOVE_SPEED: i32 = 400 * FIXED_POINT_SCALE;
 
 pub static DEFAULT_HEALTH: LazyLock<Resource> = LazyLock::new(|| {
     Resource::new(
