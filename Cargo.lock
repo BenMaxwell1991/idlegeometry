@@ -1754,6 +1754,7 @@ dependencies = [
 name = "idlegeometry"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
  "chrono",
  "device_query_revamped",
  "eframe",

@@ -1,28 +1,28 @@
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::{CAMERA_STATE, GAME_MAP, SPRITE_SHEETS};
+use crate::game::data::stored_data::{GAME_MAP, SPRITE_SHEETS};
 use crate::game::map::camera_state::CameraState;
 use crate::game::map::tile_type::TileType;
 use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 use crate::game::units::unit_type::UnitType;
-use eframe::egui::{Color32, Id, Sense, Ui, Vec2, Widget};
+use eframe::egui::{Color32, Sense, Ui, Vec2, Widget};
+use eframe::Frame;
 use egui::{Painter, Pos2, Rect, Response, Stroke, StrokeKind};
 use std::hash::Hash;
 use std::sync::Arc;
+use glow::*;
+use crate::ui::graphics::gl::{create_shader_program, draw_map};
 
-pub struct GameGraphics {
+pub struct GameGraphics<'a> {
     game_data: Arc<GameData>,
-    id: Id,
+    frame: &'a mut Frame,
 }
 
-impl GameGraphics {
-    pub fn new(game_data: Arc<GameData>, id_salt: impl Hash) -> Self {
-        Self {
-            game_data,
-            id: Id::new(id_salt),
-        }
+impl<'a> GameGraphics<'a> {
+    pub fn new(game_data: Arc<GameData>, frame: &'a mut Frame) -> Self {
+        Self { game_data, frame }
     }
 
-    fn draw_map(&self, painter: &Painter, rect: &Rect, camera_state: &CameraState) {
+    fn draw_map_old(&self, painter: &Painter, rect: &Rect, camera_state: &CameraState) {
         if let Some(game_map) = self.game_data.get_field(GAME_MAP) {
             let tile_size =  camera_state.get_zoom_scaled() * game_map.tile_size as f32 / FIXED_POINT_SCALE as f32;
 
@@ -95,28 +95,57 @@ impl GameGraphics {
     }
 }
 
-impl Widget for GameGraphics {
+impl<'a> Widget for GameGraphics<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
-        let camera_state = self.game_data.get_field(CAMERA_STATE).unwrap_or(CameraState::default());
         let available_size = ui.available_size_before_wrap();
         let (rect, response) = ui.allocate_exact_size(available_size, Sense::click());
 
-        let mut painter = ui.painter().clone();
-        painter.set_clip_rect(rect);
+        let mut renderer_lock = self.game_data.offscreen_renderer.write().unwrap();
+        if let Some(renderer) = renderer_lock.as_ref() {
+            let gl = renderer.get_gl();
+            let width = rect.width();
+            let height = rect.height();
 
-        let game_data_one = Arc::clone(&self.game_data);
-        check_window_size(game_data_one, rect);
+            let game_data_one = Arc::clone(&self.game_data);
+            check_window_size(game_data_one, rect);
+            let camera_state_cloned = self.game_data.camera_state.read().unwrap().clone();
 
-        self.draw_map(&painter, &rect, &camera_state);
-        self.draw_units(&painter, &rect, &camera_state);
+            renderer.bind();
+            unsafe {
+                gl.viewport(0, 0, width as i32, height as i32);
+                gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
+                gl.clear_color(0.0, 0.0, 0.0, 1.0);
+                // draw_red_rectangle(&gl, width , height);
+                draw_map(gl, &self.game_data, &rect, &camera_state_cloned);
+            }
+            renderer.unbind();
 
-        painter.rect_stroke(rect, 5.0, Stroke::new(3.0, Color32::from_rgb(100, 0, 100)), StrokeKind::Inside);
+            let texture_id = self.frame.register_native_glow_texture(renderer.get_texture());
+            let uv = Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(1.0, 1.0));
+            let tint = Color32::WHITE;
+            ui.painter().image(texture_id, rect, uv, tint);
+            ui.painter().rect_stroke(rect, 5.0, Stroke::new(3.0, Color32::from_rgb(100, 0, 100)), StrokeKind::Inside);
+
+            return response
+        }
+
+        // let mut painter = ui.painter().clone();
+        // painter.set_clip_rect(rect);
+        //
+        // let game_data_one = Arc::clone(&self.game_data);
+        // check_window_size(game_data_one, rect);
+        // let camera_state_cloned = self.game_data.camera_state.read().unwrap().clone();
+        //
+        // self.draw_map(&painter, &rect, &camera_state_cloned);
+        // self.draw_units(&painter, &rect, &camera_state_cloned);
+        //
+        // painter.rect_stroke(rect, 5.0, Stroke::new(3.0, Color32::from_rgb(100, 0, 100)), StrokeKind::Inside);
 
         response
     }
 }
 
-fn world_to_screen(world_pos: Pos2FixedPoint, camera: &CameraState, rect: &Rect) -> Pos2 {
+pub(crate) fn world_to_screen(world_pos: Pos2FixedPoint, camera: &CameraState, rect: &Rect) -> Pos2 {
     Pos2::new(
         ((world_pos.x as i64 - camera.camera_pos.x as i64) as f32 * camera.get_zoom_scaled() / FIXED_POINT_SCALE as f32) + rect.center().x,
         ((world_pos.y as i64 - camera.camera_pos.y as i64) as f32 * camera.get_zoom_scaled() / FIXED_POINT_SCALE as f32) + rect.center().y,

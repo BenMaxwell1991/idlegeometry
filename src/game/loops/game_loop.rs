@@ -3,8 +3,9 @@ use crate::enums::gametab::GameTab::NullGameTab;
 use crate::game::collision::detect_collision::handle_collision;
 use crate::game::constants::GAME_RATE;
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::{CAMERA_STATE, CURRENT_TAB, GAME_IN_FOCUS, KEY_STATE, RESOURCES};
+use crate::game::data::stored_data::{CURRENT_TAB, GAME_IN_FOCUS, KEY_STATE, RESOURCES};
 use crate::game::loops::key_state::KeyState;
+use crate::game::map::camera_state::CameraState;
 use crate::game::maths::integers::int_sqrt_64;
 use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 use crate::game::units::unit::move_units_batched;
@@ -42,13 +43,9 @@ impl GameLoop {
             }
         });
 
+        self.handle_attacks(delta_time);
         self.handle_animations(delta_time);
         self.handle_movement(delta_time);
-        self.handle_attacks(delta_time);
-
-        self.game_data.update_field(CAMERA_STATE, |camera| {
-            camera.update_position(delta_time, 7.0 * camera.get_zoom_scaled());
-        });
     }
 
     fn handle_attacks(&self, delta_time: f64) {
@@ -87,8 +84,6 @@ impl GameLoop {
                     None
                 }
             }).unwrap();
-
-        self.update_camera_position(player_position);
 
         let game_units_len = game_units.len();
         let num_threads = current_num_threads();
@@ -146,49 +141,58 @@ impl GameLoop {
         drop(game_units);
         drop(unit_positions);
 
-        handle_collision(&mut unit_movements, &self.game_data);
-        move_units_batched(&unit_movements, &self.game_data);
+        // Acquire camera lock while moving both camera and units, to avoid flickering:
+        {
+            let mut camera_state = self.game_data.camera_state.write().unwrap();
+            self.update_camera_position(player_position, &mut *camera_state);
+
+            // Update units
+            handle_collision(&mut unit_movements, &self.game_data);
+            move_units_batched(&unit_movements, &self.game_data);
+
+            // Update Camera
+            let zoom = camera_state.get_zoom_scaled();
+            camera_state.update_position(delta_time, 7.0 * zoom);
+        }
+
     }
 
-    fn update_camera_position(&self, player_position: Pos2FixedPoint) {
+    fn update_camera_position(&self, player_position: Pos2FixedPoint, camera_state: &mut CameraState) {
         let screen_size = self.game_data.graphic_window_size.read().unwrap().unwrap_or(vec2(0.0, 0.0));
+        let screen_width = screen_size.x;
+        let screen_height = screen_size.y;
 
-        self.game_data.update_field(CAMERA_STATE, |camera| {
-            let screen_width = screen_size.x;
-            let screen_height = screen_size.y;
+        let box_width = ((FIXED_POINT_SCALE as f32 * screen_width) / (3.0 * camera_state.get_zoom_scaled())) as i32;
+        let box_height = ((FIXED_POINT_SCALE as f32 * screen_height) / (3.0 * camera_state.get_zoom_scaled())) as i32;
 
-            let box_width = ((FIXED_POINT_SCALE as f32 * screen_width) / (3.0 * camera.get_zoom_scaled())) as i32;
-            let box_height = ((FIXED_POINT_SCALE as f32 * screen_height) / (3.0 * camera.get_zoom_scaled())) as i32;
+        let min_x = camera_state.target_pos.x - (box_width >> 1);
+        let max_x = camera_state.target_pos.x + (box_width >> 1);
+        let min_y = camera_state.target_pos.y - (box_height >> 1);
+        let max_y = camera_state.target_pos.y + (box_height >> 1);
 
-            let min_x = camera.target_pos.x - (box_width >> 1);
-            let max_x = camera.target_pos.x + (box_width >> 1);
-            let min_y = camera.target_pos.y - (box_height >> 1);
-            let max_y = camera.target_pos.y + (box_height >> 1);
+        let mut target_x = camera_state.target_pos.x;
+        let mut target_y = camera_state.target_pos.y;
 
-            let mut target_x = camera.target_pos.x;
-            let mut target_y = camera.target_pos.y;
+        if player_position.x < min_x {
+            target_x = player_position.x + (box_width >> 1);
+        } else if player_position.x > max_x {
+            target_x = player_position.x - (box_width >> 1);
+        }
 
-            if player_position.x < min_x {
-                target_x = player_position.x + (box_width >> 1);
-            } else if player_position.x > max_x {
-                target_x = player_position.x - (box_width >> 1);
-            }
+        if player_position.y < min_y {
+            target_y = player_position.y + (box_height >> 1);
+        } else if player_position.y > max_y {
+            target_y = player_position.y - (box_height >> 1);
+        }
 
-            if player_position.y < min_y {
-                target_y = player_position.y + (box_height >> 1);
-            } else if player_position.y > max_y {
-                target_y = player_position.y - (box_height >> 1);
-            }
-
-            camera.target_pos = Pos2FixedPoint::new(target_x, target_y);
-        });
+        camera_state.target_pos = Pos2FixedPoint::new(target_x, target_y);
     }
 
     pub fn start_game(mut self) {
         loop {
             let now = Instant::now();
             self.update();
-            println!("Game_Loop duration: {}", now.elapsed().as_micros());
+            // println!("Game_Loop duration: {}", now.elapsed().as_micros());
 
             let elapsed = now.elapsed().as_millis() as u64;
 

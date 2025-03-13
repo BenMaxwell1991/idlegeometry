@@ -4,3 +4,4 @@ pub mod component;
 pub(crate) mod asset;
 mod helper;
 mod panel;
+pub mod graphics;

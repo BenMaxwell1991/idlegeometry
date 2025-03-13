@@ -4,6 +4,7 @@ use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::{CURRENT_TAB, GAME_IN_FOCUS, SETTINGS};
 use crate::game::settings::Settings;
 use crate::ui::asset::loader::{load_icons, load_icons_inverted, load_sprites};
+use crate::ui::graphics::offscreen_renderer::OffscreenRenderer;
 use crate::ui::panel::main_game::show_main_game;
 use crate::ui::panel::settings::show_settings_panel;
 use crate::ui::panel::shop::show_shop;
@@ -11,7 +12,7 @@ use crate::ui::panel::upgrades::show_upgrades;
 use crate::ui::sidemenu::show_side_menu;
 use eframe::egui::{Align, Color32, Context, Layout, TextureHandle, Vec2};
 use eframe::Renderer::Glow;
-use eframe::{egui, App, Frame};
+use eframe::{egui, App, Frame, NativeOptions};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::thread;
@@ -26,7 +27,14 @@ pub struct MyAppWindow {
 }
 
 impl MyAppWindow {
-    pub fn new(game_data: Arc<GameData>, ctx: Context) -> Self {
+    pub fn new(game_data: Arc<GameData>, ctx: Context, gl: Arc<glow::Context>) -> Self {
+        {
+            let mut offscreen_renderer = game_data.offscreen_renderer.write().unwrap();
+            let width = game_data.get_field(SETTINGS).unwrap().window_width;
+            let height = game_data.get_field(SETTINGS).unwrap().window_height;
+            *offscreen_renderer = Some(OffscreenRenderer::new(gl.clone(), width as i32, height as i32));
+        }
+
         let frame_time = Duration::from_secs_f64(1.0 / FRAME_RATE);
 
         let icons = load_icons(&ctx);
@@ -75,7 +83,7 @@ impl App for MyAppWindow {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.with_layout(Layout::top_down(Align::Center), |ui| {
                 match current_tab {
-                    GameTab::Adventure => show_main_game(ui, Arc::clone(&self.game_data)),
+                    GameTab::Adventure => show_main_game(ui, Arc::clone(&self.game_data), _frame),
                     GameTab::Settings => show_settings_panel(ui, Arc::clone(&self.game_data)),
                     GameTab::Shop => show_shop(ui, Arc::clone(&self.game_data), &self.icons_inverted),
                     GameTab::Upgrades => show_upgrades(ui, Arc::clone(&self.game_data)),
@@ -103,7 +111,7 @@ fn set_window_size(ctx: &Context, settings: &Settings) {
 
 pub fn create_window(game_data: Arc<GameData>) -> eframe::Result {
     let settings = game_data.get_field(SETTINGS).unwrap_or_default();
-    let options = eframe::NativeOptions {
+    let options = NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([settings.window_width, settings.window_height])
             .with_title(GAME_NAME),
@@ -117,10 +125,11 @@ pub fn create_window(game_data: Arc<GameData>) -> eframe::Result {
         GAME_NAME,
         options,
         Box::new(|cc| {
-            if let Some(gl_ctx) = cc.gl.as_ref().cloned() {
-                *game_data.gl_context.write().unwrap() = Some(gl_ctx);
+            if let Some(gl_ctx) = cc.gl.clone() {
+                Ok(Box::new(MyAppWindow::new(game_data, cc.egui_ctx.clone(), gl_ctx)) as Box<dyn App>)
+            } else {
+                Err("Failed to get OpenGL context".into())
             }
-            Ok(Box::new(MyAppWindow::new(game_data, cc.egui_ctx.clone())) as Box<dyn App>)
         }),
     )
 }

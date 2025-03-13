@@ -1,9 +1,10 @@
 use crate::game::collision::spatial_hash_grid::SpatialHashGrid;
 use crate::game::data::stored_data::StoredData;
+use crate::game::map::camera_state::CameraState;
 use crate::game::maths::pos_2::Pos2FixedPoint;
 use crate::game::units::unit::Unit;
+use crate::ui::graphics::offscreen_renderer::OffscreenRenderer;
 use egui::Vec2;
-use glow::Context;
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -15,8 +16,9 @@ pub struct GameData {
     pub unit_positions: Arc<RwLock<Vec<Pos2FixedPoint>>>,
     pub empty_unit_indexes: Arc<RwLock<Vec<u32>>>,
     pub spatial_hash_grid: Arc<RwLock<SpatialHashGrid>>,
-    pub gl_context: Arc<RwLock<Option<Arc<Context>>>>,
-    pub graphic_window_size: Arc<RwLock<Option<Vec2>>>
+    pub offscreen_renderer: Arc<RwLock<Option<OffscreenRenderer>>>,
+    pub graphic_window_size: Arc<RwLock<Option<Vec2>>>,
+    pub camera_state: Arc<RwLock<CameraState>>,
 }
 
 impl GameData {
@@ -27,8 +29,9 @@ impl GameData {
             unit_positions: Arc::new(RwLock::new(Vec::new())),
             empty_unit_indexes: Arc::new(RwLock::new(Vec::new())),
             spatial_hash_grid: Arc::new(RwLock::new(SpatialHashGrid::new())),
-            gl_context: Arc::new(RwLock::new(None)),
+            offscreen_renderer: Arc::new(RwLock::new(None)),
             graphic_window_size: Arc::new(RwLock::new(None)),
+            camera_state: Arc::new(RwLock::new(CameraState::new(Pos2FixedPoint::new(0,0), 1024))),
         }
     }
 

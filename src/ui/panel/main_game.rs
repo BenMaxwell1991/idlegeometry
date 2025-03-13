@@ -4,15 +4,15 @@ use crate::ui::component::widget::custom_grid::CustomGrid;
 use crate::ui::component::widget::custom_heading::CustomHeading;
 use crate::ui::component::widget::custom_progress_bar::CustomProgressBar;
 use crate::ui::component::widget::game_graphics::GameGraphics;
-use eframe::egui;
-use egui::{Color32, Pos2, Rect, Vec2};
+use eframe::{egui, Frame};
+use egui::{Color32, Pos2, Rect, Ui, Vec2};
 use std::sync::{Arc, OnceLock};
 use uuid::Uuid;
 
 static GAME_GRAPHICS_ID: OnceLock<Uuid> = OnceLock::new();
 static RESOURCE_HUD_ID: OnceLock<Uuid> = OnceLock::new();
 
-pub fn show_main_game(ui: &mut egui::Ui, game_data: Arc<GameData>) {
+pub fn show_main_game(ui: &mut Ui, game_data: Arc<GameData>, frame: &mut Frame) {
     let graphics_id = GAME_GRAPHICS_ID.get_or_init(Uuid::new_v4);
     let hud_id = RESOURCE_HUD_ID.get_or_init(Uuid::new_v4);
 
@@ -27,7 +27,7 @@ pub fn show_main_game(ui: &mut egui::Ui, game_data: Arc<GameData>) {
     let (hud_rect, progress_rect) = get_hud_rects(&game_rect);
     
     // Draw Game Graphics
-    ui.put(game_rect, GameGraphics::new(game_data_one, graphics_id));
+    ui.put(game_rect, GameGraphics::new(game_data_one, frame));
 
     // Draw HUD Background
     let painter = ui.painter();

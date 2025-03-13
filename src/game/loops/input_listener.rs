@@ -1,5 +1,5 @@
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::{CAMERA_STATE, KEY_STATE};
+use crate::game::data::stored_data::KEY_STATE;
 use device_query_revamped::{DeviceQuery, DeviceState, Keycode};
 use rdev::{listen, EventType};
 use std::sync::{atomic::Ordering, Arc, Mutex};
@@ -54,11 +54,14 @@ impl InputListener {
 
         loop {
             let target_zoom = *target_zoom.lock().unwrap();
-            game_data.update_field(CAMERA_STATE, |camera| {
-                let current_zoom = camera.zoom;
+
+            {
+                let mut camera_state = game_data.camera_state.write().unwrap();
+                let current_zoom = camera_state.zoom;
                 let zoom_step = (target_zoom - current_zoom) >> steps_bits;
-                camera.set_zoom(current_zoom + zoom_step);
-            });
+                camera_state.set_zoom(current_zoom + zoom_step);
+            }
+
 
             thread::sleep(step_duration);
         }

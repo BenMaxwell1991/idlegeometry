@@ -1,6 +1,6 @@
 use crate::enums::gametab::GameTab;
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::{ATTACKS, CAMERA_STATE, CURRENT_TAB, GAME_MAP, KEY_STATE, PLAYER_POSITION, RESOURCES, SETTINGS};
+use crate::game::data::stored_data::{ATTACKS, CURRENT_TAB, GAME_MAP, KEY_STATE, PLAYER_POSITION, RESOURCES, SETTINGS};
 use crate::game::loops::key_state::KeyState;
 use crate::game::map::camera_state::CameraState;
 use crate::game::map::game_map::GameMap;
@@ -67,7 +67,10 @@ pub fn init(game_data: GameData) -> GameData {
 fn init_map(game_data: &GameData) {
     game_data.set_field(GAME_MAP, GameMap::new(X_TILE_COUNT, Y_TILE_COUNT, TILE_SIZE));
     game_data.set_field(PLAYER_POSITION, Pos2FixedPoint::new(X_CENTER, Y_CENTER));
-    game_data.set_field(CAMERA_STATE, CameraState::new(Pos2FixedPoint::new(X_CENTER, Y_CENTER), 256));
+    {
+        let mut camera_state = game_data.camera_state.write().unwrap();
+        *camera_state = CameraState::new(Pos2FixedPoint::new(X_CENTER, Y_CENTER), 256);
+    }
 }
 
 fn init_attacks(game_data: &GameData) {

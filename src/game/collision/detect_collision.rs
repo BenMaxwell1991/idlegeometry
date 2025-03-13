@@ -1,9 +1,9 @@
 use crate::game::data::game_data::GameData;
 use crate::game::maths::pos_2::{normalize_i64_upscaled, project_onto_i64, Pos2FixedPoint, FIXED_POINT_SCALE};
 use crate::game::units::unit_shape::UnitShape;
+use crate::game::units::unit_type::UnitType;
 use rayon::iter::*;
 use rayon::slice::ParallelSliceMut;
-use crate::game::units::unit_type::UnitType;
 
 pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2FixedPoint)], game_data: &GameData) {
     let spatial_grid = game_data.spatial_hash_grid.read().unwrap();

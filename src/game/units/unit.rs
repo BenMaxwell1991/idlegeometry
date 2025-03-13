@@ -85,7 +85,5 @@ pub fn move_units_batched(unit_positions_updates: &[(u32, Pos2FixedPoint, Pos2Fi
     new_positions = unit_positions_updates.par_iter().map(|&(_, _, new_pos)| new_pos).collect();
     swap(&mut *unit_positions, &mut new_positions);
 
-    let now = Instant::now();
     spatial_grid.update_units_position_in_grid(unit_positions_updates);
-    println!("Updated spatials in {}", now.elapsed().as_micros());
 }
