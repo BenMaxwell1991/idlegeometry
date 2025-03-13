@@ -2,13 +2,12 @@ use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::{CAMERA_STATE, GAME_MAP, SPRITE_SHEETS};
 use crate::game::map::camera_state::CameraState;
 use crate::game::map::tile_type::TileType;
+use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 use crate::game::units::unit_type::UnitType;
 use eframe::egui::{Color32, Id, Sense, Ui, Vec2, Widget};
 use egui::{Painter, Pos2, Rect, Response, Stroke, StrokeKind};
 use std::hash::Hash;
 use std::sync::Arc;
-use std::time::Instant;
-use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE, FIXED_POINT_SHIFT};
 
 pub struct GameGraphics {
     game_data: Arc<GameData>,
@@ -97,7 +96,7 @@ impl GameGraphics {
 }
 
 impl Widget for GameGraphics {
-    fn ui(mut self, ui: &mut Ui) -> Response {
+    fn ui(self, ui: &mut Ui) -> Response {
         let camera_state = self.game_data.get_field(CAMERA_STATE).unwrap_or(CameraState::default());
         let available_size = ui.available_size_before_wrap();
         let (rect, response) = ui.allocate_exact_size(available_size, Sense::click());

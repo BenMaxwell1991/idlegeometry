@@ -4,6 +4,7 @@ use crate::game::data::stored_data::{ATTACKS, CAMERA_STATE, CURRENT_TAB, GAME_MA
 use crate::game::loops::key_state::KeyState;
 use crate::game::map::camera_state::CameraState;
 use crate::game::map::game_map::GameMap;
+use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 use crate::game::resources::bignumber::BigNumber;
 use crate::game::resources::resource::{Resource, DEFAULT_MOVE_SPEED, DEFAULT_STATS};
 use crate::game::settings::Settings;
@@ -17,7 +18,6 @@ use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, SLASH_ATTACK, YO
 use rand::random_range;
 use std::sync::Arc;
 use std::time::Duration;
-use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 
 const TILE_SIZE: i32 = 40 * FIXED_POINT_SCALE;
 const X_TILE_COUNT: usize = 50;
@@ -83,7 +83,7 @@ fn init_attacks(game_data: &GameData) {
 
 fn init_player(game_data: &GameData) {
     let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_secs(1));
-    let mut player = Unit::new(UnitType::Player, UnitShape::new(16 * FIXED_POINT_SCALE, 16 * FIXED_POINT_SCALE), DEFAULT_MOVE_SPEED, DEFAULT_STATS.clone(), animation);
+    let mut player = Unit::new(UnitType::Player, UnitShape::new(10 * FIXED_POINT_SCALE, 10 * FIXED_POINT_SCALE), DEFAULT_MOVE_SPEED, DEFAULT_STATS.clone(), animation);
 
     if let Some(attack) = game_data.get_field(ATTACKS).unwrap().iter().find(|attack| attack.name == SLASH_ATTACK) {
         player.attacks.push(attack.clone());

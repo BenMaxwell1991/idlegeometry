@@ -1,4 +1,4 @@
-use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE, FIXED_POINT_SHIFT};
+use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 
 #[derive(Clone)]
 pub struct CameraState {
@@ -40,7 +40,7 @@ impl CameraState {
     }
 
     pub fn get_zoom_scaled(&self) -> f32 {
-        (self.zoom as f32 / FIXED_POINT_SCALE as f32)
+        self.zoom as f32 / FIXED_POINT_SCALE as f32
     }
 }
 

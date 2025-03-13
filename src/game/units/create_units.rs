@@ -8,5 +8,5 @@ use std::time::Duration;
 
 pub fn create_enemy_at_point(handle: &str) -> Unit {
     let animation = Animation::new(handle, Duration::from_secs(1));
-    Unit::new(UnitType::Enemy, UnitShape::new(16 * FIXED_POINT_SCALE, 16 * FIXED_POINT_SCALE), 30 * FIXED_POINT_SCALE, DEFAULT_STATS.clone(), animation)
+    Unit::new(UnitType::Enemy, UnitShape::new(10 * FIXED_POINT_SCALE, 10 * FIXED_POINT_SCALE), 30 * FIXED_POINT_SCALE, DEFAULT_STATS.clone(), animation)
 }

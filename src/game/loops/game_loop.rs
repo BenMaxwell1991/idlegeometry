@@ -6,7 +6,7 @@ use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::{CAMERA_STATE, CURRENT_TAB, GAME_IN_FOCUS, KEY_STATE, RESOURCES};
 use crate::game::loops::key_state::KeyState;
 use crate::game::maths::integers::int_sqrt_64;
-use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE, FIXED_POINT_SHIFT};
+use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 use crate::game::units::unit::move_units_batched;
 use crate::game::units::unit_type::UnitType;
 use egui::vec2;
@@ -146,13 +146,8 @@ impl GameLoop {
         drop(game_units);
         drop(unit_positions);
 
-        let now = Instant::now();
         handle_collision(&mut unit_movements, &self.game_data);
-        println!("Checked all collisions in: {}", now.elapsed().as_micros());
-
-        let now = Instant::now();
         move_units_batched(&unit_movements, &self.game_data);
-        println!("Moved all units in: {}", now.elapsed().as_micros());
     }
 
     fn update_camera_position(&self, player_position: Pos2FixedPoint) {

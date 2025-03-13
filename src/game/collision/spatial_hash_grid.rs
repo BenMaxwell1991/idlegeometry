@@ -1,8 +1,8 @@
+use crate::game::maths::pos_2::Pos2FixedPoint;
 use rayon::iter::*;
 use rayon::prelude::ParallelSlice;
 use rustc_hash::*;
 use serde::{Deserialize, Serialize};
-use crate::game::maths::pos_2::Pos2FixedPoint;
 
 const CELL_SIZE_BITS: i32 = 14; // 2^14 = 16,384
 
@@ -14,10 +14,6 @@ pub struct SpatialHashGrid {
 impl SpatialHashGrid {
     pub fn new() -> Self {
         Self { grid: FxHashMap::default() }
-    }
-
-    pub fn set_reserve(&mut self, size: usize) {
-        self.grid.reserve(size);
     }
 
     pub fn insert_unit(&mut self, unit_id: u32, position: Pos2FixedPoint) {
@@ -50,13 +46,6 @@ impl SpatialHashGrid {
         nearby_units
     }
 
-    pub fn insert_units(&mut self, units: Vec<(u32, Pos2FixedPoint)>) {
-        for (unit_id, position) in units {
-            self.insert_unit(unit_id, position);
-        }
-    }
-
-
     pub fn update_units_position_in_grid(&mut self, updates: &[(u32, Pos2FixedPoint, Pos2FixedPoint)]) {
         let chunk_size = (updates.len() / rayon::current_num_threads().max(1)).max(1);
         let thread_local_maps: Vec<_> = updates
@@ -78,21 +67,6 @@ impl SpatialHashGrid {
         }
 
         self.grid = new_grid;
-    }
-
-    pub(crate) fn update_unit_position_in_grid(
-        &mut self,
-        unit_id: &u32,
-        old_position: &Pos2FixedPoint,
-        new_position: &Pos2FixedPoint,
-    ) {
-        let old_cell = hash_position(*old_position);
-        let new_cell = hash_position(*new_position);
-
-        if old_cell != new_cell {
-            self.remove_unit(unit_id, *old_position);
-            self.insert_unit(*unit_id, *new_position);
-        }
     }
 
     pub fn clear(&mut self) {

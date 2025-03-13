@@ -1,7 +1,7 @@
-use egui::Pos2;
-use crate::game::units::animation::Animation;
-use serde::{Deserialize, Serialize};
 use crate::game::serialise::pos2_serialisable::{deserialize_pos2, serialize_pos2};
+use crate::game::units::animation::Animation;
+use egui::Pos2;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Attack {

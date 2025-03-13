@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use crate::game::maths::pos_2::FIXED_POINT_SCALE;
 use crate::game::resources::bignumber::BigNumber;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::LazyLock;
-use crate::game::maths::pos_2::FIXED_POINT_SCALE;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Resource {
