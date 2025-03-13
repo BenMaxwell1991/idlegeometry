@@ -40,8 +40,8 @@ pub fn init(game_data: GameData) -> GameData {
     init_player(&game_data);
     println!("Initialised Player");
 
-    // init_enemies(&game_data);
-    // println!("Initialised Enemies");
+    init_enemies(&game_data);
+    println!("Initialised Enemies");
 
     game_data.set_field(KEY_STATE, Arc::new(KeyState::new()));
     game_data.set_field(CURRENT_TAB, GameTab::default());
@@ -67,7 +67,7 @@ pub fn init(game_data: GameData) -> GameData {
 fn init_map(game_data: &GameData) {
     game_data.set_field(GAME_MAP, GameMap::new(X_TILE_COUNT, Y_TILE_COUNT, TILE_SIZE));
     game_data.set_field(PLAYER_POSITION, Pos2FixedPoint::new(X_CENTER, Y_CENTER));
-    game_data.set_field(CAMERA_STATE, CameraState::new(Pos2FixedPoint::new(X_CENTER, Y_CENTER), 1 * FIXED_POINT_SCALE));
+    game_data.set_field(CAMERA_STATE, CameraState::new(Pos2FixedPoint::new(X_CENTER, Y_CENTER), 256));
 }
 
 fn init_attacks(game_data: &GameData) {
@@ -92,20 +92,20 @@ fn init_player(game_data: &GameData) {
     add_units(vec![player], vec![Pos2FixedPoint::new(X_CENTER, Y_CENTER)], game_data);
 }
 
-// fn init_enemies(game_data: &GameData) {
-//     if let Some(map) = game_data.get_field(GAME_MAP) {
-//         let mut units = vec![];
-//         let mut positions = vec![];
-//
-//         let map_x = map.width as i32 * map.tile_size;
-//         let map_y = map.height as i32 * map.tile_size;
-//
-//         for _i in 0..99999 {
-//             let pos = Pos2FixedPoint::new(random_range(0..=map_x), random_range(0..=map_y));
-//             units.push(create_enemy_at_point(YOUNG_RED_DRAGON));
-//             positions.push(pos);
-//         }
-//
-//         add_units(units, positions, game_data);
-//     }
-// }
+fn init_enemies(game_data: &GameData) {
+    if let Some(map) = game_data.get_field(GAME_MAP) {
+        let mut units = vec![];
+        let mut positions = vec![];
+
+        let map_x = map.width as i32 * map.tile_size;
+        let map_y = map.height as i32 * map.tile_size;
+
+        for _i in 0..9999 {
+            let pos = Pos2FixedPoint::new(random_range(0..=map_x), random_range(0..=map_y));
+            units.push(create_enemy_at_point(YOUNG_RED_DRAGON));
+            positions.push(pos);
+        }
+
+        add_units(units, positions, game_data);
+    }
+}

@@ -1,4 +1,4 @@
-use crate::game::maths::pos_2::Pos2FixedPoint;
+use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE, FIXED_POINT_SHIFT};
 
 #[derive(Clone)]
 pub struct CameraState {
@@ -31,12 +31,16 @@ impl CameraState {
         self.target_pos = new_target;
     }
 
-    pub fn update_position(&mut self, delta_time: f64, speed: i32) {
-        let factor = (speed * delta_time as i32).clamp(0, 1_024);
-        if factor > 0 {
-            self.camera_pos.x += (self.target_pos.x - self.camera_pos.x) * factor;
-            self.camera_pos.y += (self.target_pos.y - self.camera_pos.y) * factor;
+    pub fn update_position(&mut self, delta_time: f64, speed: f32) {
+        let factor = (speed * delta_time as f32).clamp(0.0, 1.0);
+        if factor > 0.0 {
+            self.camera_pos.x += ((self.target_pos.x - self.camera_pos.x) as f32 * factor) as i32;
+            self.camera_pos.y += ((self.target_pos.y - self.camera_pos.y) as f32 * factor) as i32;
         }
+    }
+
+    pub fn get_zoom_scaled(&self) -> f32 {
+        (self.zoom as f32 / FIXED_POINT_SCALE as f32)
     }
 }
 

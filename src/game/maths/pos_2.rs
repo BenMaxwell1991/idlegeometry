@@ -4,8 +4,8 @@ pub const FIXED_POINT_SHIFT: i32 = 10;
 
 #[derive(Clone, Copy, Default, PartialEq, Debug)]
 pub struct Pos2FixedPoint {
-    pub(crate) x: i32,
-    pub(crate) y: i32,
+    pub x: i32,
+    pub y: i32,
 }
 
 impl Pos2FixedPoint {

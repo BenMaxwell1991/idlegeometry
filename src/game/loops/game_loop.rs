@@ -1,17 +1,18 @@
 use crate::enums::gametab::GameTab;
 use crate::enums::gametab::GameTab::NullGameTab;
+use crate::game::collision::detect_collision::handle_collision;
 use crate::game::constants::GAME_RATE;
 use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::{CAMERA_STATE, CURRENT_TAB, GAME_IN_FOCUS, KEY_STATE, RESOURCES};
 use crate::game::loops::key_state::KeyState;
-use crate::game::maths::integers::int_sqrt;
+use crate::game::maths::integers::int_sqrt_64;
 use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE, FIXED_POINT_SHIFT};
 use crate::game::units::unit::move_units_batched;
 use crate::game::units::unit_type::UnitType;
 use egui::vec2;
 use rayon::current_num_threads;
 use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
-use rayon::prelude::{ParallelSliceMut};
+use rayon::prelude::ParallelSliceMut;
 use std::cmp::max;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -45,9 +46,9 @@ impl GameLoop {
         self.handle_movement(delta_time);
         self.handle_attacks(delta_time);
 
-        // self.game_data.update_field(CAMERA_STATE, |camera| {
-        //     camera.update_position(delta_time, 7 * camera.zoom * FIXED_POINT_SCALE);
-        // });
+        self.game_data.update_field(CAMERA_STATE, |camera| {
+            camera.update_position(delta_time, 7.0 * camera.get_zoom_scaled());
+        });
     }
 
     fn handle_attacks(&self, delta_time: f64) {
@@ -77,9 +78,6 @@ impl GameLoop {
             Err(_) => return,
         };
 
-        let mut camera_pos = self.game_data.get_field(CAMERA_STATE).unwrap().camera_pos;
-        let game_units_len = game_units.len();
-
         let player_position = game_units.iter()
             .filter_map(|unit| unit.as_ref())
             .find_map(|unit| {
@@ -90,13 +88,12 @@ impl GameLoop {
                 }
             }).unwrap();
 
-        println!("Player pos: {:?}", player_position);
-        println!("Camera pos: {:?}:", camera_pos);
+        self.update_camera_position(player_position);
 
+        let game_units_len = game_units.len();
         let num_threads = current_num_threads();
         let estimated_per_thread = (game_units_len / num_threads).max(1);
 
-        let now = Instant::now();
         let mut unit_movements: Vec<(u32, Pos2FixedPoint, Pos2FixedPoint)> = game_units
             .par_chunks_mut(estimated_per_thread)
             .map(|chunk| {
@@ -121,12 +118,12 @@ impl GameLoop {
                             }
                             UnitType::Enemy => {
                                 let direction_vec = player_position.sub(old_position);
-                                let length_squared = direction_vec.x * direction_vec.x + direction_vec.y * direction_vec.y;
+                                let length_squared = direction_vec.x as i64 * direction_vec.x as i64 + direction_vec.y as i64 * direction_vec.y as i64;
                                 if length_squared > 0 {
-                                    let abs_length = int_sqrt(length_squared);
+                                    let abs_length = int_sqrt_64(length_squared);
                                     if abs_length > 0 {
-                                        new_position.x += (direction_vec.x * distance as i32) / abs_length;
-                                        new_position.y += (direction_vec.y * distance as i32) / abs_length;
+                                        new_position.x += ((direction_vec.x as i64 * distance as i64) / abs_length) as i32;
+                                        new_position.y += ((direction_vec.y as i64 * distance as i64) / abs_length) as i32;
                                     }
                                 }
                             }
@@ -145,53 +142,28 @@ impl GameLoop {
                     final_vec
                 },
             );
-        // println!("Calculated new positions in: {}", now.elapsed().as_micros());
 
         drop(game_units);
         drop(unit_positions);
 
-        // let now = Instant::now();
-        // handle_collision(&mut unit_movements, &self.game_data);
-        // println!("Checked all collisions in: {}", now.elapsed().as_micros());
+        let now = Instant::now();
+        handle_collision(&mut unit_movements, &self.game_data);
+        println!("Checked all collisions in: {}", now.elapsed().as_micros());
 
-        // let now = Instant::now();
-        // move_units_batched(&unit_movements, &self.game_data);
-        // println!("Moved all units in: {}", now.elapsed().as_micros());
-
-        // let mut game_units = match self.game_data.units.write() {
-        //     Ok(gu) => gu,
-        //     Err(_) => return,
-        // };
-        //
-        // let mut unit_positions = match self.game_data.unit_positions.read() {
-        //     Ok(up) => up,
-        //     Err(_) => return,
-        // };
-        //
-        // let player_position2 = game_units.iter()
-        //     .filter_map(|unit| unit.as_ref())
-        //     .find_map(|unit| {
-        //         if unit.unit_type == UnitType::Player {
-        //             Some(unit_positions[unit.id as usize])
-        //         } else {
-        //             None
-        //         }
-        //     }).unwrap();
-        //
-        // let x = player_position2.x;
-        // let y = player_position2.y;
-        // let x = 0;
+        let now = Instant::now();
+        move_units_batched(&unit_movements, &self.game_data);
+        println!("Moved all units in: {}", now.elapsed().as_micros());
     }
 
     fn update_camera_position(&self, player_position: Pos2FixedPoint) {
         let screen_size = self.game_data.graphic_window_size.read().unwrap().unwrap_or(vec2(0.0, 0.0));
 
         self.game_data.update_field(CAMERA_STATE, |camera| {
-            let screen_width = screen_size.x as i32;
-            let screen_height = screen_size.y as i32;
+            let screen_width = screen_size.x;
+            let screen_height = screen_size.y;
 
-            let box_width = screen_width >> 1 / (camera.zoom >> FIXED_POINT_SHIFT);
-            let box_height = screen_height >> 1 / (camera.zoom >> FIXED_POINT_SHIFT);
+            let box_width = ((FIXED_POINT_SCALE as f32 * screen_width) / (2.0 * camera.get_zoom_scaled())) as i32;
+            let box_height = ((FIXED_POINT_SCALE as f32 * screen_height) / (2.0 * camera.get_zoom_scaled())) as i32;
 
             let min_x = camera.target_pos.x - (box_width >> 1);
             let max_x = camera.target_pos.x + (box_width >> 1);
@@ -223,13 +195,13 @@ impl GameLoop {
             self.update();
             println!("Game_Loop duration: {}", now.elapsed().as_micros());
 
-            let elapsed = now.elapsed().as_micros() as u64;
+            let elapsed = now.elapsed().as_millis() as u64;
 
             if GAME_RATE > elapsed {
-                let sleep_micros = max(GAME_RATE - elapsed, 10);
-                thread::sleep(Duration::from_micros(sleep_micros));
+                let sleep_milli = max(GAME_RATE - elapsed, 10);
+                thread::sleep(Duration::from_millis(sleep_milli));
             } else {
-                thread::sleep(Duration::from_micros(10));
+                thread::sleep(Duration::from_millis(10));
             }
         }
     }

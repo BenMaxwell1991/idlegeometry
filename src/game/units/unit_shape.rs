@@ -16,9 +16,11 @@ impl UnitShape {
     }
 
     pub fn bounding_box(&self, position: Pos2FixedPoint) -> (Pos2FixedPoint, Pos2FixedPoint) {
+        let half_width = self.width >> 1;
+        let half_height = self.height >> 1;
         (
-            Pos2FixedPoint::new((position.x - self.width) >> 1, (position.y - self.height) >> 1),
-            Pos2FixedPoint::new((position.x + self.width) >> 1, (position.y + self.height) >> 1),
+            Pos2FixedPoint::new(position.x - half_width, position.y - half_height),
+            Pos2FixedPoint::new(position.x + half_width, position.y + half_height),
         )
     }
 }
