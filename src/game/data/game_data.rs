@@ -8,6 +8,7 @@ use egui::Vec2;
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use glow::NativeProgram;
 
 #[derive(Clone)]
 pub struct GameData {
@@ -19,6 +20,8 @@ pub struct GameData {
     pub offscreen_renderer: Arc<RwLock<Option<OffscreenRenderer>>>,
     pub graphic_window_size: Arc<RwLock<Option<Vec2>>>,
     pub camera_state: Arc<RwLock<CameraState>>,
+    pub rect_shader: Arc<RwLock<Option<NativeProgram>>>,
+    pub sprite_shader: Arc<RwLock<Option<NativeProgram>>>,
 }
 
 impl GameData {
@@ -32,6 +35,8 @@ impl GameData {
             offscreen_renderer: Arc::new(RwLock::new(None)),
             graphic_window_size: Arc::new(RwLock::new(None)),
             camera_state: Arc::new(RwLock::new(CameraState::new(Pos2FixedPoint::new(0,0), 256))),
+            rect_shader: Arc::new(RwLock::new(None)),
+            sprite_shader: Arc::new(RwLock::new(None)),
         }
     }
 

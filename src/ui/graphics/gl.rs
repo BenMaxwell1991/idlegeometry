@@ -1,35 +1,26 @@
+use std::ops::Add;
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::GAME_MAP;
+use crate::game::data::stored_data::{GAME_MAP, SPRITE_SHEETS};
 use crate::game::map::camera_state::CameraState;
 use crate::game::map::tile_type::TileType;
 use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
+use crate::game::units::unit_type::UnitType;
 use crate::ui::component::widget::game_graphics::world_to_screen;
 use eframe::emath::{Rect, Vec2};
-use glow::*;
-use std::sync::Arc;
-use std::time::Instant;
 use egui::{Color32, Pos2};
+use glow::*;
+use std::time::Instant;
 
-pub fn draw_map(gl: Arc<Context>, game_data: &GameData, rect: &Rect, camera_state: &CameraState) {
-    // let rects = [
-    //     (Rect::from_min_size(Pos2::new(0.0, 0.0), Vec2::new(rect.width() / 2.0, rect.height() / 2.0))),
-    //     // (Rect::from_min_size(Pos2::new(rect.width() / 2.0, rect.height() / 2.0), Vec2::new(rect.width() / 2.0, rect.height() / 2.0)))
-    // ];
-    // let colours = [(Color32::RED)];
-    // let colours = [(Color32::RED), Color32::BLUE];
-
-    // draw_colour_rectangles(gl.as_ref(), rect, &rects, &colours);
-
+pub fn draw_map(gl: &Context, game_data: &GameData, paintbox_rect: &Rect, camera_state: &CameraState) {
     if let Some(game_map) = game_data.get_field(GAME_MAP) {
         let tile_size = camera_state.get_zoom_scaled() * game_map.tile_size as f32 / FIXED_POINT_SCALE as f32;
-        println!("Tile Size: {:?}", tile_size);
 
         let mut rects = Vec::new();
         let mut colours = Vec::new();
 
         for (&(x, y), tile) in &game_map.tiles {
             let world_pos = Pos2FixedPoint::new(x as i32 * game_map.tile_size, y as i32 * game_map.tile_size);
-            let screen_pos = world_to_screen(world_pos, camera_state, rect);
+            let screen_pos = world_to_screen(world_pos, camera_state, paintbox_rect);
             let tile_rect = Rect::from_min_size(screen_pos, Vec2::new(tile_size, tile_size));
 
             let colour = match tile.tile_type {
@@ -42,52 +33,67 @@ pub fn draw_map(gl: Arc<Context>, game_data: &GameData, rect: &Rect, camera_stat
             colours.push(colour);
         }
 
-        draw_colour_rectangles(gl.as_ref(), &rect, &rects, &colours);
+        if let (shader_lock) = game_data.rect_shader.write().unwrap() {
+            draw_colour_rectangles(gl, &paintbox_rect, &rects, &colours, &*shader_lock);
+        }
     }
+}
+
+pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect, camera_state: &CameraState) {
+    let sprite_sheets = game_data.get_field(SPRITE_SHEETS);
+    let units_lock = game_data.units.read().unwrap();
+    let unit_positions_lock = game_data.unit_positions.read().unwrap();
+
+    let mut images_to_draw = Vec::new();
+    let mut rects_to_draw = Vec::new();
+    let mut colours_to_draw = Vec::new();
+    let mut player_to_draw = Vec::new();
+
+    for unit_option in units_lock.iter() {
+        if let Some(unit) = unit_option {
+            let unit_screen_position = world_to_screen(unit_positions_lock[unit.id as usize], camera_state, paintbox_rect);
+
+            // Skip rendering if unit is out of view
+            if !paintbox_rect.contains(unit_screen_position.add(paintbox_rect.min.to_vec2())) {
+                continue;
+            }
+
+            // Scale unit size based on zoom
+            let unit_size = Vec2::new(10.0, 10.0) * camera_state.get_zoom_scaled();
+            let unit_rect = Rect::from_center_size(unit_screen_position, unit_size);
+
+            // If unit is small and not a player, draw as a rectangle
+            if (unit_size.x < 5.0 || unit_size.y < 5.0) && unit.unit_type != UnitType::Player {
+                rects_to_draw.push(unit_rect);
+                colours_to_draw.push(Color32::RED); // You can change colors based on unit type
+                continue;
+            }
+
+            // If the unit has a valid sprite, use it
+            if let Some(sprite_sheets) = sprite_sheets.as_ref() {
+                if let Some(sprite_sheet) = sprite_sheets.get(&unit.animation.sprite_key) {
+                    let frame_index = (unit.animation.animation_frame * sprite_sheet.get_frame_count() as f32).trunc() as usize;
+                    let frame = sprite_sheet.get_frame(frame_index);
+
+                    match unit.unit_type {
+                        UnitType::Player => player_to_draw.push((frame.id(), unit_rect)),
+                        UnitType::Enemy => images_to_draw.push((frame.id(), unit_rect)),
+                    }
+                }
+            }
+        }
+    }
+
+    // Draw colored rectangles for small units
+    if let (shader_lock) = game_data.rect_shader.write().unwrap() {
+        draw_colour_rectangles(gl, &paintbox_rect, &rects_to_draw, &colours_to_draw, &*shader_lock);
+    }
+
+    // Draw sprites for units
+    // draw_colour_sprites(gl.as_ref(), paintbox_rect, &images_to_draw);
     //
-    //     if !vertices.is_empty() {
-    //         println!("✅ [draw_map] Generated {} vertices", vertices.len());
-    //         unsafe {
-    //             // Create VAO
-    //             let vao = gl.create_vertex_array().unwrap();
-    //             gl.bind_vertex_array(Some(vao));
-    //
-    //             // Create VBO (Vertex Buffer Object)
-    //             let vbo = gl.create_buffer().unwrap();
-    //             gl.bind_buffer(ARRAY_BUFFER, Some(vbo));
-    //             gl.buffer_data_u8_slice(ARRAY_BUFFER, bytemuck::cast_slice(&vertices), STATIC_DRAW);
-    //
-    //             // Create CBO (Color Buffer Object)
-    //             let cbo = gl.create_buffer().unwrap();
-    //             gl.bind_buffer(ARRAY_BUFFER, Some(cbo));
-    //             gl.buffer_data_u8_slice(ARRAY_BUFFER, bytemuck::cast_slice(&colors), STATIC_DRAW);
-    //
-    //             // Use Shader Program
-    //             let shader_program = create_shader_program(gl.as_ref());
-    //             gl.use_program(Some(shader_program));
-    //
-    //             println!("✅ [draw_map] Shader Program ID: {}", shader_program.0.get());
-    //
-    //             // Enable Vertex Attribute for Position
-    //             gl.vertex_attrib_pointer_f32(0, 2, FLOAT, false, 0, 0);
-    //             gl.enable_vertex_attrib_array(0);
-    //
-    //             // Enable Vertex Attribute for Color
-    //             gl.vertex_attrib_pointer_f32(1, 4, FLOAT, false, 0, 0);
-    //             gl.enable_vertex_attrib_array(1);
-    //             println!("✅ [draw_map] Buffers and attributes set.");
-    //
-    //             println!("🟢 [draw_map] Drawing {} triangles", vertices.len() / 3);
-    //             gl.draw_arrays(TRIANGLES, 0, (vertices.len() / 2) as i32);
-    //             println!("✅ [draw_map] Called gl.draw_arrays()");
-    //
-    //             // Cleanup
-    //             gl.delete_buffer(vbo);
-    //             gl.delete_buffer(cbo);
-    //             gl.delete_vertex_array(vao);
-    //         }
-    //     }
-    // }
+    // // Draw player separately
+    // draw_colour_sprites(gl.as_ref(), paintbox_rect, &player_to_draw);
 }
 
 pub fn get_gl_rect(view: &Rect, rect: &Rect) -> (Pos2, Vec2) {
@@ -115,12 +121,11 @@ pub fn get_vertex_from_gl_rect(min_pos: Pos2, size: Vec2, rgba: Color32) -> [f32
     ]
 }
 
-pub fn draw_colour_rectangles(gl: &Context, view_rect: &Rect, rectangles: &[Rect], colours: &[Color32]) {
+pub fn draw_colour_rectangles(gl: &Context, view_rect: &Rect, rectangles: &[Rect], colours: &[Color32], shader: &Option<NativeProgram>) {
     unsafe {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
         let mut index_offset = 0;
-
 
         let now = Instant::now();
         for (i, rect) in rectangles.iter().enumerate() {
@@ -138,16 +143,12 @@ pub fn draw_colour_rectangles(gl: &Context, view_rect: &Rect, rectangles: &[Rect
         let vbo = gl.create_buffer().unwrap();
         let ebo = gl.create_buffer().unwrap();
 
-        let shader_program = create_shader_program(gl);
-        gl.use_program(Some(create_shader_program(gl)));
+        gl.use_program(*shader);
 
         gl.bind_vertex_array(Some(vao));
-
-        // Upload vertex data
         gl.bind_buffer(ARRAY_BUFFER, Some(vbo));
         gl.buffer_data_u8_slice(ARRAY_BUFFER, bytemuck::cast_slice(&vertices), STATIC_DRAW);
 
-        // Upload index data
         gl.bind_buffer(ELEMENT_ARRAY_BUFFER, Some(ebo));
         gl.buffer_data_u8_slice(ELEMENT_ARRAY_BUFFER, bytemuck::cast_slice(&indices), STATIC_DRAW);
 
@@ -157,19 +158,67 @@ pub fn draw_colour_rectangles(gl: &Context, view_rect: &Rect, rectangles: &[Rect
         gl.vertex_attrib_pointer_f32(1, 4, FLOAT, false, stride, (2 * std::mem::size_of::<f32>()) as i32);
         gl.enable_vertex_attrib_array(1);
 
-        // ✅ Draw ALL rectangles in one call
         gl.draw_elements(TRIANGLES, indices.len() as i32, UNSIGNED_INT, 0);
-        println!("✅ Drew {} rectangles in a single draw call.", rectangles.len());
-        println!("elapsed {}", now.elapsed().as_micros());
 
-        gl.delete_program(shader_program);
         gl.delete_vertex_array(vao);
         gl.delete_buffer(vbo);
         gl.delete_buffer(ebo);
     }
 }
 
-pub fn create_shader_program(gl: &Context) -> NativeProgram {
+pub fn create_sprite_shader_program(gl: &Context) -> NativeProgram {
+    unsafe {
+        let vertex_shader_source = r#"
+            #version 330 core
+            layout (location = 0) in vec2 aPos;
+            layout (location = 1) in vec2 aTexCoord;
+
+            out vec2 TexCoord;
+
+            void main() {
+                gl_Position = vec4(aPos, 0.0, 1.0);
+                TexCoord = aTexCoord;
+            }
+        "#;
+
+        let fragment_shader_source = r#"
+            #version 330 core
+            in vec2 TexCoord;
+            out vec4 FragColor;
+
+            uniform sampler2D spriteTexture;
+
+            void main() {
+                FragColor = texture(spriteTexture, TexCoord);
+            }
+        "#;
+
+        let vertex_shader = gl.create_shader(VERTEX_SHADER).unwrap();
+        gl.shader_source(vertex_shader, vertex_shader_source);
+        gl.compile_shader(vertex_shader);
+        assert!(gl.get_shader_compile_status(vertex_shader));
+
+        let fragment_shader = gl.create_shader(FRAGMENT_SHADER).unwrap();
+        gl.shader_source(fragment_shader, fragment_shader_source);
+        gl.compile_shader(fragment_shader);
+        assert!(gl.get_shader_compile_status(fragment_shader));
+
+        let shader_program = gl.create_program().unwrap();
+        gl.attach_shader(shader_program, vertex_shader);
+        gl.attach_shader(shader_program, fragment_shader);
+        gl.link_program(shader_program);
+        assert!(gl.get_program_link_status(shader_program));
+
+        gl.detach_shader(shader_program, vertex_shader);
+        gl.detach_shader(shader_program, fragment_shader);
+        gl.delete_shader(vertex_shader);
+        gl.delete_shader(fragment_shader);
+
+        shader_program
+    }
+}
+
+pub fn create_rect_shader_program(gl: &Context) -> NativeProgram {
     unsafe {
         let vertex_shader_source = r#"
             #version 330 core
@@ -206,6 +255,11 @@ pub fn create_shader_program(gl: &Context) -> NativeProgram {
         gl.attach_shader(shader_program, fragment_shader);
         gl.link_program(shader_program);
         assert!(gl.get_program_link_status(shader_program));
+
+        gl.detach_shader(shader_program, vertex_shader);
+        gl.detach_shader(shader_program, fragment_shader);
+        gl.delete_shader(vertex_shader);
+        gl.delete_shader(fragment_shader);
 
         shader_program
     }

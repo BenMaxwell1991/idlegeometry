@@ -4,6 +4,7 @@ use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::{CURRENT_TAB, GAME_IN_FOCUS, SETTINGS};
 use crate::game::settings::Settings;
 use crate::ui::asset::loader::{load_icons, load_icons_inverted, load_sprites};
+use crate::ui::graphics::gl::{create_rect_shader_program, create_sprite_shader_program};
 use crate::ui::graphics::offscreen_renderer::OffscreenRenderer;
 use crate::ui::panel::main_game::show_main_game;
 use crate::ui::panel::settings::show_settings_panel;
@@ -17,6 +18,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
+use glow::HasContext;
 
 pub const BACKGROUND_COLOUR: Color32 = Color32::from_rgb(5, 5, 5);
 
@@ -24,10 +26,21 @@ pub struct MyAppWindow {
     game_data: Arc<GameData>,
     icons: HashMap<String, TextureHandle>,
     icons_inverted: HashMap<String, TextureHandle>,
+    gl_ctx: Arc<glow::Context>,
+    last_update: Instant,
 }
 
 impl MyAppWindow {
     pub fn new(game_data: Arc<GameData>, ctx: Context, gl: Arc<glow::Context>) -> Self {
+        let rect_shader = create_rect_shader_program(&gl);
+        let sprite_shader = create_sprite_shader_program(&gl);
+        if let (mut rect_shader_lock) = game_data.rect_shader.write().unwrap() {
+            *rect_shader_lock = Some(rect_shader);
+        }
+        if let (mut sprite_shader_lock) = game_data.sprite_shader.write().unwrap() {
+            *sprite_shader_lock = Some(sprite_shader);
+        }
+
         {
             let mut offscreen_renderer = game_data.offscreen_renderer.write().unwrap();
             let width = game_data.get_field(SETTINGS).unwrap().window_width;
@@ -57,12 +70,18 @@ impl MyAppWindow {
             game_data,
             icons,
             icons_inverted,
+            gl_ctx: gl,
+            last_update: Instant::now(),
         }
     }
 }
 
 impl App for MyAppWindow {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
+        println!("Time since last frame: {}", self.last_update.elapsed().as_millis());
+        println!("FPS: {}", 1000 / self.last_update.elapsed().as_millis());
+        self.last_update = Instant::now();
+
         self.game_data.update_or_set(GAME_IN_FOCUS, false, |in_focus| { *in_focus = ctx.input(|i| i.focused) });
 
         let settings = self.game_data.get_field(SETTINGS).unwrap_or_default();
@@ -91,6 +110,23 @@ impl App for MyAppWindow {
                 }
             });
         });
+    }
+}
+
+impl Drop for MyAppWindow {
+    fn drop(&mut self) {
+        if let Some(shader) = self.game_data.rect_shader.write().unwrap().take() {
+            unsafe {
+                self.gl_ctx.delete_program(shader);
+                println!("✅ Deleted rectangle shader program when MyAppWindow was dropped.");
+            }
+        }
+        if let Some(shader) = self.game_data.sprite_shader.write().unwrap().take() {
+            unsafe {
+                self.gl_ctx.delete_program(shader);
+                println!("✅ Deleted sprite shader program when MyAppWindow was dropped.");
+            }
+        }
     }
 }
 

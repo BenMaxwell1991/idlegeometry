@@ -28,7 +28,7 @@ fn main() {
     let input_listener = InputListener::new(game_data_two);
 
     thread::spawn(move || game_loop.start_game());
-    // thread::spawn(move || input_listener.listen());
+    thread::spawn(move || input_listener.listen());
     thread::spawn(move || auto_save(game_data_three));
 
     // loop {
