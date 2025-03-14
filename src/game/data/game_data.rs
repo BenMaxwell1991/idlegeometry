@@ -31,7 +31,7 @@ impl GameData {
             spatial_hash_grid: Arc::new(RwLock::new(SpatialHashGrid::new())),
             offscreen_renderer: Arc::new(RwLock::new(None)),
             graphic_window_size: Arc::new(RwLock::new(None)),
-            camera_state: Arc::new(RwLock::new(CameraState::new(Pos2FixedPoint::new(0,0), 1024))),
+            camera_state: Arc::new(RwLock::new(CameraState::new(Pos2FixedPoint::new(0,0), 256))),
         }
     }
 

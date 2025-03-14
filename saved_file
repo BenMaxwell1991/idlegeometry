@@ -3,7 +3,7 @@
     {
       "amount": {
         "exponent": 2,
-        "mantissa": 2.9802309191997343
+        "mantissa": 3.061170921239724
       },
       "level": {
         "exponent": 0,
@@ -65,7 +65,7 @@
     "autosave_interval": 10,
     "number_format_mode": "Engineering",
     "vsync": true,
-    "window_height": 1080.0,
-    "window_width": 1920.0
+    "window_height": 720.0,
+    "window_width": 1280.0
   }
 }

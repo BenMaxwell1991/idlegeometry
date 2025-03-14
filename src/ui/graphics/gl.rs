@@ -7,57 +7,43 @@ use crate::ui::component::widget::game_graphics::world_to_screen;
 use eframe::emath::{Rect, Vec2};
 use glow::*;
 use std::sync::Arc;
+use std::time::Instant;
 use egui::{Color32, Pos2};
 
 pub fn draw_map(gl: Arc<Context>, game_data: &GameData, rect: &Rect, camera_state: &CameraState) {
-    let rects = [(Rect::from_center_size(Pos2::new(0.0, 0.0), Vec2::new(100.0, 200.0)))];
-    let colours = [(Color32::RED)];
+    // let rects = [
+    //     (Rect::from_min_size(Pos2::new(0.0, 0.0), Vec2::new(rect.width() / 2.0, rect.height() / 2.0))),
+    //     // (Rect::from_min_size(Pos2::new(rect.width() / 2.0, rect.height() / 2.0), Vec2::new(rect.width() / 2.0, rect.height() / 2.0)))
+    // ];
+    // let colours = [(Color32::RED)];
+    // let colours = [(Color32::RED), Color32::BLUE];
 
-    draw_red_rectangle(gl.as_ref(), rect, &rects, &colours);   // if let Some(game_map) = game_data.get_field(GAME_MAP) {
-    //     let tile_size = camera_state.get_zoom_scaled() * game_map.tile_size as f32 / FIXED_POINT_SCALE as f32;
-    //     println!("Tile Size: {:?}", tile_size);
-    //
-    //     let mut vertices = Vec::new();
-    //     let mut colors = Vec::new();
-    //
-    //     for (&(x, y), tile) in &game_map.tiles {
-    //         let world_pos = Pos2FixedPoint::new(x as i32 * game_map.tile_size, y as i32 * game_map.tile_size);
-    //         let screen_pos = world_to_screen(world_pos, camera_state, rect);
-    //
-    //         // println!("Screen pos: {:?}", screen_pos);
-    //
-    //         let tile_rect = Rect::from_min_size(screen_pos, Vec2::new(tile_size, tile_size));
-    //
-    //         // println!("tile_rect: {:?}", tile_rect);
-    //
-    //         let color = match tile.tile_type {
-    //             TileType::Wall => [0.3, 0.3, 0.3, 1.0],
-    //             TileType::SpawnPoint => [0.0, 0.0, 0.5, 1.0],
-    //             TileType::Empty => [0.0, 0.0, 0.0, 0.0],
-    //         };
-    //
-    //         // Normalize to OpenGL clip space (-1.0 to 1.0)
-    //         let (x_min, y_min) = (
-    //             (tile_rect.min.x / rect.width()) * 2.0 - 1.0,
-    //             (tile_rect.min.y / rect.height()) * 2.0 - 1.0,
-    //         );
-    //         let (x_max, y_max) = (
-    //             (tile_rect.max.x / rect.width()) * 2.0 - 1.0,
-    //             (tile_rect.max.y / rect.height()) * 2.0 - 1.0,
-    //         );
-    //
-    //         // println!(
-    //         //     "🟡 Tile at ({}, {}): Screen Pos: {:?}, Normalized Rect: [{}, {}] -> [{}, {}]",
-    //         //     x, y, screen_pos, x_min, y_min, x_max, y_max
-    //         // );
-    //
-    //         // Two triangles to form a rectangle
-    //         vertices.extend_from_slice(&[
-    //             x_min, y_min, x_max, y_min, x_max, y_max,
-    //             x_max, y_max, x_min, y_max, x_min, y_min,
-    //         ]);
-    //         colors.extend_from_slice(&[color; 6]); // 6 vertices per quad
-    //     }
+    // draw_colour_rectangles(gl.as_ref(), rect, &rects, &colours);
+
+    if let Some(game_map) = game_data.get_field(GAME_MAP) {
+        let tile_size = camera_state.get_zoom_scaled() * game_map.tile_size as f32 / FIXED_POINT_SCALE as f32;
+        println!("Tile Size: {:?}", tile_size);
+
+        let mut rects = Vec::new();
+        let mut colours = Vec::new();
+
+        for (&(x, y), tile) in &game_map.tiles {
+            let world_pos = Pos2FixedPoint::new(x as i32 * game_map.tile_size, y as i32 * game_map.tile_size);
+            let screen_pos = world_to_screen(world_pos, camera_state, rect);
+            let tile_rect = Rect::from_min_size(screen_pos, Vec2::new(tile_size, tile_size));
+
+            let colour = match tile.tile_type {
+                TileType::Wall => Color32::from_rgb(100, 100, 100),
+                TileType::SpawnPoint => Color32::from_rgb(0, 0, 100),
+                TileType::Empty => Color32::from_rgb(0, 0, 0),
+            };
+
+            rects.push(tile_rect);
+            colours.push(colour);
+        }
+
+        draw_colour_rectangles(gl.as_ref(), &rect, &rects, &colours);
+    }
     //
     //     if !vertices.is_empty() {
     //         println!("✅ [draw_map] Generated {} vertices", vertices.len());
@@ -104,69 +90,49 @@ pub fn draw_map(gl: Arc<Context>, game_data: &GameData, rect: &Rect, camera_stat
     // }
 }
 
-// Returns the GL position/size of a rect, given a viewing rect, and the rect to be drawns size
-pub fn get_gl_rect(view_min: &Pos2, view_size: &Vec2, rect_size: &Vec2) -> (Pos2, Vec2) {
-    let x = ((view_size.x + view_min.x - rect_size.x) / view_size.x) - 1.0;
-    let y = 1.0 - (view_size.y - view_min.y - rect_size.y) / (view_size.y);
-    let w = rect_size.x / (view_size.x / 2.0);
-    let h = rect_size.y / (view_size.y / 2.0);
-    (Pos2::new(x, y), Vec2::new(w, h))
+pub fn get_gl_rect(view: &Rect, rect: &Rect) -> (Pos2, Vec2) {
+    let min_x= (rect.min.x / view.size().x) * 2.0 - 1.0;
+    let min_y= (rect.min.y / view.size().y) * 2.0 - 1.0;
+
+    let w = (rect.size().x / view.size().x) * 2.0;
+    let h = (rect.size().y / view.size().y) * 2.0;
+
+    (Pos2::new(min_x, min_y), Vec2::new(w, h))
 }
 
-// FINISH WRITING THIS FUNCTION!!!!!!
-pub fn get_gl_recta(view: &Rect, rect: &Rect) -> (Pos2, Vec2) {
-    let x = ((view.size().x + view.min.x - rect.size().x + rect.center().x) / view.size().x) - 1.0;
-    let y = 1.0 - (view.size().y - view.min.y - rect.size().y + rect.center().y) / (view.size().y);
-    let w = rect.size().x / (view.size().x / 2.0);
-    let h = rect.size().y / (view.size().y / 2.0);
-    (Pos2::new(x, y), Vec2::new(w, h))
-}
 
-pub fn get_vertex_from_gl_rect(center: Pos2, size: Vec2, rgba: Color32) -> [f32; 24] {
+pub fn get_vertex_from_gl_rect(min_pos: Pos2, size: Vec2, rgba: Color32) -> [f32; 24] {
     let r = rgba.r() as f32 / 255.0;
     let g = rgba.g() as f32 / 255.0;
     let b = rgba.b() as f32 / 255.0;
     let a = rgba.a() as f32 / 255.0;
+
     [
-        center.x,           center.y - size.y,  r, g, b, a, // Bottom-left (Red)
-        center.x + size.x,  center.y - size.y,  r, g, b, a, // Bottom-right
-        center.x + size.x,  center.y,           r, g, b, a, // Top-right
-        center.x,           center.y,           r, g, b, a, // Top-left
+        min_pos.x,           min_pos.y,            r, g, b, a, // Bottom-left
+        min_pos.x + size.x,  min_pos.y,            r, g, b, a, // Bottom-right
+        min_pos.x + size.x,  min_pos.y + size.y,   r, g, b, a, // Top-right
+        min_pos.x,           min_pos.y + size.y,   r, g, b, a, // Top-left
     ]
 }
-pub fn draw_red_rectangle(gl: &Context, view_rect: &Rect, rects: &[Rect], colours: &[Color32]) {
-    unsafe {
-        let rect_width = 200.0;
-        let rect_height = 100.0;
 
+pub fn draw_colour_rectangles(gl: &Context, view_rect: &Rect, rectangles: &[Rect], colours: &[Color32]) {
+    unsafe {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
         let mut index_offset = 0;
 
-        for (i, rect) in rects.iter().enumerate() {
-            // let (center, size) = get_gl_rect(&view_rect.min, &view_rect.size(), &Vec2::new(rect.width(), rect.height()));
-            let (center, size) = get_gl_recta(&view_rect, &rect);
-            let rect_vertices = get_vertex_from_gl_rect(center, size, colours[i]);
-            vertices.extend_from_slice(&rect_vertices);
 
-            // Indices for each rectangle
+        let now = Instant::now();
+        for (i, rect) in rectangles.iter().enumerate() {
+            let (min_pos, size) = get_gl_rect(&view_rect, &rect);
+            let rect_vertices = get_vertex_from_gl_rect(min_pos, size, colours[i]);
+            vertices.extend_from_slice(&rect_vertices);
             indices.extend_from_slice(&[
                 index_offset, index_offset + 1, index_offset + 2,
                 index_offset + 2, index_offset + 3, index_offset
             ]);
-            index_offset += 4; // 4 vertices per rectangle
+            index_offset += 4;
         }
-
-
-        // Convert UI pixels to OpenGL [-1,1] normalized device coordinates (NDC)
-        // let (center, size) = get_gl_rect(&rect.min, &rect.size(), &Vec2::new(rect_width, rect_height));
-        // let x = center.x;
-        // let y = center.y;
-        // let w = size.x;
-        // let h = size.y;
-        //
-        // let vertices = get_vertex_from_gl_rect(center, size, Color32::RED);
-        // let indices: [u32; 6] = [0, 1, 2, 2, 3, 0];
 
         let vao = gl.create_vertex_array().unwrap();
         let vbo = gl.create_buffer().unwrap();
@@ -185,7 +151,7 @@ pub fn draw_red_rectangle(gl: &Context, view_rect: &Rect, rects: &[Rect], colour
         gl.bind_buffer(ELEMENT_ARRAY_BUFFER, Some(ebo));
         gl.buffer_data_u8_slice(ELEMENT_ARRAY_BUFFER, bytemuck::cast_slice(&indices), STATIC_DRAW);
 
-        let stride = (2 + 4) * std::mem::size_of::<f32>() as i32; // 2 Position + 4 Color
+        let stride = (2 + 4) * size_of::<f32>() as i32; // 2 Position + 4 Color
         gl.vertex_attrib_pointer_f32(0, 2, FLOAT, false, stride, 0);
         gl.enable_vertex_attrib_array(0);
         gl.vertex_attrib_pointer_f32(1, 4, FLOAT, false, stride, (2 * std::mem::size_of::<f32>()) as i32);
@@ -193,9 +159,9 @@ pub fn draw_red_rectangle(gl: &Context, view_rect: &Rect, rects: &[Rect], colour
 
         // ✅ Draw ALL rectangles in one call
         gl.draw_elements(TRIANGLES, indices.len() as i32, UNSIGNED_INT, 0);
-        println!("✅ Drew {} rectangles in a single draw call.", rects.len());
+        println!("✅ Drew {} rectangles in a single draw call.", rectangles.len());
+        println!("elapsed {}", now.elapsed().as_micros());
 
-        // Cleanup
         gl.delete_program(shader_program);
         gl.delete_vertex_array(vao);
         gl.delete_buffer(vbo);

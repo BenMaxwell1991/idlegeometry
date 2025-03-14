@@ -101,7 +101,8 @@ impl<'a> Widget for GameGraphics<'a> {
         let (rect, response) = ui.allocate_exact_size(available_size, Sense::click());
 
         let mut renderer_lock = self.game_data.offscreen_renderer.write().unwrap();
-        if let Some(renderer) = renderer_lock.as_ref() {
+        if let Some(renderer) = renderer_lock.as_mut() {
+            renderer.resize(rect.width() as i32, rect.height() as i32);
             let gl = renderer.get_gl();
             let width = rect.width();
             let height = rect.height();
