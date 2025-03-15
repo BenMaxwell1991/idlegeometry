@@ -34,5 +34,5 @@ pub const RESOURCES: StoredData<Vec<Resource>> = StoredData::new("resources");
 pub const STEAM_CLIENT: StoredData<Client> = StoredData::new("steam_client");
 pub const GAME_MAP: StoredData<GameMap> = StoredData::new("game_map");
 pub const ATTACKS: StoredData<Vec<Attack>> = StoredData::new("attacks");
-pub const SPRITE_SHEETS: StoredData<HashMap<String, SpriteSheet>> = StoredData::new("sprite_sheets");
+pub const SPRITE_SHEETS_NATIVE: StoredData<HashMap<String, SpriteSheet>> = StoredData::new("sprite_sheets_native");
 pub const GAME_IN_FOCUS: StoredData<bool> = StoredData::new("game_in_focus");

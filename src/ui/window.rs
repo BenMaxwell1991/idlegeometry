@@ -3,7 +3,7 @@ use crate::game::constants::{FRAME_RATE, GAME_NAME};
 use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::{CURRENT_TAB, GAME_IN_FOCUS, SETTINGS};
 use crate::game::settings::Settings;
-use crate::ui::asset::loader::{load_icons, load_icons_inverted, load_sprites};
+use crate::ui::asset::loader::{load_icons, load_icons_inverted, load_sprites_native};
 use crate::ui::graphics::gl::{create_rect_shader_program, create_sprite_shader_program};
 use crate::ui::graphics::offscreen_renderer::OffscreenRenderer;
 use crate::ui::panel::main_game::show_main_game;
@@ -52,7 +52,7 @@ impl MyAppWindow {
 
         let icons = load_icons(&ctx);
         let icons_inverted = load_icons_inverted(&ctx);
-        load_sprites(&ctx, &game_data);
+        load_sprites_native(&gl, &game_data);
 
         thread::spawn(move || {
             let mut last_frame = Instant::now();

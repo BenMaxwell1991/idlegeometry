@@ -39,12 +39,11 @@ impl<'a> Widget for GameGraphics<'a> {
             renderer.bind();
             unsafe {
                 gl.viewport(0, 0, width as i32, height as i32);
-                gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
                 gl.clear_color(0.0, 0.0, 0.0, 1.0);
-                // draw_red_rectangle(&gl, width , height);
-                draw_map(&gl, &self.game_data, &rect, &camera_state_cloned);
-                draw_units(&gl, &self.game_data, &rect, &camera_state_cloned);
+                gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
             }
+            draw_map(&gl, &self.game_data, &rect, &camera_state_cloned);
+            draw_units(&gl, &self.game_data, &rect, &camera_state_cloned);
             renderer.unbind();
 
             let texture_id = self.frame.register_native_glow_texture(renderer.get_texture());

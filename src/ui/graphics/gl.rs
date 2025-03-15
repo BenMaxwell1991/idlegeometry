@@ -1,15 +1,14 @@
-use std::ops::Add;
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::{GAME_MAP, SPRITE_SHEETS};
+use crate::game::data::stored_data::{GAME_MAP, SPRITE_SHEETS_NATIVE};
 use crate::game::map::camera_state::CameraState;
 use crate::game::map::tile_type::TileType;
 use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 use crate::game::units::unit_type::UnitType;
 use crate::ui::component::widget::game_graphics::world_to_screen;
 use eframe::emath::{Rect, Vec2};
-use egui::{Color32, Pos2, TextureId};
+use egui::{Color32, Pos2};
 use glow::*;
-use std::time::Instant;
+use std::ops::Add;
 
 pub fn draw_map(gl: &Context, game_data: &GameData, paintbox_rect: &Rect, camera_state: &CameraState) {
     if let Some(game_map) = game_data.get_field(GAME_MAP) {
@@ -40,7 +39,7 @@ pub fn draw_map(gl: &Context, game_data: &GameData, paintbox_rect: &Rect, camera
 }
 
 pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect, camera_state: &CameraState) {
-    let sprite_sheets = game_data.get_field(SPRITE_SHEETS);
+    let sprite_sheets = game_data.get_field(SPRITE_SHEETS_NATIVE);
     let units_lock = game_data.units.read().unwrap();
     let unit_positions_lock = game_data.unit_positions.read().unwrap();
 
@@ -59,7 +58,7 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect, came
             }
 
             // Scale unit size based on zoom
-            let unit_size = Vec2::new(10.0, 10.0) * camera_state.get_zoom_scaled();
+            let unit_size = Vec2::new(40.0, 40.0) * camera_state.get_zoom_scaled();
             let unit_rect = Rect::from_center_size(unit_screen_position, unit_size);
 
             // If unit is small and not a player, draw as a rectangle
@@ -72,33 +71,30 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect, came
             // If the unit has a valid sprite, use it
             if let Some(sprite_sheets) = sprite_sheets.as_ref() {
                 if let Some(sprite_sheet) = sprite_sheets.get(&unit.animation.sprite_key) {
-                    let frame_index = (unit.animation.animation_frame * sprite_sheet.get_frame_count() as f32).trunc() as usize;
-                    let frame = sprite_sheet.get_frame(frame_index);
-
-
+                    let frame_index = (unit.animation.animation_frame * sprite_sheet.get_frame_count_native() as f32).trunc() as usize;
+                    let frame = sprite_sheet.get_frame_native(frame_index);
 
                     match unit.unit_type {
-                        UnitType::Player => player_to_draw.push((Some(NativeTexture(frame,id())), unit_rect));
-
-                        UnitType::Enemy => images_to_draw.push((frame.id(), unit_rect)),
+                        UnitType::Player => { player_to_draw.push((Some(*frame), unit_rect)); },
+                        UnitType::Enemy => { images_to_draw.push((Some(*frame), unit_rect)); },
                     }
                 }
             }
         }
     }
 
-    // Draw colored rectangles for small units
     if let (shader_lock) = game_data.rect_shader.write().unwrap() {
         draw_colour_rectangles(gl, &paintbox_rect, &rects_to_draw, &colours_to_draw, &*shader_lock);
     }
 
-    // Draw sprites for units
-    // draw_colour_sprites(gl.as_ref(), paintbox_rect, &images_to_draw);
-    //
-    // Draw player separately
     if let (shader_lock) = game_data.sprite_shader.write().unwrap() {
-        draw_colour_sprites(gl.as_ref(), paintbox_rect, &player_to_draw, &*shader_lock);
+        draw_colour_sprites(gl, paintbox_rect, &images_to_draw, &*shader_lock);
     }
+
+    if let (shader_lock) = game_data.sprite_shader.write().unwrap() {
+        draw_colour_sprites(gl, paintbox_rect, &player_to_draw, &*shader_lock);
+    }
+
 }
 
 pub fn draw_colour_sprites(
@@ -345,13 +341,4 @@ pub fn create_rect_shader_program(gl: &Context) -> NativeProgram {
 
         shader_program
     }
-}
-
-pub fn egui_texture_id_to_native(gl: &glow::Context, ctx: &egui::Context, texture_id: TextureId) -> Option<NativeTexture> {
-    if let Some(allocator) = ctx.tex_allocator() {
-        if let Some(gl_allocator) = allocator.downcast_ref::<GlowTextureAllocator>() {
-            return gl_allocator.get_texture(texture_id);
-        }
-    }
-    None
 }
