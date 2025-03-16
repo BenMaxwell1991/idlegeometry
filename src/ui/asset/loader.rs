@@ -76,7 +76,7 @@ pub fn load_sprites_native(gl: &glow::Context, game_data: &Arc<GameData>) {
 
     load_sprite_sheets_native(gl, &mut native_sprite_sheets);
 
-    load_sprite_folders_native(gl, &mut native_sprite_sheets);
+    // load_sprite_folders_native(gl, &mut native_sprite_sheets);
 
     println!("✅ All native sprites loaded!");
     game_data.set_field(SPRITE_SHEETS_NATIVE, native_sprite_sheets);

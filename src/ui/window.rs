@@ -78,8 +78,8 @@ impl MyAppWindow {
 
 impl App for MyAppWindow {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
-        println!("Time since last frame: {}", self.last_update.elapsed().as_millis());
-        println!("FPS: {}", 1000 / self.last_update.elapsed().as_millis());
+        // println!("Time since last frame: {}", self.last_update.elapsed().as_millis());
+        // println!("FPS: {}", 1000 / self.last_update.elapsed().as_millis());
         self.last_update = Instant::now();
 
         self.game_data.update_or_set(GAME_IN_FOCUS, false, |in_focus| { *in_focus = ctx.input(|i| i.focused) });

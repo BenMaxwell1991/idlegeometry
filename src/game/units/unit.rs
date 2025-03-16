@@ -1,35 +1,34 @@
 use crate::game::data::game_data::GameData;
 use crate::game::maths::pos_2::{Pos2FixedPoint, INVALID_POSITION};
-use crate::game::resources::resource::Resource;
 use crate::game::units::animation::Animation;
 use crate::game::units::attack::Attack;
 use crate::game::units::unit_shape::UnitShape;
 use crate::game::units::unit_type::UnitType;
 use rayon::iter::*;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::mem::swap;
-use std::time::Instant;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Unit {
     pub id: u32,
     pub unit_type: UnitType,
     pub unit_shape: UnitShape,
-    pub stats: HashMap<String, Resource>,
     pub move_speed: i32,
+    pub health_max: f32,
+    pub health_current: f32,
     pub animation: Animation,
     pub attacks: Vec<Attack>,
 }
 
 impl Unit {
-    pub fn new(unit_type: UnitType, unit_shape: UnitShape, move_speed: i32, stats: HashMap<String, Resource>, animation: Animation) -> Self {
+    pub fn new(unit_type: UnitType, unit_shape: UnitShape, move_speed: i32, health_max: f32, health_current: f32, animation: Animation) -> Self {
         Self {
             id: u32::MAX,
             unit_type,
             unit_shape,
             move_speed,
-            stats,
+            health_max,
+            health_current,
             animation,
             attacks: Vec::new(),
         }

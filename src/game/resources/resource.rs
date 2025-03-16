@@ -1,7 +1,6 @@
 use crate::game::maths::pos_2::FIXED_POINT_SCALE;
 use crate::game::resources::bignumber::BigNumber;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::sync::LazyLock;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -67,11 +66,4 @@ pub static DEFAULT_MANA: LazyLock<Resource> = LazyLock::new(|| {
         BigNumber::new(0.0),
         false,
     )
-});
-
-pub static DEFAULT_STATS: LazyLock<HashMap<String, Resource>> = LazyLock::new(|| {
-    let mut stats = HashMap::new();
-    stats.insert(DEFAULT_HEALTH.name.clone(), DEFAULT_HEALTH.clone());
-    stats.insert(DEFAULT_MANA.name.clone(), DEFAULT_MANA.clone());
-    stats
 });

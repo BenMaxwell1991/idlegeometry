@@ -7,6 +7,9 @@ pub struct OffscreenRenderer {
     texture: Texture,
     width: i32,
     height: i32,
+    pub vao: NativeVertexArray,
+    pub vbo: NativeBuffer,
+    pub ebo: NativeBuffer,
 }
 
 impl OffscreenRenderer {
@@ -14,6 +17,9 @@ impl OffscreenRenderer {
         unsafe {
             let framebuffer = gl.create_framebuffer().unwrap();
             let texture = gl.create_texture().unwrap();
+            let vao = gl.create_vertex_array().unwrap();
+            let vbo = gl.create_buffer().unwrap();
+            let ebo = gl.create_buffer().unwrap();
 
             gl.bind_framebuffer(FRAMEBUFFER, Some(framebuffer));
 
@@ -46,6 +52,9 @@ impl OffscreenRenderer {
                 texture,
                 width,
                 height,
+                vao,
+                vbo,
+                ebo,
             }
         }
     }

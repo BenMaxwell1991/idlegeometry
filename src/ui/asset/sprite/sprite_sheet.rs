@@ -2,6 +2,7 @@ use eframe::egui::{Context, TextureHandle};
 use egui::{ColorImage, TextureOptions};
 use image::{DynamicImage, RgbaImage};
 use std::fs;
+use std::fs::read_dir;
 use std::path::PathBuf;
 use glow::{HasContext, NativeTexture, PixelUnpackData};
 
@@ -23,12 +24,12 @@ pub(crate) const SPRITE_FOLDERS: [(&str, &str); 1] = [
 
 #[derive(Clone)]
 pub struct SpriteSheet {
-    frames_native: Vec<NativeTexture>,
+    frame_texture_ids: Vec<NativeTexture>,
 }
 
 impl SpriteSheet {
     pub fn new(gl: &glow::Context, name: &str, bytes: &[u8], frame_width: u32, frame_height: u32) -> Self {
-        let mut frames_native = Vec::new();
+        let mut frame_texture_ids = Vec::new();
 
         // Load the full sprite sheet from memory
         let sprite_sheet = image::load_from_memory(bytes).expect("Failed to load sprite sheet");
@@ -42,22 +43,22 @@ impl SpriteSheet {
             for x in 0..frame_count_x {
                 let frame = extract_frame(&sprite_sheet, x, y, frame_width, frame_height);
                 let native_texture = create_opengl_texture(gl, &frame);
-                frames_native.push(native_texture);
+                frame_texture_ids.push(native_texture);
             }
         }
 
-        Self { frames_native }
+        Self { frame_texture_ids }
     }
 
     pub fn from_folder(gl: &glow::Context, name: &str, folder_path: &str) -> Self {
-        let mut frames_native = Vec::new();
+        let mut frame_texture_ids = Vec::new();
 
         let path = PathBuf::from(folder_path);
 
         println!("Path: {:?}", path);
 
         // Read directory and collect file paths
-        let mut files: Vec<PathBuf> = fs::read_dir(&path)
+        let mut files: Vec<PathBuf> = read_dir(&path)
             .expect("Failed to read sprite folder")
             .filter_map(|entry| entry.ok().map(|e| e.path()))
             .filter(|path| path.extension().map_or(false, |ext| ext == "png"))
@@ -74,19 +75,19 @@ impl SpriteSheet {
             let sprite = image::load_from_memory(&image_data).expect("Failed to load image");
 
             let native_texture = create_opengl_texture(gl, &sprite.to_rgba8());
-            frames_native.push(native_texture);
+            frame_texture_ids.push(native_texture);
         }
 
-        Self { frames_native }
+        Self { frame_texture_ids }
     }
 
 
-    pub fn get_frame_native(&self, index: usize) -> &NativeTexture {
-        &self.frames_native[index % self.frames_native.len()]
+    pub fn get_frame_native(&self, index: usize) -> NativeTexture {
+        self.frame_texture_ids[index % self.frame_texture_ids.len()]
     }
 
     pub fn get_frame_count_native(&self) -> usize {
-        self.frames_native.len()
+        self.frame_texture_ids.len()
     }
 }
 
@@ -117,7 +118,7 @@ fn create_opengl_texture(gl: &glow::Context, image: &RgbaImage) -> NativeTexture
         gl.tex_image_2d(
             glow::TEXTURE_2D,
             0,
-            glow::RGBA as i32,
+            glow::SRGB_ALPHA  as i32,
             width as i32,
             height as i32,
             0,
@@ -129,8 +130,8 @@ fn create_opengl_texture(gl: &glow::Context, image: &RgbaImage) -> NativeTexture
         gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_WRAP_S, glow::CLAMP_TO_EDGE as i32);
         gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_WRAP_T, glow::CLAMP_TO_EDGE as i32);
 
-        gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_MIN_FILTER, glow::LINEAR as i32);
-        gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_MAG_FILTER, glow::LINEAR as i32);
+        gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_MIN_FILTER, glow::NEAREST as i32);
+        gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_MAG_FILTER, glow::NEAREST as i32);
 
         gl.bind_texture(glow::TEXTURE_2D, None);
         texture

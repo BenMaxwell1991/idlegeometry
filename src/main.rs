@@ -5,6 +5,7 @@ use game::loops::input_listener::InputListener;
 use rayon::ThreadPoolBuilder;
 use std::sync::Arc;
 use std::thread;
+use crate::game::loops::unit_spawner::spawn_units;
 
 mod game;
 mod ui;
@@ -23,16 +24,18 @@ fn main() {
     let game_data_two = Arc::clone(&game_data);
     let game_data_three = Arc::clone(&game_data);
     let game_data_four = Arc::clone(&game_data);
+    let game_data_five = Arc::clone(&game_data);
 
     let game_loop = GameLoop::new(game_data_one);
     let input_listener = InputListener::new(game_data_two);
 
     thread::spawn(move || game_loop.start_game());
+    // thread::spawn(move || spawn_units(game_data_four));
     thread::spawn(move || input_listener.listen());
     thread::spawn(move || auto_save(game_data_three));
 
     // loop {
     //     thread::sleep(Duration::from_millis(100));
     // }
-    create_window(game_data_four).expect("Failed to start UI");
+    create_window(game_data_five).expect("Failed to start UI");
 }

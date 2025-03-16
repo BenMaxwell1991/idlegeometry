@@ -6,7 +6,7 @@ use crate::game::map::camera_state::CameraState;
 use crate::game::map::game_map::GameMap;
 use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 use crate::game::resources::bignumber::BigNumber;
-use crate::game::resources::resource::{Resource, DEFAULT_MOVE_SPEED, DEFAULT_STATS};
+use crate::game::resources::resource::{Resource, DEFAULT_MOVE_SPEED};
 use crate::game::settings::Settings;
 use crate::game::units::animation::Animation;
 use crate::game::units::attack::Attack;
@@ -86,7 +86,7 @@ fn init_attacks(game_data: &GameData) {
 
 fn init_player(game_data: &GameData) {
     let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_secs(1));
-    let mut player = Unit::new(UnitType::Player, UnitShape::new(20 * FIXED_POINT_SCALE, 20 * FIXED_POINT_SCALE), DEFAULT_MOVE_SPEED, DEFAULT_STATS.clone(), animation);
+    let mut player = Unit::new(UnitType::Player, UnitShape::new(20 * FIXED_POINT_SCALE, 20 * FIXED_POINT_SCALE), DEFAULT_MOVE_SPEED, 10.0, 5.0, animation);
 
     if let Some(attack) = game_data.get_field(ATTACKS).unwrap().iter().find(|attack| attack.name == SLASH_ATTACK) {
         player.attacks.push(attack.clone());
@@ -103,9 +103,12 @@ fn init_enemies(game_data: &GameData) {
         let map_x = map.width as i32 * map.tile_size;
         let map_y = map.height as i32 * map.tile_size;
 
-        for _i in 0..9999 {
+        for _i in 0..5 {
             let pos = Pos2FixedPoint::new(random_range(0..=map_x), random_range(0..=map_y));
-            units.push(create_enemy_at_point(YOUNG_RED_DRAGON));
+            // units.push(create_enemy_at_point(YOUNG_RED_DRAGON));
+            let animation = Animation::new(YOUNG_RED_DRAGON, Duration::from_secs(1));
+            let unit = Unit::new(UnitType::Enemy, UnitShape::new(20 * FIXED_POINT_SCALE, 20 * FIXED_POINT_SCALE), 30 * FIXED_POINT_SCALE, 10.0, 10.0 - _i as f32, animation);
+            units.push(unit);
             positions.push(pos);
         }
 
