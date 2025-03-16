@@ -100,8 +100,6 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect, came
                             health_bar_colours.push(Color32::GREEN); // Health
                         },
                         UnitType::Enemy => {
-                            println!("Unit Id: {}", unit.id);
-                            println!("Frame_Number: {}", frame_index);
                             images_to_draw.push((frame, unit_rect));
 
                             if unit.health_current != unit.health_max {

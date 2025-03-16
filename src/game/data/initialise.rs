@@ -85,7 +85,8 @@ fn init_attacks(game_data: &GameData) {
 }
 
 fn init_player(game_data: &GameData) {
-    let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_secs(1));
+    // let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_secs(1));
+    let animation = Animation::new(SLASH_ATTACK, Duration::from_secs(1));
     let mut player = Unit::new(UnitType::Player, UnitShape::new(20 * FIXED_POINT_SCALE, 20 * FIXED_POINT_SCALE), DEFAULT_MOVE_SPEED, 10.0, 5.0, animation);
 
     if let Some(attack) = game_data.get_field(ATTACKS).unwrap().iter().find(|attack| attack.name == SLASH_ATTACK) {

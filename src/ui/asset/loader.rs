@@ -5,8 +5,11 @@ use eframe::egui;
 use eframe::egui::ColorImage;
 use eframe::epaint::TextureHandle;
 use std::collections::HashMap;
+use std::fs::create_dir_all;
 use std::sync::Arc;
 use egui::Context;
+use glow::{HasContext, NativeTexture};
+use image::{ImageBuffer, RgbaImage};
 
 // Icons
 pub const ADVENTURE_IMAGE_BYTES: &[u8] = include_bytes!("icon/adventure.png");
@@ -76,7 +79,7 @@ pub fn load_sprites_native(gl: &glow::Context, game_data: &Arc<GameData>) {
 
     load_sprite_sheets_native(gl, &mut native_sprite_sheets);
 
-    // load_sprite_folders_native(gl, &mut native_sprite_sheets);
+    load_sprite_folders_native(gl, &mut native_sprite_sheets);
 
     println!("✅ All native sprites loaded!");
     game_data.set_field(SPRITE_SHEETS_NATIVE, native_sprite_sheets);
@@ -91,7 +94,7 @@ fn load_sprite_sheets_native(gl: &glow::Context, native_sprite_sheets: &mut Hash
             index + 1, total_sheets, name, (index as f32 / total_sheets as f32) * 100.0
         );
 
-        let sprite_sheet = SpriteSheet::new(gl, name, bytes, *width, *height);
+        let sprite_sheet = SpriteSheet::new(gl, bytes, *width, *height);
         native_sprite_sheets.insert(name.to_string(), sprite_sheet);
     }
 }
@@ -105,7 +108,7 @@ fn load_sprite_folders_native(gl: &glow::Context, native_sprite_sheets: &mut Has
             index + 1, total_folders, name, (index as f32 / total_folders as f32) * 100.0
         );
 
-        let sprite_sheet = SpriteSheet::from_folder(gl, name, folder_path);
+        let sprite_sheet = SpriteSheet::from_folder(gl, folder_path);
         native_sprite_sheets.insert(name.to_string(), sprite_sheet);
     }
 }

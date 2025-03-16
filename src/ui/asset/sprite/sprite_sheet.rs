@@ -1,10 +1,9 @@
-use eframe::egui::{Context, TextureHandle};
-use egui::{ColorImage, TextureOptions};
+use egui::ColorImage;
+use glow::{HasContext, NativeTexture, PixelUnpackData};
 use image::{DynamicImage, RgbaImage};
 use std::fs;
-use std::fs::read_dir;
+use std::fs::{create_dir_all, read, read_dir};
 use std::path::PathBuf;
-use glow::{HasContext, NativeTexture, PixelUnpackData};
 
 // Sprites
 pub const ADULT_GREEN_DRAGON: &str = "adult_green_dragon";
@@ -24,11 +23,11 @@ pub(crate) const SPRITE_FOLDERS: [(&str, &str); 1] = [
 
 #[derive(Clone)]
 pub struct SpriteSheet {
-    frame_texture_ids: Vec<NativeTexture>,
+    pub(crate) frame_texture_ids: Vec<NativeTexture>,
 }
 
 impl SpriteSheet {
-    pub fn new(gl: &glow::Context, name: &str, bytes: &[u8], frame_width: u32, frame_height: u32) -> Self {
+    pub fn new(gl: &glow::Context, bytes: &[u8], frame_width: u32, frame_height: u32) -> Self {
         let mut frame_texture_ids = Vec::new();
 
         // Load the full sprite sheet from memory
@@ -50,29 +49,29 @@ impl SpriteSheet {
         Self { frame_texture_ids }
     }
 
-    pub fn from_folder(gl: &glow::Context, name: &str, folder_path: &str) -> Self {
+    pub fn from_folder(gl: &glow::Context, folder_path: &str) -> Self {
         let mut frame_texture_ids = Vec::new();
 
         let path = PathBuf::from(folder_path);
 
         println!("Path: {:?}", path);
 
-        // Read directory and collect file paths
         let mut files: Vec<PathBuf> = read_dir(&path)
             .expect("Failed to read sprite folder")
             .filter_map(|entry| entry.ok().map(|e| e.path()))
             .filter(|path| path.extension().map_or(false, |ext| ext == "png"))
             .collect();
 
-        // Sort files alphabetically to ensure frame order
         files.sort();
         println!("✅ Files sorted.");
 
-        // Load each image file
         for (index, file) in files.iter().enumerate() {
             println!("📂 Loading image {}", index);
             let image_data = fs::read(file).expect("Failed to read image file");
             let sprite = image::load_from_memory(&image_data).expect("Failed to load image");
+
+            let rgba_image = sprite.to_rgba8();
+            let pixels = rgba_image.as_raw();
 
             let native_texture = create_opengl_texture(gl, &sprite.to_rgba8());
             frame_texture_ids.push(native_texture);
@@ -80,7 +79,6 @@ impl SpriteSheet {
 
         Self { frame_texture_ids }
     }
-
 
     pub fn get_frame_native(&self, index: usize) -> NativeTexture {
         self.frame_texture_ids[index % self.frame_texture_ids.len()]
@@ -135,5 +133,50 @@ fn create_opengl_texture(gl: &glow::Context, image: &RgbaImage) -> NativeTexture
 
         gl.bind_texture(glow::TEXTURE_2D, None);
         texture
+    }
+}
+
+pub fn convert_transparent_white_to_black(gl: &glow::Context, folder_path: &str) {
+    let path = PathBuf::from(folder_path);
+    println!("Path: {:?}", path);
+
+    let mut files: Vec<PathBuf> = read_dir(&path)
+        .expect("Failed to read sprite folder")
+        .filter_map(|entry| entry.ok().map(|e| e.path()))
+        .filter(|path| path.extension().map_or(false, |ext| ext == "png"))
+        .collect();
+
+    files.sort();
+    println!("✅ Files sorted.");
+
+    let output_folder = path.join("modified");
+    create_dir_all(&output_folder).expect("Failed to create modified image folder");
+
+    // Load and modify each image
+    for (index, file) in files.iter().enumerate() {
+        println!("📂 Loading image {}", index);
+        let image_data = read(file).expect("Failed to read image file");
+        let sprite = image::load_from_memory(&image_data).expect("Failed to load image");
+
+        let mut rgba_image = sprite.to_rgba8();
+        let pixels = rgba_image.as_mut();
+
+        for chunk in pixels.chunks_exact_mut(4) {
+            if chunk[0] == 255 && chunk[1] == 255 && chunk[2] == 255 && chunk[3] == 0 {
+                chunk[0] = 0;
+                chunk[1] = 0;
+                chunk[2] = 0;
+            }
+        }
+
+        let modified_file_path = output_folder.join(
+            file.file_stem().unwrap().to_str().unwrap().to_owned() + "_mod.png"
+        );
+
+        rgba_image
+            .save(&modified_file_path)
+            .expect("Failed to save modified image");
+
+        println!("✅ Saved modified image: {}", modified_file_path.display());
     }
 }
