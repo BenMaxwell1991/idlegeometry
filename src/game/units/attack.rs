@@ -1,36 +1,110 @@
-use crate::game::serialise::pos2_serialisable::{deserialize_pos2, serialize_pos2};
+use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 use crate::game::units::animation::Animation;
-use egui::Pos2;
 use serde::{Deserialize, Serialize};
+use crate::game::units::unit::Unit;
+use crate::game::units::unit_shape::UnitShape;
+use crate::game::units::upgrades::UpgradeType;
+use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, SLASH_ATTACK};
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Attack {
-    pub name: String,
+    pub id: u32,
+    pub unit_id: Option<u32>,
+    pub name: AttackName,
+    pub attack_shape: UnitShape,
     pub damage: f64,
     pub range: f32,
     pub cooldown: f32,
-    pub direction: f32,
-    pub speed: f32,
+    pub direction: (f32, f32),
+    pub speed: i32,
     pub area: f32,
     pub animation: Animation,
-    #[serde(serialize_with = "serialize_pos2", deserialize_with = "deserialize_pos2")]
-    pub attack_origin: Pos2,
+    pub attack_origin: Pos2FixedPoint,
+    pub lifetime: f32,
     pub enabled: bool,
+    pub hit_count: u32,
+    pub max_targets: u32,
+    pub units_hit: Vec<u32>
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Debug)]
+pub enum AttackName {
+    Swipe,
+    Fireball
 }
 
 impl Attack {
-    pub fn new(name: &str, damage: f64, range: f32, cooldown: f32, direction: f32, speed: f32, area: f32, animation: Animation, attack_origin: Pos2, enabled: bool) -> Self {
-        Self {
-            name: name.to_string(),
-            damage,
-            range,
-            cooldown,
-            direction,
-            speed,
-            area,
-            animation,
-            attack_origin,
-            enabled,
+    pub fn get_modified_attack(unit: &Unit, attack_name: AttackName) -> Self {
+        let mut attack = Attack::get_basic_attack(attack_name);
+
+        for upgrade in &unit.upgrades {
+            match upgrade.upgrade_type {
+                UpgradeType::IncreaseDamage => {
+                    attack.damage += 10.0 * upgrade.level as f64;
+                }
+                UpgradeType::DecreaseCooldown => {
+                    attack.cooldown *= 1.0 - (0.05 * upgrade.level as f32);
+                }
+                UpgradeType::IncreaseAOE => {
+                    attack.area += 2.0 * FIXED_POINT_SCALE as f32 * upgrade.level as f32;
+                }
+                UpgradeType::IncreaseRange => {
+                    attack.range += 10.0 * FIXED_POINT_SCALE as f32 * upgrade.level as f32;
+                }
+                UpgradeType::IncreaseSpeed => {
+                    attack.speed += 1 * FIXED_POINT_SCALE * upgrade.level as i32;
+                }
+            }
+        }
+
+        attack
+    }
+
+    pub fn get_basic_attack(name: AttackName) -> Self {
+        let animation = match name {
+            AttackName::Swipe => Animation::new(SLASH_ATTACK, std::time::Duration::from_millis(400), (200, 70)),
+            AttackName::Fireball => Animation::new(BABY_GREEN_DRAGON, std::time::Duration::from_millis(300), (70, 70)),
+        };
+
+        match name {
+            AttackName::Swipe => Self {
+                id: u32::MAX,
+                unit_id: None,
+                name: AttackName::Swipe,
+                attack_shape: UnitShape::new(200 * FIXED_POINT_SCALE, 70 * FIXED_POINT_SCALE),
+                damage: 1.0,
+                range: 50.0,
+                cooldown: 0.5,
+                direction: (0.0, 1.0),
+                speed: 0 * FIXED_POINT_SCALE,
+                area: 2000.0,
+                animation,
+                attack_origin: Pos2FixedPoint::new(0, 0),
+                lifetime: 0.4,
+                enabled: false,
+                hit_count: 0,
+                max_targets: u32::MAX,
+                units_hit: Vec::new(),
+            },
+            AttackName::Fireball => Self {
+                id: u32::MAX,
+                unit_id: None,
+                name: AttackName::Fireball,
+                attack_shape: UnitShape::new(20 * FIXED_POINT_SCALE, 20 * FIXED_POINT_SCALE),
+                damage: 50.0,
+                range: 200.0,
+                cooldown: 5.0,
+                direction: (1.0, 0.0),
+                speed: 2 * FIXED_POINT_SCALE,
+                area: 30.0,
+                animation,
+                attack_origin: Pos2FixedPoint::new(0, 0),
+                lifetime: 0.0,
+                enabled: false,
+                hit_count: 0,
+                max_targets: 1,
+                units_hit: Vec::new(),
+            },
         }
     }
 }

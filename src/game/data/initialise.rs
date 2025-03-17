@@ -1,6 +1,6 @@
 use crate::enums::gametab::GameTab;
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::{ATTACKS, CURRENT_TAB, GAME_MAP, KEY_STATE, PLAYER_POSITION, RESOURCES, SETTINGS};
+use crate::game::data::stored_data::{CURRENT_TAB, GAME_MAP, KEY_STATE, PLAYER_POSITION, RESOURCES, SETTINGS};
 use crate::game::loops::key_state::KeyState;
 use crate::game::map::camera_state::CameraState;
 use crate::game::map::game_map::GameMap;
@@ -9,7 +9,7 @@ use crate::game::resources::bignumber::BigNumber;
 use crate::game::resources::resource::{Resource, DEFAULT_MOVE_SPEED};
 use crate::game::settings::Settings;
 use crate::game::units::animation::Animation;
-use crate::game::units::attack::Attack;
+use crate::game::units::attack::{Attack, AttackName};
 use crate::game::units::create_units::create_enemy_at_point;
 use crate::game::units::unit::{add_units, Unit};
 use crate::game::units::unit_shape::UnitShape;
@@ -74,26 +74,34 @@ fn init_map(game_data: &GameData) {
 }
 
 fn init_attacks(game_data: &GameData) {
-    let mut attacks = Vec::new();
+    let animation = Animation::new(SLASH_ATTACK, Duration::from_millis(1000), (70, 70));
+    let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_millis(1000), (70, 70));
 
-    let animation = Animation::new(SLASH_ATTACK, Duration::from_millis(1000));
-    let attack = Attack::new("slash", 10.0, 5.0, 2.0, 0.0, 0.0, 0.0, animation, Default::default(), true);
+    let pool_config = vec![
+        (AttackName::Swipe, animation.clone(), 1000), // Up to 1000 Swipes available
+        (AttackName::Fireball, animation.clone(), 1000), // Up to 1000 Swipes available
+    ];
 
-    attacks.push(attack);
-
-    game_data.set_field(ATTACKS, attacks);
+    initialise_attack_pools(game_data, &pool_config);
 }
 
-fn init_player(game_data: &GameData) {
-    // let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_secs(1));
-    let animation = Animation::new(SLASH_ATTACK, Duration::from_secs(1));
-    let mut player = Unit::new(UnitType::Player, UnitShape::new(20 * FIXED_POINT_SCALE, 20 * FIXED_POINT_SCALE), DEFAULT_MOVE_SPEED, 10.0, 5.0, animation);
 
-    if let Some(attack) = game_data.get_field(ATTACKS).unwrap().iter().find(|attack| attack.name == SLASH_ATTACK) {
-        player.attacks.push(attack.clone());
-    }
+fn init_player(game_data: &GameData) {
+    let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_secs(1), (50, 50));
+    let mut player = Unit::new(UnitType::Player, UnitShape::new(40 * FIXED_POINT_SCALE, 40 * FIXED_POINT_SCALE), DEFAULT_MOVE_SPEED, 10.0, 5.0, animation);
+
+    player.attacks.push(AttackName::Swipe);
 
     add_units(vec![player], vec![Pos2FixedPoint::new(X_CENTER, Y_CENTER)], game_data);
+
+    let player_id = game_data.units.read().unwrap()
+        .iter()
+        .filter_map(|unit_option| unit_option.as_ref())
+        .find(|unit| unit.unit_type == UnitType::Player)
+        .map(|player| player.id);
+
+    let mut player_id_lock = game_data.player_id.write().unwrap();
+    *player_id_lock = player_id;
 }
 
 fn init_enemies(game_data: &GameData) {
@@ -104,15 +112,29 @@ fn init_enemies(game_data: &GameData) {
         let map_x = map.width as i32 * map.tile_size;
         let map_y = map.height as i32 * map.tile_size;
 
-        for _i in 0..5 {
+        let unit_count = 5000;
+
+        for _i in 0..unit_count {
             let pos = Pos2FixedPoint::new(random_range(0..=map_x), random_range(0..=map_y));
-            // units.push(create_enemy_at_point(YOUNG_RED_DRAGON));
-            let animation = Animation::new(YOUNG_RED_DRAGON, Duration::from_secs(1));
-            let unit = Unit::new(UnitType::Enemy, UnitShape::new(20 * FIXED_POINT_SCALE, 20 * FIXED_POINT_SCALE), 30 * FIXED_POINT_SCALE, 10.0, 10.0 - _i as f32, animation);
+            let animation = Animation::new(YOUNG_RED_DRAGON, Duration::from_secs(1), (40, 40));
+            let current_hp = 10.0 -  10.0 * _i as f32 / unit_count as f32;
+            let unit = Unit::new(UnitType::Enemy, UnitShape::new(40 * FIXED_POINT_SCALE, 40 * FIXED_POINT_SCALE), 30 * FIXED_POINT_SCALE, 10.0, current_hp, animation);
             units.push(unit);
             positions.push(pos);
         }
 
         add_units(units, positions, game_data);
+    }
+}
+
+pub fn initialise_attack_pools(game_data: &GameData, pool_sizes: &[(AttackName, Animation, usize)]) {
+    let mut attack_pools = game_data.attack_pools.write().unwrap();
+
+    for (attack_name, animation, size) in pool_sizes {
+        let mut pool = Vec::with_capacity(*size);
+        for _ in 0..*size {
+            pool.push(Attack::get_basic_attack(attack_name.clone()));
+        }
+        attack_pools.insert(attack_name.clone(), pool);
     }
 }

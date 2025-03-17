@@ -1,14 +1,16 @@
 use crate::game::data::game_data::GameData;
 use crate::game::maths::pos_2::{Pos2FixedPoint, INVALID_POSITION};
 use crate::game::units::animation::Animation;
-use crate::game::units::attack::Attack;
+use crate::game::units::attack::AttackName;
 use crate::game::units::unit_shape::UnitShape;
 use crate::game::units::unit_type::UnitType;
 use rayon::iter::*;
 use serde::{Deserialize, Serialize};
 use std::mem::swap;
+use crate::game::units::upgrades::{Upgrade, UpgradeType};
+use crate::helper::lock_helper::acquire_lock_mut;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Unit {
     pub id: u32,
     pub unit_type: UnitType,
@@ -17,7 +19,8 @@ pub struct Unit {
     pub health_max: f32,
     pub health_current: f32,
     pub animation: Animation,
-    pub attacks: Vec<Attack>,
+    pub attacks: Vec<AttackName>,
+    pub upgrades: Vec<Upgrade>,
 }
 
 impl Unit {
@@ -31,7 +34,12 @@ impl Unit {
             health_current,
             animation,
             attacks: Vec::new(),
+            upgrades: Vec::new(),
         }
+    }
+    pub fn apply_damage(&mut self, damage: f64) -> bool {
+        self.health_current -= damage as f32;
+        self.health_current <= 0.0
     }
 }
 
@@ -75,14 +83,39 @@ pub fn remove_units(unit_ids: Vec<u32>, game_data: &GameData) {
     }
 }
 
-pub fn move_units_batched(unit_positions_updates: &[(u32, Pos2FixedPoint, Pos2FixedPoint)], game_data: &GameData) {
+pub fn move_units_batched(unit_positions_updates: &[(u32, Pos2FixedPoint, Pos2FixedPoint)], game_data: &GameData, delta_time: f64) {
+    let mut game_units = game_data.units.write().unwrap();
     let mut unit_positions = game_data.unit_positions.write().unwrap();
     let mut spatial_grid = game_data.spatial_hash_grid.write().unwrap();
+    let mut camera_state = game_data.camera_state.write().unwrap();
 
     unit_positions.clear();
     let mut new_positions: Vec<Pos2FixedPoint> = Vec::with_capacity(unit_positions_updates.len());
     new_positions = unit_positions_updates.par_iter().map(|&(_, _, new_pos)| new_pos).collect();
     swap(&mut *unit_positions, &mut new_positions);
-
     spatial_grid.update_units_position_in_grid(unit_positions_updates);
+
+    let pos = game_units.iter()
+        .filter_map(|unit| unit.as_ref())
+        .find_map(|unit| {
+            if unit.unit_type == UnitType::Player {
+                Some(unit_positions[unit.id as usize])
+            } else {
+                None
+            }
+        }).unwrap_or(Pos2FixedPoint::default());
+
+    camera_state.set_target(pos);
+    camera_state.move_to_target();
 }
+
+pub fn apply_upgrade(unit: &mut Unit, upgrade_type: UpgradeType) {
+    if let Some(existing_upgrade) = unit.upgrades.iter_mut().find(|u| u.upgrade_type == upgrade_type) {
+        existing_upgrade.level += 1;
+    } else {
+        unit.upgrades.push(Upgrade { upgrade_type, level: 1 });
+    }
+
+    println!("Upgrade Applied: {:?}", unit.upgrades);
+}
+

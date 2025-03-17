@@ -4,3 +4,5 @@ pub mod animation;
 pub mod create_units;
 pub mod attack;
 pub mod unit_shape;
+pub mod create_attacks;
+pub mod upgrades;

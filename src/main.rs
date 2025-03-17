@@ -5,11 +5,11 @@ use game::loops::input_listener::InputListener;
 use rayon::ThreadPoolBuilder;
 use std::sync::Arc;
 use std::thread;
-use crate::game::loops::unit_spawner::spawn_units;
 
 mod game;
 mod ui;
 mod enums;
+mod helper;
 
 fn main() {
     ThreadPoolBuilder::new()
@@ -31,6 +31,7 @@ fn main() {
 
     thread::spawn(move || game_loop.start_game());
     // thread::spawn(move || spawn_units(game_data_four));
+    // thread::spawn(move || spawn_swipe_attacks(game_data_four));
     thread::spawn(move || input_listener.listen());
     thread::spawn(move || auto_save(game_data_three));
 

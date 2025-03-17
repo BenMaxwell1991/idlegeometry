@@ -2,8 +2,8 @@
   "resources": [
     {
       "amount": {
-        "exponent": 2,
-        "mantissa": 3.6610069581297364
+        "exponent": 1,
+        "mantissa": 5.668319479800073
       },
       "level": {
         "exponent": 0,
@@ -62,7 +62,7 @@
     }
   ],
   "settings": {
-    "autosave_interval": 10,
+    "autosave_interval": 5,
     "number_format_mode": "Engineering",
     "vsync": true,
     "window_height": 720.0,

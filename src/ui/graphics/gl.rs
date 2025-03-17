@@ -1,7 +1,5 @@
-use std::num::NonZeroU32;
 use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::{GAME_MAP, SPRITE_SHEETS_NATIVE};
-use crate::game::map::camera_state::CameraState;
 use crate::game::map::tile_type::TileType;
 use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 use crate::game::units::unit_type::UnitType;
@@ -9,20 +7,21 @@ use crate::ui::component::widget::game_graphics::world_to_screen;
 use eframe::emath::{Rect, Vec2};
 use egui::{Color32, Pos2};
 use glow::*;
-use std::ops::Add;
 use rustc_hash::FxHashMap;
-use crate::ui::graphics::offscreen_renderer::OffscreenRenderer;
+use std::num::NonZeroU32;
+use std::ops::Add;
 
-pub fn draw_map(gl: &Context, game_data: &GameData, paintbox_rect: &Rect, camera_state: &CameraState) {
+pub fn draw_map(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
+    let camera_state_lock = game_data.camera_state.read().unwrap();
     if let Some(game_map) = game_data.get_field(GAME_MAP) {
-        let tile_size = camera_state.get_zoom_scaled() * game_map.tile_size as f32 / FIXED_POINT_SCALE as f32;
+        let tile_size = camera_state_lock.get_zoom_scaled() * game_map.tile_size as f32 / FIXED_POINT_SCALE as f32;
 
         let mut rects = Vec::new();
         let mut colours = Vec::new();
 
         for (&(x, y), tile) in &game_map.tiles {
             let world_pos = Pos2FixedPoint::new(x as i32 * game_map.tile_size, y as i32 * game_map.tile_size);
-            let screen_pos = world_to_screen(world_pos, camera_state, paintbox_rect);
+            let screen_pos = world_to_screen(world_pos, &camera_state_lock, paintbox_rect);
             let tile_rect = Rect::from_min_size(screen_pos, Vec2::new(tile_size, tile_size));
 
             let colour = match tile.tile_type {
@@ -41,10 +40,13 @@ pub fn draw_map(gl: &Context, game_data: &GameData, paintbox_rect: &Rect, camera
     }
 }
 
-pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect, camera_state: &CameraState) {
+pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
     let sprite_sheets = game_data.get_field(SPRITE_SHEETS_NATIVE);
     let units_lock = game_data.units.read().unwrap();
     let unit_positions_lock = game_data.unit_positions.read().unwrap();
+    let attacks_lock = game_data.attacks.read().unwrap();
+    let attack_positions_lock = game_data.attack_positions.read().unwrap();
+    let camera_state_lock = game_data.camera_state.read().unwrap();
 
     let mut images_to_draw = Vec::new();
     let mut rects_to_draw = Vec::new();
@@ -52,29 +54,25 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect, came
     let mut player_to_draw = Vec::new();
     let mut health_bar_rects = Vec::new();
     let mut health_bar_colours = Vec::new();
+    let mut attack_sprites_to_draw = Vec::new();
 
     for unit_option in units_lock.iter() {
         if let Some(unit) = unit_option {
-            let unit_screen_position = world_to_screen(unit_positions_lock[unit.id as usize], camera_state, paintbox_rect);
+            let unit_screen_position = world_to_screen(unit_positions_lock[unit.id as usize], &camera_state_lock, paintbox_rect);
 
-            // Skip rendering if unit is out of view
             if !paintbox_rect.contains(unit_screen_position.add(paintbox_rect.min.to_vec2())) {
                 continue;
             }
 
-            // Scale unit size based on zoom
-            let unit_size = Vec2::new(40.0, 40.0) * camera_state.get_zoom_scaled();
+            let unit_size = Vec2::new(unit.animation.size.0 as f32, unit.animation.size.1 as f32) * camera_state_lock.get_zoom_scaled();
             let unit_rect = Rect::from_center_size(unit_screen_position, unit_size);
 
-            // If unit is small and not a player, draw as a rectangle
             if (unit_size.x < 5.0 || unit_size.y < 5.0) && unit.unit_type != UnitType::Player {
                 rects_to_draw.push(unit_rect);
-                colours_to_draw.push(Color32::RED); // You can change colors based on unit type
+                colours_to_draw.push(Color32::RED);
                 continue;
             }
 
-
-            // If the unit has a valid sprite, use it
             if let Some(sprite_sheets) = sprite_sheets.as_ref() {
                 if let Some(sprite_sheet) = sprite_sheets.get(&unit.animation.sprite_key) {
                     let frame_index = (unit.animation.animation_frame * sprite_sheet.get_frame_count_native() as f32).trunc() as usize;
@@ -84,7 +82,7 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect, came
                         UnitType::Player => {
                             player_to_draw.push((frame, unit_rect));
 
-                            let health_bar_height = 4.0 * camera_state.get_zoom_scaled();
+                            let health_bar_height = 4.0 * camera_state_lock.get_zoom_scaled();
                             let health_bar_width = unit_size.x * 0.9;
                             let current_health_width = health_bar_width * (unit.health_current / unit.health_max);
 
@@ -95,17 +93,17 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect, came
                             let health_bar_rect = Rect::from_min_size(health_bar_min, Vec2::new(current_health_width, health_bar_height));
 
                             health_bar_rects.push(health_bar_bg_rect);
-                            health_bar_colours.push(Color32::BLACK); // Background
+                            health_bar_colours.push(Color32::BLACK);
                             health_bar_rects.push(health_bar_rect);
-                            health_bar_colours.push(Color32::GREEN); // Health
+                            health_bar_colours.push(Color32::GREEN);
                         },
                         UnitType::Enemy => {
                             images_to_draw.push((frame, unit_rect));
 
                             if unit.health_current != unit.health_max {
-                                let health_bar_height = 3.0 * camera_state.get_zoom_scaled();
+                                let health_bar_height = 3.0 * camera_state_lock.get_zoom_scaled();
                                 let health_bar_width = unit_size.x * 0.7;
-                                let current_health_width = health_bar_width * (unit.health_current / unit.health_max);
+                                let current_health_width = health_bar_width * (unit.health_current / unit.health_max).max(0.0);
 
                                 let health_bar_bg_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
                                 let health_bar_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
@@ -114,9 +112,9 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect, came
                                 let health_bar_rect = Rect::from_min_size(health_bar_min, Vec2::new(current_health_width, health_bar_height));
 
                                 health_bar_rects.push(health_bar_bg_rect);
-                                health_bar_colours.push(Color32::BLACK); // Background
+                                health_bar_colours.push(Color32::BLACK);
                                 health_bar_rects.push(health_bar_rect);
-                                health_bar_colours.push(Color32::RED); // Health
+                                health_bar_colours.push(Color32::RED);
                             }
                         }
                     }
@@ -125,20 +123,54 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect, came
         }
     }
 
+    for (i, attack_option) in attacks_lock.iter().enumerate() {
+        if let Some(attack) = attack_option {
+            let attack_screen_position = world_to_screen(attack_positions_lock[i], &camera_state_lock, paintbox_rect);
+
+            if !paintbox_rect.contains(attack_screen_position.add(paintbox_rect.min.to_vec2())) {
+                continue;
+            }
+
+            let attack_size = Vec2::new(attack.animation.size.0 as f32, attack.animation.size.1 as f32) * camera_state_lock.get_zoom_scaled();
+            let attack_rect = Rect::from_center_size(attack_screen_position, attack_size);
+
+            if let Some(sprite_sheets) = sprite_sheets.as_ref() {
+                if let Some(sprite_sheet) = sprite_sheets.get(&attack.animation.sprite_key) {
+                    let frame_index = (attack.animation.animation_frame * sprite_sheet.get_frame_count_native() as f32).trunc() as usize;
+                    let frame = sprite_sheet.get_frame_native(frame_index);
+
+                    attack_sprites_to_draw.push((frame, attack_rect));
+                } else {
+                    rects_to_draw.push(attack_rect);
+                    colours_to_draw.push(Color32::YELLOW);
+                }
+            }
+        }
+    }
+
+    // rectangles if too far out
     if let shader_lock = game_data.rect_shader.write().unwrap() {
         draw_colour_rectangles(gl, &paintbox_rect, &rects_to_draw, &colours_to_draw, &*shader_lock);
     }
 
+    // draw units
     if let shader_lock = game_data.sprite_shader.write().unwrap() {
         draw_colour_sprites(gl, paintbox_rect, &images_to_draw, &*shader_lock);
     }
 
+    // draw health bars
+    if let shader_lock = game_data.rect_shader.write().unwrap() {
+        draw_colour_rectangles(gl, &paintbox_rect, &health_bar_rects, &health_bar_colours, &*shader_lock);
+    }
+
+    // draw player
     if let shader_lock = game_data.sprite_shader.write().unwrap() {
         draw_colour_sprites(gl, paintbox_rect, &player_to_draw, &*shader_lock);
     }
 
-    if let shader_lock = game_data.rect_shader.write().unwrap() {
-        draw_colour_rectangles(gl, &paintbox_rect, &health_bar_rects, &health_bar_colours, &*shader_lock);
+    // Draw attacks
+    if let shader_lock = game_data.sprite_shader.write().unwrap() {
+        draw_colour_sprites(gl, paintbox_rect, &attack_sprites_to_draw, &*shader_lock);
     }
 }
 

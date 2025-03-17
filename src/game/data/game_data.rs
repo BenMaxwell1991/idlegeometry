@@ -8,35 +8,57 @@ use egui::Vec2;
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use device_query_revamped::Keycode;
 use glow::NativeProgram;
+use rustc_hash::FxHashMap;
+use crate::game::units::attack::{Attack, AttackName};
 
 #[derive(Clone)]
 pub struct GameData {
     pub store: Arc<RwLock<HashMap<String, Arc<RwLock<Box<dyn Any + Send + Sync>>>>>>,
+
     pub units: Arc<RwLock<Vec<Option<Unit>>>>,
     pub unit_positions: Arc<RwLock<Vec<Pos2FixedPoint>>>,
     pub empty_unit_indexes: Arc<RwLock<Vec<u32>>>,
+    pub player_id: Arc<RwLock<Option<u32>>>,
+
+    pub attacks: Arc<RwLock<Vec<Option<Attack>>>>,
+    pub attack_positions: Arc<RwLock<Vec<Pos2FixedPoint>>>,
+    pub empty_attack_indexes: Arc<RwLock<Vec<u32>>>,
+    pub attack_pools: Arc<RwLock<FxHashMap<AttackName, Vec<Attack>>>>,
+
     pub spatial_hash_grid: Arc<RwLock<SpatialHashGrid>>,
     pub offscreen_renderer: Arc<RwLock<Option<OffscreenRenderer>>>,
     pub graphic_window_size: Arc<RwLock<Option<Vec2>>>,
     pub camera_state: Arc<RwLock<CameraState>>,
     pub rect_shader: Arc<RwLock<Option<NativeProgram>>>,
     pub sprite_shader: Arc<RwLock<Option<NativeProgram>>>,
+
+    pub key_queue: Arc<RwLock<Vec<Keycode>>>
 }
 
 impl GameData {
     pub fn new() -> Self {
         Self {
             store: Arc::new(RwLock::new(HashMap::new())),
+
             units: Arc::new(RwLock::new(Vec::new())),
             unit_positions: Arc::new(RwLock::new(Vec::new())),
             empty_unit_indexes: Arc::new(RwLock::new(Vec::new())),
+            player_id: Arc::new(RwLock::new(None)),
+
+            attacks: Arc::new(RwLock::new(Vec::new())),
+            attack_positions: Arc::new(RwLock::new(Vec::new())),
+            empty_attack_indexes: Arc::new(RwLock::new(Vec::new())),
+            attack_pools: Arc::new(RwLock::new(FxHashMap::default())),
+
             spatial_hash_grid: Arc::new(RwLock::new(SpatialHashGrid::new())),
             offscreen_renderer: Arc::new(RwLock::new(None)),
             graphic_window_size: Arc::new(RwLock::new(None)),
             camera_state: Arc::new(RwLock::new(CameraState::new(Pos2FixedPoint::new(0,0), 256))),
             rect_shader: Arc::new(RwLock::new(None)),
             sprite_shader: Arc::new(RwLock::new(None)),
+            key_queue: Arc::new(RwLock::new(Vec::new())),
         }
     }
 

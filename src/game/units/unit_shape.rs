@@ -1,7 +1,7 @@
 use crate::game::maths::pos_2::Pos2FixedPoint;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct UnitShape {
     pub width: i32,
     pub height: i32,

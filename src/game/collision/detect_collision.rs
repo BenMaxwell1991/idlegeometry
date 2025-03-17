@@ -6,9 +6,9 @@ use rayon::iter::*;
 use rayon::slice::ParallelSliceMut;
 
 pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2FixedPoint)], game_data: &GameData) {
-    let spatial_grid = game_data.spatial_hash_grid.read().unwrap();
-    let unit_positions = game_data.unit_positions.read().unwrap();
     let units = game_data.units.read().unwrap();
+    let unit_positions = game_data.unit_positions.read().unwrap();
+    let spatial_grid = game_data.spatial_hash_grid.read().unwrap();
     let chunk_size = ((unit_positions_updates.len() / rayon::current_num_threads()).max(1)).max(1);
 
     unit_positions_updates

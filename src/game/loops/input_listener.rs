@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::KEY_STATE;
 use device_query_revamped::{DeviceQuery, DeviceState, Keycode};
@@ -69,9 +70,11 @@ impl InputListener {
 
     fn listen_keyboard(game_data: Arc<GameData>) {
         let device_state = DeviceState::new();
+        let mut last_pressed = Vec::new();
 
         loop {
             let keys = device_state.get_keys();
+            let mut key_queue = game_data.key_queue.write().unwrap();
 
             if let Some(key_state) = game_data.get_field(KEY_STATE) {
                 key_state.w.store(keys.contains(&Keycode::W), Ordering::SeqCst);
@@ -80,7 +83,18 @@ impl InputListener {
                 key_state.d.store(keys.contains(&Keycode::D), Ordering::SeqCst);
             }
 
-            thread::sleep(Duration::from_millis(5));
+            for &key in &keys {
+                if !last_pressed.contains(&key) {
+                    println!("Key pressed: {:?}", key);
+                    key_queue.push(key);
+                }
+            }
+
+            last_pressed = keys.clone();
+
+            drop(key_queue);
+            thread::sleep(Duration::from_millis(10));
         }
     }
+
 }

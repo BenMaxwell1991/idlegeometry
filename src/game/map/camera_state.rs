@@ -27,6 +27,11 @@ impl CameraState {
         self.target_pos = self.camera_pos;
     }
 
+    pub fn move_to_target(&mut self) {
+        self.camera_pos.x = self.target_pos.x;
+        self.camera_pos.y = self.target_pos.y;
+    }
+
     pub fn set_target(&mut self, new_target: Pos2FixedPoint) {
         self.target_pos = new_target;
     }

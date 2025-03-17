@@ -34,7 +34,6 @@ impl<'a> Widget for GameGraphics<'a> {
 
             let game_data_one = Arc::clone(&self.game_data);
             check_window_size(game_data_one, rect);
-            let camera_state_cloned = self.game_data.camera_state.read().unwrap().clone();
 
             renderer.bind();
             unsafe {
@@ -42,8 +41,8 @@ impl<'a> Widget for GameGraphics<'a> {
                 gl.clear_color(0.0, 0.0, 0.0, 1.0);
                 gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
             }
-            draw_map(&gl, &self.game_data, &rect, &camera_state_cloned);
-            draw_units(&gl, &self.game_data, &rect, &camera_state_cloned);
+            draw_map(&gl, &self.game_data, &rect);
+            draw_units(&gl, &self.game_data, &rect);
             renderer.unbind();
 
             let texture_id = self.frame.register_native_glow_texture(renderer.get_texture());
