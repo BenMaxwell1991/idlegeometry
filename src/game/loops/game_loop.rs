@@ -7,7 +7,7 @@ use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::{CURRENT_TAB, GAME_IN_FOCUS, KEY_STATE, RESOURCES};
 use crate::game::loops::key_state::KeyState;
 use crate::game::maths::integers::int_sqrt_64;
-use crate::game::maths::pos_2::{Pos2FixedPoint, INVALID_POSITION};
+use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE, INVALID_POSITION};
 use crate::game::units::attack::Attack;
 use crate::game::units::create_attacks::{despawn_attack, spawn_attack};
 use crate::game::units::unit::{add_units, move_units_batched, remove_units, Unit};
@@ -231,8 +231,10 @@ impl GameLoop {
         let mut game_units = acquire_lock_mut(&self.game_data.units, "game_units");
         game_units.par_iter_mut().for_each(|unit| {
             if let Some(unit) = unit {
-                unit.animation.animation_frame =
-                    (unit.animation.animation_frame + delta_time as f32 / unit.animation.animation_length.as_secs_f32()).fract();
+                if !unit.animation.fixed_frame_index.is_some() {
+                    unit.animation.animation_frame =
+                        (unit.animation.animation_frame + delta_time as f32 / unit.animation.animation_length.as_secs_f32()).fract();
+                }
             }
         });
         drop(game_units);
@@ -240,8 +242,10 @@ impl GameLoop {
         let mut game_attacks = acquire_lock_mut(&self.game_data.attacks, "game_attacks");
         game_attacks.par_iter_mut().for_each(|attack| {
             if let Some(attack) = attack {
-                attack.animation.animation_frame =
-                    (attack.animation.animation_frame + delta_time as f32 / attack.animation.animation_length.as_secs_f32()).fract();
+                if !attack.animation.fixed_frame_index.is_some() {
+                    attack.animation.animation_frame =
+                        (attack.animation.animation_frame + delta_time as f32 / attack.animation.animation_length.as_secs_f32()).fract();
+                }
             }
         });
         drop(game_attacks);
@@ -302,15 +306,32 @@ impl GameLoop {
                             UnitType::Collectable => {
                                 let direction_vec = player_position.sub(old_position);
                                 let length_squared = direction_vec.x as i64 * direction_vec.x as i64 + direction_vec.y as i64 * direction_vec.y as i64;
+                                let pickup_radius_squared = pickup_radius as i64 * pickup_radius as i64;
 
-                                if length_squared >= pickup_radius as i64 * pickup_radius as i64 {
+                                if length_squared >= pickup_radius_squared {
                                     local_buffer.push((unit.id, old_position, new_position));
-                                    continue
-                                } else if length_squared > 0 {
+                                    continue;
+                                }
+
+                                if length_squared > 0 {
                                     let abs_length = int_sqrt_64(length_squared);
                                     if abs_length > 0 {
-                                        new_position.x += ((direction_vec.x as i64 * distance as i64) / abs_length) as i32;
-                                        new_position.y += ((direction_vec.y as i64 * distance as i64) / abs_length) as i32;
+                                        let base_speed = distance as i64; // Normal move speed
+
+                                        let scale_factor = pickup_radius_squared / length_squared;
+                                        let mut scaled_speed = base_speed * scale_factor;
+
+                                        // ✅ Cap at 16x speed when within 1/4 radius
+                                        if length_squared <= pickup_radius_squared / 16 {
+                                            scaled_speed = scaled_speed.min(base_speed * 16);
+                                        }
+
+                                        // ✅ Ensure movement does not exceed direction_vec
+                                        let move_x = ((direction_vec.x as i64 * scaled_speed) / abs_length) as i32;
+                                        let move_y = ((direction_vec.y as i64 * scaled_speed) / abs_length) as i32;
+
+                                        new_position.x += move_x;
+                                        new_position.y += move_y;
                                     }
                                 }
                             }
@@ -344,6 +365,7 @@ impl GameLoop {
         loop {
             let now = Instant::now();
             self.update();
+            println!("Game_Loop Duration: {}", now.elapsed().as_millis());
 
             let elapsed = now.elapsed().as_millis() as u64;
             if GAME_RATE > elapsed {

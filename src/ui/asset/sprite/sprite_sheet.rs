@@ -11,14 +11,16 @@ pub const BABY_GREEN_DRAGON: &str = "baby_green_dragon";
 pub const YOUNG_RED_DRAGON: &str = "young_red_dragon";
 pub const AQUA_DRAKE: &str = "aqua_drake";
 pub const ADULT_WHITE_DRAGON: &str = "adult_white_dragon";
+pub const TREASURE: &str = "treasure";
 pub const SLASH_ATTACK: &str = "slash_attack";
 
-pub(crate) const SPRITE_DATA: [(&str, &[u8], u32, u32); 5] = [
+pub(crate) const SPRITE_DATA: [(&str, &[u8], u32, u32); 6] = [
     (ADULT_GREEN_DRAGON, include_bytes!("Basic Dragon Animations/Adult Green Dragon/AdultGreenDragon.png"), 16, 16),
     (BABY_GREEN_DRAGON, include_bytes!("Basic Dragon Animations/Baby Green Dragon/BabyGreenDragon.png"), 16, 16),
     (YOUNG_RED_DRAGON, include_bytes!("Basic Dragon Animations/Young Red Dragon/YoungRedDragon.png"), 16, 16),
     (AQUA_DRAKE, include_bytes!("Basic Dragon Animations/Aqua Drake/AquaDrake.png"), 16, 16),
     (ADULT_WHITE_DRAGON, include_bytes!("Basic Dragon Animations/Adult White Dragon/AdultWhiteDragon.png"), 16, 16),
+    (TREASURE, include_bytes!("resources/treasure_sheet.png"), 16, 16),
 ];
 
 pub(crate) const SPRITE_FOLDERS: [(&str, &str); 1] = [

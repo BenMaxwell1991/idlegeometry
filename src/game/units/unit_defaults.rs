@@ -4,7 +4,7 @@ use crate::game::units::loot::Loot;
 use crate::game::units::unit::Unit;
 use crate::game::units::unit_shape::UnitShape;
 use crate::game::units::unit_type::UnitType;
-use crate::ui::asset::sprite::sprite_sheet::{ADULT_WHITE_DRAGON, AQUA_DRAKE, YOUNG_RED_DRAGON};
+use crate::ui::asset::sprite::sprite_sheet::{ADULT_WHITE_DRAGON, AQUA_DRAKE, TREASURE, YOUNG_RED_DRAGON};
 use std::time::Duration;
 use crate::game::units::on_death;
 use crate::game::units::on_death::OnDeath;
@@ -91,7 +91,9 @@ pub fn create_03_adult_white_dragon() -> Unit {
 }
 
 pub fn collectable_01_basic_monster(loot: Option<Loot>) -> Unit {
-    let animation = Animation::new(ADULT_WHITE_DRAGON, Duration::from_secs(1), (45, 45));
+    let mut animation = Animation::new(TREASURE, Duration::from_secs(1), (45, 45));
+
+    animation.fixed_frame_index = Some(1);
 
     let mut collectable = Unit::new(
         UnitType::Collectable,

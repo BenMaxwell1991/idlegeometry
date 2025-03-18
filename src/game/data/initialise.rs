@@ -110,7 +110,7 @@ fn init_player(game_data: &GameData) {
     let mut player = Unit::new(UnitType::Player, UnitShape::new(40 * FIXED_POINT_SCALE, 40 * FIXED_POINT_SCALE), DEFAULT_MOVE_SPEED, 10.0, 5.0, animation);
 
     player.attack_cooldowns.insert(AttackName::Swipe, 2.0);
-    player.pickup_radius = Some(200 * FIXED_POINT_SCALE);
+    player.pickup_radius = Some(300 * FIXED_POINT_SCALE);
 
     add_units(vec![player], vec![Pos2FixedPoint::new(X_CENTER, Y_CENTER)], game_data);
 

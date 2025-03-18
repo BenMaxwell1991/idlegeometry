@@ -76,7 +76,11 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
 
             if let Some(sprite_sheets) = sprite_sheets.as_ref() {
                 if let Some(sprite_sheet) = sprite_sheets.get(&unit.animation.sprite_key) {
-                    let frame_index = (unit.animation.animation_frame * sprite_sheet.get_frame_count_native() as f32).trunc() as usize;
+
+                    let frame_index = unit.animation.fixed_frame_index.unwrap_or_else(|| {
+                        (unit.animation.animation_frame * sprite_sheet.get_frame_count_native() as f32).trunc() as usize
+                    });
+
                     let frame = sprite_sheet.get_frame_native(frame_index);
 
                     match unit.unit_type {
@@ -157,7 +161,10 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
 
             if let Some(sprite_sheets) = sprite_sheets.as_ref() {
                 if let Some(sprite_sheet) = sprite_sheets.get(&attack.animation.sprite_key) {
-                    let frame_index = (attack.animation.animation_frame * sprite_sheet.get_frame_count_native() as f32).trunc() as usize;
+                    let frame_index = attack.animation.fixed_frame_index.unwrap_or_else(|| {
+                        (attack.animation.animation_frame * sprite_sheet.get_frame_count_native() as f32).trunc() as usize
+                    });
+
                     let frame = sprite_sheet.get_frame_native(frame_index);
 
                     attack_sprites_to_draw.push((frame, attack_rect));

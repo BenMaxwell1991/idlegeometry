@@ -83,7 +83,7 @@ impl Attack {
                 attack_shape: UnitShape::new(200 * FIXED_POINT_SCALE, 70 * FIXED_POINT_SCALE),
                 damage: 1.0,
                 range: 50.0,
-                cooldown: 0.05,
+                cooldown: 0.6,
                 direction: (0.0, 1.0),
                 speed: 0 * FIXED_POINT_SCALE,
                 area: 2000.0,
