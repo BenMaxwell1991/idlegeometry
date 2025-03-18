@@ -1,41 +1,44 @@
+use crate::enums::gamestate::GameState;
 use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::RESOURCES;
 use crate::ui::component::widget::custom_grid::CustomGrid;
 use crate::ui::component::widget::custom_heading::CustomHeading;
 use crate::ui::component::widget::custom_progress_bar::CustomProgressBar;
 use crate::ui::component::widget::game_graphics::GameGraphics;
+use crate::ui::panel::game_menu::show_game_menu;
 use eframe::{egui, Frame};
 use egui::{Color32, Pos2, Rect, Ui, Vec2};
-use std::sync::{Arc, OnceLock};
+use std::sync::OnceLock;
 use uuid::Uuid;
 
 static GAME_GRAPHICS_ID: OnceLock<Uuid> = OnceLock::new();
 static RESOURCE_HUD_ID: OnceLock<Uuid> = OnceLock::new();
 
-pub fn show_main_game(ui: &mut Ui, game_data: Arc<GameData>, frame: &mut Frame) {
-    let graphics_id = GAME_GRAPHICS_ID.get_or_init(Uuid::new_v4);
+pub fn show_main_game(ui: &mut Ui, game_data: &GameData, frame: &mut Frame) {
+    let game_state = *game_data.game_state.read().unwrap();
     let hud_id = RESOURCE_HUD_ID.get_or_init(Uuid::new_v4);
-
-    let game_data_one = Arc::clone(&game_data);
-    let game_data_two = Arc::clone(&game_data);
 
     ui.add(CustomHeading::new("The Game"));
     ui.separator();
 
-    // Get Drawing Rects
     let game_rect = ui.available_rect_before_wrap();
     let (hud_rect, progress_rect) = get_hud_rects(&game_rect);
-    
-    // Draw Game Graphics
-    ui.put(game_rect, GameGraphics::new(game_data_one, frame));
 
-    // Draw HUD Background
+    match game_state {
+        GameState::Ready => {
+            show_game_menu(ui, game_data, game_rect);
+        }
+        GameState::Playing => {
+            ui.put(game_rect, GameGraphics::new(game_data, frame));
+        }
+        _ => {}
+    }
+
     let painter = ui.painter();
     painter.rect_filled(hud_rect, 10.0, Color32::from_rgb(50, 0, 50));
     painter.rect_filled(progress_rect, 5.0, Color32::from_rgb(50, 0, 50));
 
-    // Draw HUD Foreground
-    ui.put(hud_rect, CustomGrid::new(game_data_two, hud_id));
+    ui.put(hud_rect, CustomGrid::new(game_data, hud_id));
 
     if let Some(points) = game_data.get_field(RESOURCES)
         .unwrap().iter()

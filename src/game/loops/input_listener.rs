@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::KEY_STATE;
 use device_query_revamped::{DeviceQuery, DeviceState, Keycode};

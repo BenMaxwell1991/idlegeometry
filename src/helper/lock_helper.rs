@@ -1,6 +1,6 @@
 use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
-use std::time::{Duration, Instant};
 use std::thread;
+use std::time::{Duration, Instant};
 
 pub fn acquire_lock<'a, T>(lock: &'a RwLock<T>, name: &str) -> RwLockReadGuard<'a, T> {
     let timeout = Duration::from_secs(2);

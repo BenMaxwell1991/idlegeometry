@@ -7,15 +7,14 @@ use eframe::Frame;
 use egui::{Pos2, Rect, Response, Stroke, StrokeKind};
 use glow::*;
 use std::hash::Hash;
-use std::sync::Arc;
 
 pub struct GameGraphics<'a> {
-    game_data: Arc<GameData>,
+    game_data: &'a GameData,
     frame: &'a mut Frame,
 }
 
 impl<'a> GameGraphics<'a> {
-    pub fn new(game_data: Arc<GameData>, frame: &'a mut Frame) -> Self {
+    pub fn new(game_data: &'a GameData, frame: &'a mut Frame) -> Self {
         Self { game_data, frame }
     }
 }
@@ -32,8 +31,7 @@ impl<'a> Widget for GameGraphics<'a> {
             let width = rect.width();
             let height = rect.height();
 
-            let game_data_one = Arc::clone(&self.game_data);
-            check_window_size(game_data_one, rect);
+            check_window_size(&self.game_data, rect);
 
             renderer.bind();
             unsafe {
@@ -65,7 +63,7 @@ pub(crate) fn world_to_screen(world_pos: Pos2FixedPoint, camera: &CameraState, r
     )
 }
 
-fn check_window_size(game_data: Arc<GameData>, rect: Rect) {
+fn check_window_size(game_data: &GameData, rect: Rect) {
     let mut window_size_lock = game_data.graphic_window_size.write().unwrap();
 
     if let Some(previous_size) = *window_size_lock {

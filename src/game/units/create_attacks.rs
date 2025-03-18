@@ -1,10 +1,14 @@
+use std::sync::Arc;
+use rand::prelude::IndexedRandom;
+use rand::thread_rng;
 use crate::game::data::game_data::GameData;
 use crate::game::maths::pos_2::Pos2FixedPoint;
 use crate::game::units::attack::{Attack, AttackName};
 use crate::helper::lock_helper::acquire_lock_mut;
+use crate::ui::sound::music_player::play_sound;
 
 pub fn spawn_attack(
-    game_data: &GameData,
+    game_data: Arc<GameData>,
     attack_name: AttackName,
     attack_origin: Pos2FixedPoint,
     unit_id: Option<u32>,
@@ -34,6 +38,11 @@ pub fn spawn_attack(
                 attack.area = modified_attack.area;
                 attack.lifetime = modified_attack.lifetime;
                 attack.attack_shape = modified_attack.attack_shape;
+            }
+
+            // 🎵 **Play a random sound from `cast_sounds` if available**
+            if let Some(sound_name) = attack.cast_sounds.choose(&mut thread_rng()) {
+                play_sound(Arc::clone(&game_data), sound_name);
             }
 
             let attack_id = if let Some(reuse_index) = empty_indexes.pop() {

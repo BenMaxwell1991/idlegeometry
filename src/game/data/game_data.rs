@@ -1,17 +1,21 @@
+use crate::enums::gamestate::GameState;
+use crate::enums::gamestate::GameState::Ready;
 use crate::game::collision::spatial_hash_grid::SpatialHashGrid;
 use crate::game::data::stored_data::StoredData;
 use crate::game::map::camera_state::CameraState;
 use crate::game::maths::pos_2::Pos2FixedPoint;
+use crate::game::units::attack::{Attack, AttackName};
 use crate::game::units::unit::Unit;
 use crate::ui::graphics::offscreen_renderer::OffscreenRenderer;
+use device_query_revamped::Keycode;
+use eframe::epaint::TextureHandle;
 use egui::Vec2;
+use glow::NativeProgram;
+use rodio::{OutputStream, OutputStreamHandle, Sink};
+use rustc_hash::FxHashMap;
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use device_query_revamped::Keycode;
-use glow::NativeProgram;
-use rustc_hash::FxHashMap;
-use crate::game::units::attack::{Attack, AttackName};
 
 #[derive(Clone)]
 pub struct GameData {
@@ -34,7 +38,15 @@ pub struct GameData {
     pub rect_shader: Arc<RwLock<Option<NativeProgram>>>,
     pub sprite_shader: Arc<RwLock<Option<NativeProgram>>>,
 
-    pub key_queue: Arc<RwLock<Vec<Keycode>>>
+    pub key_queue: Arc<RwLock<Vec<Keycode>>>,
+    pub game_state: Arc<RwLock<GameState>>,
+    pub icons: Arc<RwLock<FxHashMap<String, TextureHandle>>>,
+    pub icons_inverted: Arc<RwLock<FxHashMap<String, TextureHandle>>>,
+
+    pub sounds: Arc<RwLock<FxHashMap<String, Arc<Sink>>>>,
+    pub audio_stream_handle: Arc<RwLock<Option<OutputStreamHandle>>>,
+    pub current_track: Arc<RwLock<Option<String>>>,
+    pub active_sounds: Arc<RwLock<Vec<Sink>>>,
 }
 
 impl GameData {
@@ -59,6 +71,14 @@ impl GameData {
             rect_shader: Arc::new(RwLock::new(None)),
             sprite_shader: Arc::new(RwLock::new(None)),
             key_queue: Arc::new(RwLock::new(Vec::new())),
+            game_state: Arc::new(RwLock::new(Ready)),
+            icons: Arc::new(RwLock::new(FxHashMap::default())),
+            icons_inverted: Arc::new(RwLock::new(FxHashMap::default())),
+
+            sounds: Arc::new(RwLock::new(FxHashMap::default())),
+            audio_stream_handle: Arc::new(RwLock::new(None)),
+            current_track: Arc::new(RwLock::new(None)),
+            active_sounds: Arc::new(RwLock::new(Vec::new())),
         }
     }
 

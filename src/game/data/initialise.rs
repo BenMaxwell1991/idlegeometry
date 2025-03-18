@@ -10,7 +10,6 @@ use crate::game::resources::resource::{Resource, DEFAULT_MOVE_SPEED};
 use crate::game::settings::Settings;
 use crate::game::units::animation::Animation;
 use crate::game::units::attack::{Attack, AttackName};
-use crate::game::units::create_units::create_enemy_at_point;
 use crate::game::units::unit::{add_units, Unit};
 use crate::game::units::unit_shape::UnitShape;
 use crate::game::units::unit_type::UnitType;

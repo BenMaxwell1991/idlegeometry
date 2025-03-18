@@ -4,14 +4,13 @@ use crate::game::data::stored_data::SETTINGS;
 use crate::ui::component::widget::custom_heading::CustomHeading;
 use eframe::egui;
 use eframe::egui::{Align, ComboBox, Layout, Slider};
-use std::sync::Arc;
 use std::sync::OnceLock;
 use uuid::Uuid;
 
 static COMBOBOX_ID: OnceLock<Uuid> = OnceLock::new();
 static RESOLUTION_ID: OnceLock<Uuid> = OnceLock::new();
 
-pub fn show_settings_panel(ui: &mut egui::Ui, game_data: Arc<GameData>) {
+pub fn show_settings_panel(ui: &mut egui::Ui, game_data: &GameData) {
     ui.add(CustomHeading::new("Settings Panel"));
     ui.separator();
 
@@ -26,21 +25,20 @@ pub fn show_settings_panel(ui: &mut egui::Ui, game_data: Arc<GameData>) {
             ComboBox::from_id_salt(combobox_id)
                 .selected_text(format!("{:?}", settings.number_format_mode))
                 .show_ui(ui, |ui| {
-                    let game_data_clone = Arc::clone(&game_data);
                     if ui.selectable_label(settings.number_format_mode == NumberFormatMode::Standard, "Standard").clicked() {
                         let mut updated_settings = settings;
                         updated_settings.number_format_mode = NumberFormatMode::Standard;
-                        game_data_clone.set_field(SETTINGS, updated_settings);
+                        game_data.set_field(SETTINGS, updated_settings);
                     }
                     if ui.selectable_label(settings.number_format_mode == NumberFormatMode::Engineering, "Engineering").clicked() {
                         let mut updated_settings = settings;
                         updated_settings.number_format_mode = NumberFormatMode::Engineering;
-                        game_data_clone.set_field(SETTINGS, updated_settings);
+                        game_data.set_field(SETTINGS, updated_settings);
                     }
                     if ui.selectable_label(settings.number_format_mode == NumberFormatMode::Exponential, "Exponential").clicked() {
                         let mut updated_settings = settings;
                         updated_settings.number_format_mode = NumberFormatMode::Exponential;
-                        game_data_clone.set_field(SETTINGS, updated_settings);
+                        game_data.set_field(SETTINGS, updated_settings);
                     }
                 });
         });
@@ -50,24 +48,23 @@ pub fn show_settings_panel(ui: &mut egui::Ui, game_data: Arc<GameData>) {
             ComboBox::from_id_salt(resolution_id)
                 .selected_text(format!("{} x {}", settings.window_width, settings.window_height))
                 .show_ui(ui, |ui| {
-                    let game_data_clone = Arc::clone(&game_data);
                     if ui.selectable_label(settings.window_width == 1920.0, "1920 x 1080").clicked() {
                         let mut updated_settings = settings;
                         updated_settings.window_width = 1920.0;
                         updated_settings.window_height = 1080.0;
-                        game_data_clone.set_field(SETTINGS, updated_settings);
+                        game_data.set_field(SETTINGS, updated_settings);
                     }
                     if ui.selectable_label(settings.window_width == 1280.0, "1280 x 720").clicked() {
                         let mut updated_settings = settings;
                         updated_settings.window_width = 1280.0;
                         updated_settings.window_height = 720.0;
-                        game_data_clone.set_field(SETTINGS, updated_settings);
+                        game_data.set_field(SETTINGS, updated_settings);
                     }
                     if ui.selectable_label(settings.window_width == 800.0, "800 x 600").clicked() {
                         let mut updated_settings = settings;
                         updated_settings.window_width = 800.0;
                         updated_settings.window_height = 600.0;
-                        game_data_clone.set_field(SETTINGS, updated_settings);
+                        game_data.set_field(SETTINGS, updated_settings);
                     }
                 });
         });

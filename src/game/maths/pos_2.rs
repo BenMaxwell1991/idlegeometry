@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::game::maths::integers::fast_inverse_sqrt_f32;
+use serde::{Deserialize, Serialize};
 
 pub const INVALID_POSITION: i32 = i32::MIN; // -2,147,483,648
 pub const FIXED_POINT_SCALE: i32 = 1024;

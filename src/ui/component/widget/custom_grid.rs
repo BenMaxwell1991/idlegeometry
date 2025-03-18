@@ -4,18 +4,17 @@ use crate::game::resources::resource::Resource;
 use crate::game::settings::Settings;
 use crate::ui::helper::layout_helper::centered_ui;
 use eframe::egui::{Color32, FontId, Grid, Id, RichText, Sense, Ui, Vec2, Widget};
-use std::sync::Arc;
 
 const RESOURCE_TEXT_COLOUR: Color32 = Color32::from_rgb(255, 255, 255);
 const COLUMN_SPACING: f32 = 20.0;
 
-pub struct CustomGrid {
-    game_data: Arc<GameData>,
+pub struct CustomGrid<'a> {
+    game_data: &'a GameData,
     id: Id,
 }
 
-impl CustomGrid {
-    pub fn new(game_data: Arc<GameData>, id_salt: impl std::hash::Hash) -> Self {
+impl<'a> CustomGrid<'a> {
+    pub fn new(game_data: &'a GameData, id_salt: impl std::hash::Hash) -> Self {
         Self {
             game_data,
             id: Id::new(id_salt),
@@ -23,7 +22,7 @@ impl CustomGrid {
     }
 }
 
-impl Widget for CustomGrid {
+impl<'a> Widget for CustomGrid<'a> {
     fn ui(self, ui: &mut Ui) -> eframe::egui::Response {
         let resources = self.game_data.get_field(RESOURCES).unwrap_or_default();
         let settings = self.game_data.get_field(SETTINGS).unwrap_or_default();

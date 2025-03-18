@@ -21,6 +21,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
+use crate::enums::gamestate::GameState;
 
 pub struct GameLoop {
     pub game_data: Arc<GameData>,
@@ -45,19 +46,10 @@ impl GameLoop {
             }
         });
 
-        let now = Instant::now();
         self.handle_input_actions();
-        // println!("input: {}", now.elapsed().as_millis());
-
-        let now = Instant::now();
         self.handle_animations(delta_time);
-        // println!("animations: {}", now.elapsed().as_millis());
-
         self.handle_attacks(delta_time);
-
-        let now = Instant::now();
         self.handle_movement(delta_time);
-        // println!("movement: {}", now.elapsed().as_millis());
     }
 
     fn handle_input_actions(&self) {
@@ -66,7 +58,6 @@ impl GameLoop {
 
         if let Some(player_id) = player_id {
             let units = acquire_lock(&self.game_data.units, "units");
-            let unit_positions = acquire_lock(&self.game_data.unit_positions, "unit_positions");
 
             if let Some(player) = units.get(player_id as usize).and_then(|u| u.as_ref()) {
                 while let Some(key) = key_queue.pop() {
@@ -75,10 +66,13 @@ impl GameLoop {
                             // Ensure player has an attack to use
                             if let Some(attack_name) = player.attacks.first() {
                                 println!("Spawning {:?} attack at {:?}", attack_name, player_position);
-                                spawn_attack(&self.game_data, attack_name.clone(), player_position, Some(player_id));
+                                spawn_attack(Arc::clone(&self.game_data), attack_name.clone(), player_position, Some(player_id));
                             } else {
                                 println!("Player has no attacks assigned.");
                             }
+                        }
+                        Keycode::Escape => {
+                            *self.game_data.game_state.write().unwrap() = GameState::Ready;
                         }
                         _ => {}
                     }

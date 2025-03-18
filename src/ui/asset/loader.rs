@@ -1,15 +1,11 @@
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::{SPRITE_SHEETS_NATIVE};
+use crate::game::data::stored_data::SPRITE_SHEETS_NATIVE;
 use crate::ui::asset::sprite::sprite_sheet::{SpriteSheet, SPRITE_DATA, SPRITE_FOLDERS};
 use eframe::egui;
 use eframe::egui::ColorImage;
-use eframe::epaint::TextureHandle;
-use std::collections::HashMap;
-use std::fs::create_dir_all;
-use std::sync::Arc;
 use egui::Context;
-use glow::{HasContext, NativeTexture};
-use image::{ImageBuffer, RgbaImage};
+use rustc_hash::FxHashMap;
+
 
 // Icons
 pub const ADVENTURE_IMAGE_BYTES: &[u8] = include_bytes!("icon/adventure.png");
@@ -27,8 +23,8 @@ const ICON_DATA: [(&str, &[u8]); 5] = [
     ("exit", EXIT_IMAGE_BYTES),
 ];
 
-pub fn load_icons(ctx: &Context) -> HashMap<String, TextureHandle> {
-    let mut icons = HashMap::new();
+pub fn load_icons(ctx: &Context, game_data: &GameData) {
+    let mut icons = FxHashMap::default();
 
     for (name, bytes) in ICON_DATA {
         if let Ok(image) = image::load_from_memory(bytes) {
@@ -44,11 +40,11 @@ pub fn load_icons(ctx: &Context) -> HashMap<String, TextureHandle> {
         }
     }
 
-    icons
+    *game_data.icons.write().unwrap() = icons;
 }
 
-pub fn load_icons_inverted(ctx: &Context) -> HashMap<String, TextureHandle> {
-    let mut icons = HashMap::new();
+pub fn load_icons_inverted(ctx: &Context, game_data: &GameData) {
+    let mut icons = FxHashMap::default();
 
     for (name, bytes) in ICON_DATA {
         if let Ok(image) = image::load_from_memory(bytes) {
@@ -71,11 +67,11 @@ pub fn load_icons_inverted(ctx: &Context) -> HashMap<String, TextureHandle> {
         }
     }
 
-    icons
+    *game_data.icons_inverted.write().unwrap() = icons;
 }
 
-pub fn load_sprites_native(gl: &glow::Context, game_data: &Arc<GameData>) {
-    let mut native_sprite_sheets = HashMap::new();
+pub fn load_sprites_native(gl: &glow::Context, game_data: &GameData) {
+    let mut native_sprite_sheets = FxHashMap::default();
 
     load_sprite_sheets_native(gl, &mut native_sprite_sheets);
 
@@ -85,7 +81,7 @@ pub fn load_sprites_native(gl: &glow::Context, game_data: &Arc<GameData>) {
     game_data.set_field(SPRITE_SHEETS_NATIVE, native_sprite_sheets);
 }
 
-fn load_sprite_sheets_native(gl: &glow::Context, native_sprite_sheets: &mut HashMap<String, SpriteSheet>) {
+fn load_sprite_sheets_native(gl: &glow::Context, native_sprite_sheets: &mut FxHashMap<String, SpriteSheet>) {
     let total_sheets = SPRITE_DATA.len();
 
     for (index, (name, bytes, width, height)) in SPRITE_DATA.iter().enumerate() {
@@ -99,7 +95,7 @@ fn load_sprite_sheets_native(gl: &glow::Context, native_sprite_sheets: &mut Hash
     }
 }
 
-fn load_sprite_folders_native(gl: &glow::Context, native_sprite_sheets: &mut HashMap<String, SpriteSheet>) {
+fn load_sprite_folders_native(gl: &glow::Context, native_sprite_sheets: &mut FxHashMap<String, SpriteSheet>) {
     let total_folders = SPRITE_FOLDERS.len();
 
     for (index, (name, folder_path)) in SPRITE_FOLDERS.iter().enumerate() {

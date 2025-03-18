@@ -1,10 +1,11 @@
 use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 use crate::game::units::animation::Animation;
-use serde::{Deserialize, Serialize};
 use crate::game::units::unit::Unit;
 use crate::game::units::unit_shape::UnitShape;
 use crate::game::units::upgrades::UpgradeType;
 use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, SLASH_ATTACK};
+use serde::{Deserialize, Serialize};
+use crate::ui::sound::music_player::{ATTACK_SWIPE_01, ATTACK_SWIPE_02};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Attack {
@@ -24,7 +25,8 @@ pub struct Attack {
     pub enabled: bool,
     pub hit_count: u32,
     pub max_targets: u32,
-    pub units_hit: Vec<u32>
+    pub units_hit: Vec<u32>,
+    pub cast_sounds: Vec<String>,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Debug)]
@@ -85,6 +87,7 @@ impl Attack {
                 hit_count: 0,
                 max_targets: u32::MAX,
                 units_hit: Vec::new(),
+                cast_sounds: vec![ATTACK_SWIPE_01.to_string(), ATTACK_SWIPE_02.to_string()],
             },
             AttackName::Fireball => Self {
                 id: u32::MAX,
@@ -104,6 +107,7 @@ impl Attack {
                 hit_count: 0,
                 max_targets: 1,
                 units_hit: Vec::new(),
+                cast_sounds: Vec::new(),
             },
         }
     }

@@ -4,11 +4,10 @@ use crate::game::units::animation::Animation;
 use crate::game::units::attack::AttackName;
 use crate::game::units::unit_shape::UnitShape;
 use crate::game::units::unit_type::UnitType;
+use crate::game::units::upgrades::{Upgrade, UpgradeType};
 use rayon::iter::*;
 use serde::{Deserialize, Serialize};
 use std::mem::swap;
-use crate::game::units::upgrades::{Upgrade, UpgradeType};
-use crate::helper::lock_helper::acquire_lock_mut;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Unit {
