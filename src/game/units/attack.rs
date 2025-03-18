@@ -11,7 +11,7 @@ use std::time::Duration;
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Attack {
     pub id: u32,
-    pub unit_id: Option<u32>,
+    pub origin_unit_id: Option<u32>,
     pub name: AttackName,
     pub attack_shape: UnitShape,
     pub damage: f64,
@@ -22,7 +22,13 @@ pub struct Attack {
     pub area: f32,
     pub animation: Animation,
     pub attack_origin: Pos2FixedPoint,
+
+    // Attack timings
     pub lifetime: f32,
+    pub elapsed: f32,
+    pub damage_point: f32,
+    pub damage_duration: f32,
+
     pub enabled: bool,
     pub hit_count: u32,
     pub max_targets: u32,
@@ -72,18 +78,21 @@ impl Attack {
         match name {
             AttackName::Swipe => Self {
                 id: u32::MAX,
-                unit_id: None,
+                origin_unit_id: None,
                 name: AttackName::Swipe,
                 attack_shape: UnitShape::new(200 * FIXED_POINT_SCALE, 70 * FIXED_POINT_SCALE),
                 damage: 1.0,
                 range: 50.0,
-                cooldown: 2.0,
+                cooldown: 0.05,
                 direction: (0.0, 1.0),
                 speed: 0 * FIXED_POINT_SCALE,
                 area: 2000.0,
                 animation,
                 attack_origin: Pos2FixedPoint::new(0, 0),
                 lifetime: 0.4,
+                elapsed: 0.0,
+                damage_point: 0.0,
+                damage_duration: 0.0,
                 enabled: false,
                 hit_count: 0,
                 max_targets: u32::MAX,
@@ -92,7 +101,7 @@ impl Attack {
             },
             AttackName::Fireball => Self {
                 id: u32::MAX,
-                unit_id: None,
+                origin_unit_id: None,
                 name: AttackName::Fireball,
                 attack_shape: UnitShape::new(20 * FIXED_POINT_SCALE, 20 * FIXED_POINT_SCALE),
                 damage: 50.0,
@@ -103,7 +112,10 @@ impl Attack {
                 area: 30.0,
                 animation,
                 attack_origin: Pos2FixedPoint::new(0, 0),
-                lifetime: 0.0,
+                lifetime: 1.0,
+                elapsed: 0.0,
+                damage_point: 0.0,
+                damage_duration: 1.0,
                 enabled: false,
                 hit_count: 0,
                 max_targets: 1,

@@ -1,12 +1,13 @@
-use crate::ui::sound::music_player::{start_music_thread};
+use crate::game::data::initialise::initialise_sound_pools;
+use crate::ui::sound::music_player::start_music_thread;
 use crate::ui::window::create_window;
 use game::data::save_load::{auto_save, load_game_or_new};
 use game::loops::game_loop::GameLoop;
 use game::loops::input_listener::InputListener;
 use rayon::ThreadPoolBuilder;
+use rodio::OutputStream;
 use std::sync::Arc;
 use std::thread;
-use rodio::OutputStream;
 
 mod game;
 mod ui;
@@ -15,7 +16,7 @@ mod helper;
 
 fn main() {
     ThreadPoolBuilder::new()
-        .num_threads(num_cpus::get_physical())  // Match number of CPU cores
+        .num_threads(num_cpus::get_physical())
         .build_global()
         .unwrap();
 
@@ -24,6 +25,8 @@ fn main() {
 
     let (stream, stream_handle) = OutputStream::try_default().expect("❌ Failed to create audio output stream");
     *game_data.audio_stream_handle.write().unwrap() = Some(stream_handle);
+    initialise_sound_pools(&game_data);
+    println!("Initialised Sounds");
 
     let game_data_one = Arc::clone(&game_data);
     let game_data_two = Arc::clone(&game_data);

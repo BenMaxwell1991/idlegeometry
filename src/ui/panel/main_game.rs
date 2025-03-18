@@ -65,8 +65,6 @@ fn draw_resource_hud(ui: &mut Ui, game_data: &GameData, hud_rect: Rect) {
     let gold_icon = icons.get("coin").cloned();
     let ruby_icon = icons.get("ruby").cloned();
 
-
-
     ui.allocate_new_ui(
         UiBuilder::new()
             .max_rect(hud_rect)

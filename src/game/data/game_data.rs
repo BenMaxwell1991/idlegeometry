@@ -14,7 +14,7 @@ use glow::NativeProgram;
 use rodio::{OutputStreamHandle, Sink};
 use rustc_hash::FxHashMap;
 use std::any::Any;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, RwLock};
 
 #[derive(Clone)]
@@ -45,6 +45,7 @@ pub struct GameData {
     pub icons_inverted: Arc<RwLock<FxHashMap<String, TextureHandle>>>,
 
     pub sounds: Arc<RwLock<FxHashMap<String, Arc<Sink>>>>,
+    pub sound_pools: Arc<RwLock<FxHashMap<String, VecDeque<Arc<Sink>>>>>,
     pub audio_stream_handle: Arc<RwLock<Option<OutputStreamHandle>>>,
     pub current_track: Arc<RwLock<Option<String>>>,
     pub active_sounds: Arc<RwLock<Vec<Sink>>>,
@@ -78,6 +79,7 @@ impl GameData {
             icons_inverted: Arc::new(RwLock::new(FxHashMap::default())),
 
             sounds: Arc::new(RwLock::new(FxHashMap::default())),
+            sound_pools: Arc::new(RwLock::new(FxHashMap::default())),
             audio_stream_handle: Arc::new(RwLock::new(None)),
             current_track: Arc::new(RwLock::new(None)),
             active_sounds: Arc::new(RwLock::new(Vec::new())),

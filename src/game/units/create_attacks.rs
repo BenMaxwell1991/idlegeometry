@@ -1,11 +1,9 @@
-use std::sync::Arc;
-use rand::prelude::IndexedRandom;
-use rand::thread_rng;
 use crate::game::data::game_data::GameData;
 use crate::game::maths::pos_2::Pos2FixedPoint;
 use crate::game::units::attack::{Attack, AttackName};
 use crate::helper::lock_helper::acquire_lock_mut;
-use crate::ui::sound::music_player::play_sound;
+use rand::prelude::IndexedRandom;
+use std::sync::Arc;
 
 pub fn spawn_attack(
     game_data: Arc<GameData>,
@@ -26,8 +24,9 @@ pub fn spawn_attack(
             attack.enabled = true;
             attack.attack_origin = attack_origin;
             attack.animation.animation_frame = 0.0;
+            attack.elapsed = 0.0;
             attack.units_hit = Vec::new();
-            attack.unit_id = unit_id;
+            attack.origin_unit_id = unit_id;
 
             if let Some(unit) = unit {
                 let modified_attack = Attack::get_modified_attack(unit, attack_name);

@@ -8,3 +8,5 @@ pub mod create_attacks;
 pub mod upgrades;
 pub mod loot;
 pub mod unit_defaults;
+pub mod on_death;
+pub mod sound;

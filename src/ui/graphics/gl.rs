@@ -10,6 +10,7 @@ use glow::*;
 use rustc_hash::FxHashMap;
 use std::num::NonZeroU32;
 use std::ops::Add;
+use crate::helper::lock_helper::acquire_lock;
 
 pub fn draw_map(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
     let camera_state_lock = game_data.camera_state.read().unwrap();
@@ -42,11 +43,11 @@ pub fn draw_map(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
 
 pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
     let sprite_sheets = game_data.get_field(SPRITE_SHEETS_NATIVE);
-    let units_lock = game_data.units.read().unwrap();
-    let unit_positions_lock = game_data.unit_positions.read().unwrap();
-    let attacks_lock = game_data.attacks.read().unwrap();
-    let attack_positions_lock = game_data.attack_positions.read().unwrap();
-    let camera_state_lock = game_data.camera_state.read().unwrap();
+    let units_lock = acquire_lock(&game_data.units, "Failed to acquire units lock");
+    let unit_positions_lock = acquire_lock(&game_data.unit_positions, "Failed to acquire unit_positions lock");
+    let attacks_lock = acquire_lock(&game_data.attacks, "Failed to acquire attacks lock");
+    let attack_positions_lock = acquire_lock(&game_data.attack_positions, "Failed to acquire attack_positions lock");
+    let camera_state_lock = acquire_lock(&game_data.camera_state, "Failed to acquire camera_state lock");
 
     let mut images_to_draw = Vec::new();
     let mut rects_to_draw = Vec::new();
@@ -98,6 +99,26 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
                             health_bar_colours.push(Color32::GREEN);
                         },
                         UnitType::Enemy => {
+                            images_to_draw.push((frame, unit_rect));
+
+                            if unit.health_current != unit.health_max {
+                                let health_bar_height = 3.0 * camera_state_lock.get_zoom_scaled();
+                                let health_bar_width = unit_size.x * 0.7;
+                                let current_health_width = health_bar_width * (unit.health_current / unit.health_max).max(0.0);
+
+                                let health_bar_bg_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
+                                let health_bar_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
+
+                                let health_bar_bg_rect = Rect::from_min_size(health_bar_bg_min, Vec2::new(health_bar_width, health_bar_height));
+                                let health_bar_rect = Rect::from_min_size(health_bar_min, Vec2::new(current_health_width, health_bar_height));
+
+                                health_bar_rects.push(health_bar_bg_rect);
+                                health_bar_colours.push(Color32::BLACK);
+                                health_bar_rects.push(health_bar_rect);
+                                health_bar_colours.push(Color32::RED);
+                            }
+                        }
+                        UnitType::Collectable => {
                             images_to_draw.push((frame, unit_rect));
 
                             if unit.health_current != unit.health_max {

@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use crate::enums::gametab::GameTab;
 use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::{CURRENT_TAB, GAME_MAP, KEY_STATE, PLAYER_POSITION, RESOURCES, SETTINGS};
@@ -17,7 +18,9 @@ use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, SLASH_ATTACK, YO
 use rand::random_range;
 use std::sync::Arc;
 use std::time::Duration;
-use crate::game::units::unit_defaults::create_01_baby_dragon;
+use rodio::Sink;
+use crate::game::units::unit_defaults::{create_01_baby_dragon, create_02_aqua_drake, create_03_adult_white_dragon};
+use crate::ui::sound::music_player::{ATTACK_SWIPE_01, ATTACK_SWIPE_02, COLLECT_RUBY, MONSTER_DEATH_01, SELL_GOLD, SOUND_FILES};
 
 const TILE_SIZE: i32 = 40 * FIXED_POINT_SCALE;
 const X_TILE_COUNT: usize = 50;
@@ -102,12 +105,12 @@ fn init_attacks(game_data: &GameData) {
     initialise_attack_pools(game_data, &pool_config);
 }
 
-
 fn init_player(game_data: &GameData) {
     let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_secs(1), (50, 50));
     let mut player = Unit::new(UnitType::Player, UnitShape::new(40 * FIXED_POINT_SCALE, 40 * FIXED_POINT_SCALE), DEFAULT_MOVE_SPEED, 10.0, 5.0, animation);
 
     player.attack_cooldowns.insert(AttackName::Swipe, 2.0);
+    player.pickup_radius = Some(200 * FIXED_POINT_SCALE);
 
     add_units(vec![player], vec![Pos2FixedPoint::new(X_CENTER, Y_CENTER)], game_data);
 
@@ -129,11 +132,27 @@ fn init_enemies(game_data: &GameData) {
         let map_x = map.width as i32 * map.tile_size;
         let map_y = map.height as i32 * map.tile_size;
 
-        let unit_count = 50;
+        let baby_count = 5000;
+        let drake_count = 0;
+        let adult_count = 0;
 
-        for _i in 0..unit_count {
+        for _i in 0..baby_count {
             let pos = Pos2FixedPoint::new(random_range(0..=map_x), random_range(0..=map_y));
             let unit = create_01_baby_dragon();
+            units.push(unit);
+            positions.push(pos);
+        }
+
+        for _i in 0..drake_count {
+            let pos = Pos2FixedPoint::new(random_range(0..=map_x), random_range(0..=map_y));
+            let unit = create_02_aqua_drake();
+            units.push(unit);
+            positions.push(pos);
+        }
+
+        for _i in 0..adult_count {
+            let pos = Pos2FixedPoint::new(random_range(0..=map_x), random_range(0..=map_y));
+            let unit = create_03_adult_white_dragon();
             units.push(unit);
             positions.push(pos);
         }
@@ -152,4 +171,42 @@ pub fn initialise_attack_pools(game_data: &GameData, pool_sizes: &[(AttackName, 
         }
         attack_pools.insert(attack_name.clone(), pool);
     }
+}
+
+pub fn initialise_sound_pools(game_data: &GameData) {
+    let mut sound_pools = game_data.sound_pools.write()
+        .expect("❌ Failed to acquire write lock on sound pools");
+
+    let stream_handle = game_data.audio_stream_handle.read()
+        .expect("❌ Failed to acquire read lock on audio stream")
+        .clone();
+
+    println!("🎵 Initializing Sound Pools...");
+
+    if let Some(stream_handle) = stream_handle {
+        for (sound_name, _, pool_size) in SOUND_FILES.iter() {
+            println!("🔹 Initializing Sound Pool for '{}' with {} sinks", sound_name, pool_size);
+
+            let mut pool = VecDeque::with_capacity(*pool_size as usize);
+            for i in 0..*pool_size {
+                match Sink::try_new(&stream_handle) {
+                    Ok(sink) => {
+                        let sink = Arc::new(sink);
+                        pool.push_back(sink);
+                        println!("   ✅ Created Sink {} for '{}'", i + 1, sound_name);
+                    }
+                    Err(e) => {
+                        println!("   ❌ Failed to create Sink {} for '{}': {:?}", i + 1, sound_name, e);
+                    }
+                }
+            }
+
+            println!("   🎵 Final pool size for '{}': {}", sound_name, pool.len());
+            sound_pools.insert(sound_name.to_string(), pool);
+        }
+    } else {
+        println!("❌ Stream handle is None. Sound pools cannot be initialized!");
+    }
+
+    println!("✅ Sound Pools Initialized Successfully");
 }
