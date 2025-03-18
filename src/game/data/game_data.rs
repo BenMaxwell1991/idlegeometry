@@ -11,7 +11,7 @@ use device_query_revamped::Keycode;
 use eframe::epaint::TextureHandle;
 use egui::Vec2;
 use glow::NativeProgram;
-use rodio::{OutputStream, OutputStreamHandle, Sink};
+use rodio::{OutputStreamHandle, Sink};
 use rustc_hash::FxHashMap;
 use std::any::Any;
 use std::collections::HashMap;
@@ -20,6 +20,7 @@ use std::sync::{Arc, RwLock};
 #[derive(Clone)]
 pub struct GameData {
     pub store: Arc<RwLock<HashMap<String, Arc<RwLock<Box<dyn Any + Send + Sync>>>>>>,
+    pub resources: Arc<RwLock<FxHashMap<String, f64>>>,
 
     pub units: Arc<RwLock<Vec<Option<Unit>>>>,
     pub unit_positions: Arc<RwLock<Vec<Pos2FixedPoint>>>,
@@ -53,6 +54,7 @@ impl GameData {
     pub fn new() -> Self {
         Self {
             store: Arc::new(RwLock::new(HashMap::new())),
+            resources: Arc::new(RwLock::new(FxHashMap::default())),
 
             units: Arc::new(RwLock::new(Vec::new())),
             unit_positions: Arc::new(RwLock::new(Vec::new())),

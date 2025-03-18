@@ -1,9 +1,8 @@
 use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::GAME_MAP;
 use crate::game::maths::pos_2::Pos2FixedPoint;
-use crate::game::units::create_units::create_enemy_at_point;
 use crate::game::units::unit::add_units;
-use crate::ui::asset::sprite::sprite_sheet::YOUNG_RED_DRAGON;
+use crate::game::units::unit_defaults::create_01_baby_dragon;
 use rand::random_range;
 use std::sync::Arc;
 use std::thread;
@@ -19,7 +18,7 @@ pub fn spawn_units(game_data: Arc<GameData>) {
             let map_y = map.height as i32 * map.tile_size;
 
             let pos = Pos2FixedPoint::new(random_range(0..=map_x), random_range(0..=map_y));
-            units.push(create_enemy_at_point(YOUNG_RED_DRAGON));
+            units.push(create_01_baby_dragon());
             positions.push(pos);
 
             add_units(units, positions, &game_data);

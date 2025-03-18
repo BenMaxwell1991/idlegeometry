@@ -40,11 +40,6 @@ pub fn spawn_attack(
                 attack.attack_shape = modified_attack.attack_shape;
             }
 
-            // 🎵 **Play a random sound from `cast_sounds` if available**
-            if let Some(sound_name) = attack.cast_sounds.choose(&mut thread_rng()) {
-                play_sound(Arc::clone(&game_data), sound_name);
-            }
-
             let attack_id = if let Some(reuse_index) = empty_indexes.pop() {
                 attack.id = reuse_index;
                 attacks[reuse_index as usize] = Some(attack);

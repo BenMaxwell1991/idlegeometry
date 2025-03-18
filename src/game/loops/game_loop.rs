@@ -1,3 +1,4 @@
+use crate::enums::gamestate::GameState;
 use crate::enums::gametab::GameTab;
 use crate::enums::gametab::GameTab::NullGameTab;
 use crate::game::collision::detect_collision::{handle_collision, rectangles_collide};
@@ -7,11 +8,15 @@ use crate::game::data::stored_data::{CURRENT_TAB, GAME_IN_FOCUS, KEY_STATE, RESO
 use crate::game::loops::key_state::KeyState;
 use crate::game::maths::integers::int_sqrt_64;
 use crate::game::maths::pos_2::{Pos2FixedPoint, INVALID_POSITION};
+use crate::game::units::attack::Attack;
 use crate::game::units::create_attacks::{despawn_attack, spawn_attack};
 use crate::game::units::unit::{move_units_batched, remove_units};
 use crate::game::units::unit_type::UnitType;
 use crate::helper::lock_helper::{acquire_lock, acquire_lock_mut};
+use crate::ui::sound::music_player::play_sound;
 use device_query_revamped::Keycode;
+use rand::prelude::IndexedRandom;
+use rand::rng;
 use rayon::current_num_threads;
 use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use rayon::prelude::ParallelSliceMut;
@@ -21,7 +26,6 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
-use crate::enums::gamestate::GameState;
 
 pub struct GameLoop {
     pub game_data: Arc<GameData>,
@@ -63,8 +67,7 @@ impl GameLoop {
                 while let Some(key) = key_queue.pop() {
                     match key {
                         Keycode::Space => {
-                            // Ensure player has an attack to use
-                            if let Some(attack_name) = player.attacks.first() {
+                            if let Some((attack_name, _)) = player.attack_cooldowns.iter().next() {
                                 println!("Spawning {:?} attack at {:?}", attack_name, player_position);
                                 spawn_attack(Arc::clone(&self.game_data), attack_name.clone(), player_position, Some(player_id));
                             } else {
@@ -148,11 +151,28 @@ impl GameLoop {
         self.handle_attack_collisions();
 
         let mut expired_attacks = Vec::new();
+        let mut attacks_to_spawn = Vec::new();
+
         {
-            let game_units = acquire_lock(&self.game_data.units, "game_units");
-            let unit_positions = acquire_lock(&self.game_data.unit_positions, "unit_positions");
+            let mut game_units = acquire_lock_mut(&self.game_data.units, "game_units");
+            let mut unit_positions = acquire_lock_mut(&self.game_data.unit_positions, "unit_positions");
             let mut attacks = acquire_lock_mut(&self.game_data.attacks, "attacks");
             let mut attack_positions = acquire_lock_mut(&self.game_data.attack_positions, "attack_positions");
+
+            for unit in game_units.iter_mut().flatten() {
+                let unit_position = unit_positions[unit.id as usize];
+
+                for (attack_name, cooldown) in unit.attack_cooldowns.iter_mut() {
+                    *cooldown -= delta_time as f32;
+
+                    if *cooldown <= 0.0 {
+                        println!("🔥 Queuing attack {:?} from Unit {}", attack_name, unit.id);
+                        attacks_to_spawn.push((attack_name.clone(), unit_position, unit.id));
+                        let attack = Attack::get_basic_attack(attack_name.clone());
+                        *cooldown = attack.cooldown;
+                    }
+                }
+            }
 
             attacks.iter_mut().enumerate().for_each(|(id, attack_option)| {
                 if let Some(attack) = attack_option {
@@ -179,6 +199,19 @@ impl GameLoop {
 
         for attack_id in expired_attacks {
             despawn_attack(attack_id, &self.game_data);
+        }
+
+        let mut played_sounds = FxHashSet::default();
+
+        for (attack_name, unit_position, unit_id) in attacks_to_spawn {
+            spawn_attack(Arc::clone(&self.game_data), attack_name.clone(), unit_position, Some(unit_id));
+
+            if let Some(attack_sounds) = Attack::get_basic_attack(attack_name).cast_sounds.choose(&mut rng()) {
+                if !played_sounds.contains(attack_sounds) {
+                    play_sound(Arc::clone(&self.game_data), attack_sounds);
+                    played_sounds.insert(attack_sounds.clone());
+                }
+            }
         }
     }
 

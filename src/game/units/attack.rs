@@ -4,8 +4,9 @@ use crate::game::units::unit::Unit;
 use crate::game::units::unit_shape::UnitShape;
 use crate::game::units::upgrades::UpgradeType;
 use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, SLASH_ATTACK};
-use serde::{Deserialize, Serialize};
 use crate::ui::sound::music_player::{ATTACK_SWIPE_01, ATTACK_SWIPE_02};
+use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Attack {
@@ -64,8 +65,8 @@ impl Attack {
 
     pub fn get_basic_attack(name: AttackName) -> Self {
         let animation = match name {
-            AttackName::Swipe => Animation::new(SLASH_ATTACK, std::time::Duration::from_millis(400), (200, 70)),
-            AttackName::Fireball => Animation::new(BABY_GREEN_DRAGON, std::time::Duration::from_millis(300), (70, 70)),
+            AttackName::Swipe => Animation::new(SLASH_ATTACK, Duration::from_millis(400), (200, 70)),
+            AttackName::Fireball => Animation::new(BABY_GREEN_DRAGON, Duration::from_millis(300), (70, 70)),
         };
 
         match name {
@@ -76,7 +77,7 @@ impl Attack {
                 attack_shape: UnitShape::new(200 * FIXED_POINT_SCALE, 70 * FIXED_POINT_SCALE),
                 damage: 1.0,
                 range: 50.0,
-                cooldown: 0.5,
+                cooldown: 2.0,
                 direction: (0.0, 1.0),
                 speed: 0 * FIXED_POINT_SCALE,
                 area: 2000.0,

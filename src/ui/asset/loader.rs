@@ -13,14 +13,18 @@ pub const SETTINGS_IMAGE_BYTES: &[u8] = include_bytes!("icon/settings.png");
 pub const SHOP_IMAGE_BYTES: &[u8] = include_bytes!("icon/shop.png");
 pub const UPGRADE_IMAGE_BYTES: &[u8] = include_bytes!("icon/upgrade.png");
 pub const EXIT_IMAGE_BYTES: &[u8] = include_bytes!("icon/exit.png");
+pub const COIN_IMAGE_BYTES: &[u8] = include_bytes!("icon/icon_coin.png");
+pub const RUBY_IMAGE_BYTES: &[u8] = include_bytes!("icon/icon_ruby.png");
 
 
-const ICON_DATA: [(&str, &[u8]); 5] = [
+const ICON_DATA: [(&str, &[u8]); 7] = [
     ("adventure", ADVENTURE_IMAGE_BYTES),
     ("settings", SETTINGS_IMAGE_BYTES),
     ("shop", SHOP_IMAGE_BYTES),
     ("upgrade", UPGRADE_IMAGE_BYTES),
     ("exit", EXIT_IMAGE_BYTES),
+    ("coin", COIN_IMAGE_BYTES),
+    ("ruby", RUBY_IMAGE_BYTES),
 ];
 
 pub fn load_icons(ctx: &Context, game_data: &GameData) {

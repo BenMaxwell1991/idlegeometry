@@ -1,15 +1,16 @@
 use crate::enums::gamestate::GameState;
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::RESOURCES;
+use crate::game::data::stored_data::{RESOURCES, SETTINGS};
 use crate::ui::component::widget::custom_grid::CustomGrid;
 use crate::ui::component::widget::custom_heading::CustomHeading;
 use crate::ui::component::widget::custom_progress_bar::CustomProgressBar;
 use crate::ui::component::widget::game_graphics::GameGraphics;
 use crate::ui::panel::game_menu::show_game_menu;
 use eframe::{egui, Frame};
-use egui::{Color32, Pos2, Rect, Ui, Vec2};
+use egui::{Align, Color32, FontId, Image, Layout, Pos2, Rect, RichText, Ui, UiBuilder, Vec2};
 use std::sync::OnceLock;
 use uuid::Uuid;
+use crate::game::resources::bignumber::BigNumber;
 
 static GAME_GRAPHICS_ID: OnceLock<Uuid> = OnceLock::new();
 static RESOURCE_HUD_ID: OnceLock<Uuid> = OnceLock::new();
@@ -34,11 +35,12 @@ pub fn show_main_game(ui: &mut Ui, game_data: &GameData, frame: &mut Frame) {
         _ => {}
     }
 
-    let painter = ui.painter();
-    painter.rect_filled(hud_rect, 10.0, Color32::from_rgb(50, 0, 50));
-    painter.rect_filled(progress_rect, 5.0, Color32::from_rgb(50, 0, 50));
+    // let painter = ui.painter();
+    // painter.rect_filled(hud_rect, 10.0, Color32::from_rgb(50, 0, 50));
+    // painter.rect_filled(progress_rect, 5.0, Color32::from_rgb(50, 0, 50));
+    // ui.put(hud_rect, CustomGrid::new(game_data, hud_id));
 
-    ui.put(hud_rect, CustomGrid::new(game_data, hud_id));
+    draw_resource_hud(ui, game_data, hud_rect);
 
     if let Some(points) = game_data.get_field(RESOURCES)
         .unwrap().iter()
@@ -50,6 +52,51 @@ pub fn show_main_game(ui: &mut Ui, game_data: &GameData, frame: &mut Frame) {
             .set_on_click(Box::new(|| { println!("Progress Bar Clicked") }))
         );
     }
+}
+
+fn draw_resource_hud(ui: &mut Ui, game_data: &GameData, hud_rect: Rect) {
+    let settings = game_data.get_field(SETTINGS).unwrap();
+    let resources = game_data.resources.read().unwrap();
+    let icons = game_data.icons.read().unwrap();
+
+    let gold = resources.get("Gold").cloned().unwrap_or(0.0);
+    let ruby = resources.get("Ruby").cloned().unwrap_or(0.0);
+
+    let gold_icon = icons.get("coin").cloned();
+    let ruby_icon = icons.get("ruby").cloned();
+
+
+
+    ui.allocate_new_ui(
+        UiBuilder::new()
+            .max_rect(hud_rect)
+            .layout(Layout::top_down_justified(Align::Min)),
+        |ui| {
+            ui.vertical(|ui| {
+                ui.horizontal(|ui| {
+                    if let Some(icon) = &gold_icon {
+                        ui.add(Image::new(icon).fit_to_exact_size(Vec2::new(35.0, 35.0)));
+                    }
+                    ui.label(
+                        RichText::new(format!("Gold: {:.0}", gold))
+                            .font(FontId::proportional(24.0))
+                            .color(Color32::GOLD),
+                    );
+                });
+
+                ui.horizontal(|ui| {
+                    if let Some(icon) = &ruby_icon {
+                        ui.add(Image::new(icon).fit_to_exact_size(Vec2::new(35.0, 35.0)));
+                    }
+                    ui.label(
+                        RichText::new(format!("Rubies: {:.0}", ruby))
+                            .font(FontId::proportional(24.0))
+                            .color(Color32::from_rgb(255, 50, 50)),
+                    );
+                });
+            });
+        },
+    );
 }
 
 fn get_hud_rects(game_rect: &Rect) -> (Rect, Rect) {

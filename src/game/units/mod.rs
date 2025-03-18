@@ -6,3 +6,5 @@ pub mod attack;
 pub mod unit_shape;
 pub mod create_attacks;
 pub mod upgrades;
+pub mod loot;
+pub mod unit_defaults;

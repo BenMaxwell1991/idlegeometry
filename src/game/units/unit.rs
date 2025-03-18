@@ -8,6 +8,8 @@ use crate::game::units::upgrades::{Upgrade, UpgradeType};
 use rayon::iter::*;
 use serde::{Deserialize, Serialize};
 use std::mem::swap;
+use rustc_hash::FxHashMap;
+use crate::game::units::loot::Loot;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Unit {
@@ -18,8 +20,9 @@ pub struct Unit {
     pub health_max: f32,
     pub health_current: f32,
     pub animation: Animation,
-    pub attacks: Vec<AttackName>,
+    pub attack_cooldowns: FxHashMap<AttackName, f32>,
     pub upgrades: Vec<Upgrade>,
+    pub loot: Loot,
 }
 
 impl Unit {
@@ -32,8 +35,9 @@ impl Unit {
             health_max,
             health_current,
             animation,
-            attacks: Vec::new(),
+            attack_cooldowns: FxHashMap::default(),
             upgrades: Vec::new(),
+            loot: Loot::default(),
         }
     }
     pub fn apply_damage(&mut self, damage: f64) -> bool {

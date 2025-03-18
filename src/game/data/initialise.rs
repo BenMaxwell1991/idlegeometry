@@ -17,6 +17,7 @@ use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, SLASH_ATTACK, YO
 use rand::random_range;
 use std::sync::Arc;
 use std::time::Duration;
+use crate::game::units::unit_defaults::create_01_baby_dragon;
 
 const TILE_SIZE: i32 = 40 * FIXED_POINT_SCALE;
 const X_TILE_COUNT: usize = 50;
@@ -42,6 +43,9 @@ pub fn init(game_data: GameData) -> GameData {
     init_enemies(&game_data);
     println!("Initialised Enemies");
 
+    init_resources(&game_data);
+    println!("Initialised Resources");
+
     game_data.set_field(KEY_STATE, Arc::new(KeyState::new()));
     game_data.set_field(CURRENT_TAB, GameTab::default());
 
@@ -61,6 +65,20 @@ pub fn init(game_data: GameData) -> GameData {
     }
 
     game_data
+}
+
+fn init_resources(game_data: &GameData) {
+    {
+        let mut resources = game_data.resources.write().unwrap();
+        if !resources.contains_key("Gold") {
+            resources.insert("Gold".to_string(), 1.0);
+            println!("Gold initialized to 1.0");
+        }
+        if !resources.contains_key("Ruby") {
+            resources.insert("Ruby".to_string(), 1.0);
+            println!("Ruby initialized to 1.0");
+        }
+    }
 }
 
 fn init_map(game_data: &GameData) {
@@ -89,7 +107,7 @@ fn init_player(game_data: &GameData) {
     let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_secs(1), (50, 50));
     let mut player = Unit::new(UnitType::Player, UnitShape::new(40 * FIXED_POINT_SCALE, 40 * FIXED_POINT_SCALE), DEFAULT_MOVE_SPEED, 10.0, 5.0, animation);
 
-    player.attacks.push(AttackName::Swipe);
+    player.attack_cooldowns.insert(AttackName::Swipe, 2.0);
 
     add_units(vec![player], vec![Pos2FixedPoint::new(X_CENTER, Y_CENTER)], game_data);
 
@@ -111,13 +129,11 @@ fn init_enemies(game_data: &GameData) {
         let map_x = map.width as i32 * map.tile_size;
         let map_y = map.height as i32 * map.tile_size;
 
-        let unit_count = 5000;
+        let unit_count = 50;
 
         for _i in 0..unit_count {
             let pos = Pos2FixedPoint::new(random_range(0..=map_x), random_range(0..=map_y));
-            let animation = Animation::new(YOUNG_RED_DRAGON, Duration::from_secs(1), (40, 40));
-            let current_hp = 10.0 -  10.0 * _i as f32 / unit_count as f32;
-            let unit = Unit::new(UnitType::Enemy, UnitShape::new(40 * FIXED_POINT_SCALE, 40 * FIXED_POINT_SCALE), 30 * FIXED_POINT_SCALE, 10.0, current_hp, animation);
+            let unit = create_01_baby_dragon();
             units.push(unit);
             positions.push(pos);
         }
