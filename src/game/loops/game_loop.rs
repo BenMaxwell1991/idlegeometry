@@ -25,6 +25,7 @@ use std::cmp::max;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread;
+use std::thread::sleep;
 use std::time::{Duration, Instant};
 
 pub struct GameLoop {
@@ -75,7 +76,7 @@ impl GameLoop {
                             }
                         }
                         Keycode::Escape => {
-                            *self.game_data.game_state.write().unwrap() = GameState::Ready;
+                            self.game_data.set_game_state(GameState::Ready);
                         }
                         _ => {}
                     }
@@ -284,13 +285,7 @@ impl GameLoop {
 
                         match unit.unit_type {
                             UnitType::Player => {
-                                if current_tab == GameTab::Adventure && in_focus {
-                                    let dx = key_state.d.load(Ordering::Relaxed) as i32  - key_state.a.load(Ordering::Relaxed) as i32;
-                                    let dy = key_state.s.load(Ordering::Relaxed) as i32 - key_state.w.load(Ordering::Relaxed) as i32;
-
-                                    new_position.x += dx * distance as i32;
-                                    new_position.y += dy * distance as i32;
-                                }
+                                // Player moved in its own loop to reduce lag
                             }
                             UnitType::Enemy => {
                                 let direction_vec = player_position.sub(old_position);
@@ -363,9 +358,13 @@ impl GameLoop {
 
     pub fn start_game(mut self) {
         loop {
+            if !self.game_data.game_loop_active.load(Ordering::Relaxed) {
+                sleep(Duration::from_millis(10));
+                continue;
+            }
+
             let now = Instant::now();
             self.update();
-            // println!("Game_Loop Duration: {}", now.elapsed().as_millis());
 
             let elapsed = now.elapsed().as_millis() as u64;
             if GAME_RATE > elapsed {

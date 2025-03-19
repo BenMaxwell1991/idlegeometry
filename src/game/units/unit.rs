@@ -121,10 +121,10 @@ pub fn remove_units(unit_ids: Vec<u32>, game_data: Arc<GameData>) -> Vec<(Unit, 
 }
 
 pub fn move_units_batched(unit_positions_updates: &[(u32, Pos2FixedPoint, Pos2FixedPoint)], game_data: &GameData, delta_time: f64) {
-    let mut game_units = game_data.units.write().unwrap();
+    // let mut game_units = game_data.units.write().unwrap();
     let mut unit_positions = game_data.unit_positions.write().unwrap();
     let mut spatial_grid = game_data.spatial_hash_grid.write().unwrap();
-    let mut camera_state = game_data.camera_state.write().unwrap();
+    // let mut camera_state = game_data.camera_state.write().unwrap();
 
     unit_positions.clear();
     let mut new_positions: Vec<Pos2FixedPoint> = Vec::with_capacity(unit_positions_updates.len());
@@ -132,18 +132,18 @@ pub fn move_units_batched(unit_positions_updates: &[(u32, Pos2FixedPoint, Pos2Fi
     swap(&mut *unit_positions, &mut new_positions);
     spatial_grid.update_units_position_in_grid(unit_positions_updates);
 
-    let pos = game_units.iter()
-        .filter_map(|unit| unit.as_ref())
-        .find_map(|unit| {
-            if unit.unit_type == UnitType::Player {
-                Some(unit_positions[unit.id as usize])
-            } else {
-                None
-            }
-        }).unwrap_or(Pos2FixedPoint::default());
-
-    camera_state.set_target(pos);
-    camera_state.move_to_target();
+    // let pos = game_units.iter()
+    //     .filter_map(|unit| unit.as_ref())
+    //     .find_map(|unit| {
+    //         if unit.unit_type == UnitType::Player {
+    //             Some(unit_positions[unit.id as usize])
+    //         } else {
+    //             None
+    //         }
+    //     }).unwrap_or(Pos2FixedPoint::default());
+    //
+    // camera_state.set_target(pos);
+    // camera_state.move_to_target();
 }
 
 pub fn apply_upgrade(unit: &mut Unit, upgrade_type: UpgradeType) {

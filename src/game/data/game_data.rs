@@ -17,9 +17,13 @@ use rustc_hash::FxHashMap;
 use std::any::Any;
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, RwLock};
+use std::sync::atomic::{AtomicBool, Ordering};
+use crate::helper::lock_helper::acquire_lock_mut;
 
 #[derive(Clone)]
 pub struct GameData {
+    pub game_loop_active: Arc<AtomicBool>,
+
     pub store: Arc<RwLock<HashMap<String, Arc<RwLock<Box<dyn Any + Send + Sync>>>>>>,
     pub resources: Arc<RwLock<FxHashMap<String, f64>>>,
     pub game_map: Arc<RwLock<Option<GameMap>>>,
@@ -58,6 +62,8 @@ pub struct GameData {
 impl GameData {
     pub fn new() -> Self {
         Self {
+            game_loop_active: Arc::new(AtomicBool::new(false)),
+
             store: Arc::new(RwLock::new(HashMap::new())),
             resources: Arc::new(RwLock::new(FxHashMap::default())),
             game_map: Arc::new(RwLock::new(None)),
@@ -91,6 +97,11 @@ impl GameData {
 
             fonts: Arc::new(RwLock::new(FxHashMap::default())),
         }
+    }
+
+    pub fn set_game_state(&self, game_state: GameState) {
+        *acquire_lock_mut(&self.game_state, "game_state") = game_state;
+        self.game_loop_active.store(game_state.is_game_active(), Ordering::Relaxed);
     }
 
     pub fn set_field<T: Any + Send + Sync>(&self, key: StoredData<T>, value: T) {

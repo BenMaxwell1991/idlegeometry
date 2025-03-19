@@ -69,6 +69,22 @@ impl SpatialHashGrid {
         self.grid = new_grid;
     }
 
+    pub fn move_unit(&mut self, unit_id: u32, old_position: Pos2FixedPoint, new_position: Pos2FixedPoint) {
+        let old_cell = hash_position(old_position);
+        let new_cell = hash_position(new_position);
+
+        if old_cell != new_cell {
+            if let Some(units) = self.grid.get_mut(&old_cell) {
+                units.retain(|id| *id != unit_id);
+                if units.is_empty() {
+                    self.grid.remove(&old_cell);
+                }
+            }
+
+            self.grid.entry(new_cell).or_default().push(unit_id);
+        }
+    }
+
     pub fn clear(&mut self) {
         self.grid.clear();
     }

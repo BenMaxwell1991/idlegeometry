@@ -1,3 +1,5 @@
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use crate::enums::gamestate::GameState;
 use crate::game::data::game_data::GameData;
 use crate::ui::component::widget::custom_button::CustomButton;
@@ -33,7 +35,7 @@ pub fn show_game_menu(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
                             None,
                             Some(text),
                             Box::new(move || {
-                                *game_data.game_state.write().unwrap() = state;
+                                game_data.set_game_state(state);
                             }),
                         ));
                         ui.separator();

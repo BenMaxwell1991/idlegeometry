@@ -122,7 +122,7 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
     }
 }
 
-fn handle_terrain(new_position: &mut Pos2FixedPoint, old_position: &Pos2FixedPoint, unit_shape: &UnitShape, game_map: &GameMap, tile_size: i32) {
+pub fn handle_terrain(new_position: &mut Pos2FixedPoint, old_position: &Pos2FixedPoint, unit_shape: &UnitShape, game_map: &GameMap, tile_size: i32) {
     let movement_vector = new_position.sub(*old_position);
     let movement_length_squared = movement_vector.x as i64 * movement_vector.x as i64 + movement_vector.y as i64 * movement_vector.y as i64;
     let step_count = int_sqrt_64((movement_length_squared * 256 / (tile_size * tile_size) as i64).max(1)) as i32;

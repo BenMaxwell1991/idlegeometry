@@ -4,6 +4,7 @@ use device_query_revamped::{DeviceQuery, DeviceState, Keycode};
 use rdev::{listen, EventType};
 use std::sync::{atomic::Ordering, Arc, Mutex};
 use std::thread;
+use std::thread::sleep;
 use std::time::Duration;
 
 pub struct InputListener {
@@ -62,8 +63,7 @@ impl InputListener {
                 camera_state.set_zoom(current_zoom + zoom_step);
             }
 
-
-            thread::sleep(step_duration);
+            sleep(step_duration);
         }
     }
 
