@@ -1,15 +1,14 @@
 use crate::game::maths::pos_2::FIXED_POINT_SCALE;
 use crate::game::units::animation::Animation;
 use crate::game::units::loot::Loot;
+use crate::game::units::on_death::OnDeath;
+use crate::game::units::sound::Sound;
 use crate::game::units::unit::Unit;
 use crate::game::units::unit_shape::UnitShape;
 use crate::game::units::unit_type::UnitType;
 use crate::ui::asset::sprite::sprite_sheet::{ADULT_WHITE_DRAGON, AQUA_DRAKE, TREASURE, YOUNG_RED_DRAGON};
+use crate::ui::sound::music_player::SELL_GOLD;
 use std::time::Duration;
-use crate::game::units::on_death;
-use crate::game::units::on_death::OnDeath;
-use crate::game::units::sound::Sound;
-use crate::ui::sound::music_player::{MONSTER_DEATH_01, SELL_GOLD};
 
 pub fn create_01_baby_dragon() -> Unit {
     let animation = Animation::new(YOUNG_RED_DRAGON, Duration::from_secs(1), (25, 25));

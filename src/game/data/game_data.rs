@@ -3,6 +3,7 @@ use crate::enums::gamestate::GameState::Ready;
 use crate::game::collision::spatial_hash_grid::SpatialHashGrid;
 use crate::game::data::stored_data::StoredData;
 use crate::game::map::camera_state::CameraState;
+use crate::game::map::game_map::GameMap;
 use crate::game::maths::pos_2::Pos2FixedPoint;
 use crate::game::units::attack::{Attack, AttackName};
 use crate::game::units::unit::Unit;
@@ -21,6 +22,7 @@ use std::sync::{Arc, RwLock};
 pub struct GameData {
     pub store: Arc<RwLock<HashMap<String, Arc<RwLock<Box<dyn Any + Send + Sync>>>>>>,
     pub resources: Arc<RwLock<FxHashMap<String, f64>>>,
+    pub game_map: Arc<RwLock<Option<GameMap>>>,
 
     pub units: Arc<RwLock<Vec<Option<Unit>>>>,
     pub unit_positions: Arc<RwLock<Vec<Pos2FixedPoint>>>,
@@ -49,6 +51,8 @@ pub struct GameData {
     pub audio_stream_handle: Arc<RwLock<Option<OutputStreamHandle>>>,
     pub current_track: Arc<RwLock<Option<String>>>,
     pub active_sounds: Arc<RwLock<Vec<Sink>>>,
+
+    pub fonts: Arc<RwLock<FxHashMap<String, String>>>
 }
 
 impl GameData {
@@ -56,6 +60,7 @@ impl GameData {
         Self {
             store: Arc::new(RwLock::new(HashMap::new())),
             resources: Arc::new(RwLock::new(FxHashMap::default())),
+            game_map: Arc::new(RwLock::new(None)),
 
             units: Arc::new(RwLock::new(Vec::new())),
             unit_positions: Arc::new(RwLock::new(Vec::new())),
@@ -70,7 +75,7 @@ impl GameData {
             spatial_hash_grid: Arc::new(RwLock::new(SpatialHashGrid::new())),
             offscreen_renderer: Arc::new(RwLock::new(None)),
             graphic_window_size: Arc::new(RwLock::new(None)),
-            camera_state: Arc::new(RwLock::new(CameraState::new(Pos2FixedPoint::new(0,0), 256))),
+            camera_state: Arc::new(RwLock::new(CameraState::new(Pos2FixedPoint::new(0,0), 2048))),
             rect_shader: Arc::new(RwLock::new(None)),
             sprite_shader: Arc::new(RwLock::new(None)),
             key_queue: Arc::new(RwLock::new(Vec::new())),
@@ -83,6 +88,8 @@ impl GameData {
             audio_stream_handle: Arc::new(RwLock::new(None)),
             current_track: Arc::new(RwLock::new(None)),
             active_sounds: Arc::new(RwLock::new(Vec::new())),
+
+            fonts: Arc::new(RwLock::new(FxHashMap::default())),
         }
     }
 

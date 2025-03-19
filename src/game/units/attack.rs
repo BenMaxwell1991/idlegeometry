@@ -2,7 +2,7 @@ use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 use crate::game::units::animation::Animation;
 use crate::game::units::unit::Unit;
 use crate::game::units::unit_shape::UnitShape;
-use crate::game::units::upgrades::UpgradeType;
+use crate::game::units::upgrades::{Upgrade, UpgradeType};
 use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, SLASH_ATTACK};
 use crate::ui::sound::music_player::{ATTACK_SWIPE_01, ATTACK_SWIPE_02};
 use serde::{Deserialize, Serialize};
@@ -43,10 +43,10 @@ pub enum AttackName {
 }
 
 impl Attack {
-    pub fn get_modified_attack(unit: &Unit, attack_name: AttackName) -> Self {
+    pub fn get_modified_attack(upgrades: &Vec<Upgrade>, attack_name: AttackName) -> Self {
         let mut attack = Attack::get_basic_attack(attack_name);
 
-        for upgrade in &unit.upgrades {
+        for upgrade in upgrades {
             match upgrade.upgrade_type {
                 UpgradeType::IncreaseDamage => {
                     attack.damage += 10.0 * upgrade.level as f64;
@@ -83,7 +83,7 @@ impl Attack {
                 attack_shape: UnitShape::new(200 * FIXED_POINT_SCALE, 70 * FIXED_POINT_SCALE),
                 damage: 1.0,
                 range: 50.0,
-                cooldown: 0.6,
+                cooldown: 2.0,
                 direction: (0.0, 1.0),
                 speed: 0 * FIXED_POINT_SCALE,
                 area: 2000.0,
@@ -97,7 +97,7 @@ impl Attack {
                 hit_count: 0,
                 max_targets: u32::MAX,
                 units_hit: Vec::new(),
-                cast_sounds: vec![ATTACK_SWIPE_01.to_string(), ATTACK_SWIPE_02.to_string()],
+                cast_sounds: vec![ATTACK_SWIPE_02.to_string()],
             },
             AttackName::Fireball => Self {
                 id: u32::MAX,

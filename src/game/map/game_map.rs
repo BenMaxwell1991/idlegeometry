@@ -1,4 +1,4 @@
-use crate::game::map::game_tile::{GameTile, EMPTY_DEFAULT, SPAWN_POINT_DEFAULT, WALL_DEFAULT};
+use crate::game::map::game_tile::{GameTile, EMPTY_DEFAULT, GRASS_DEFAULT, WALL_DEFAULT};
 use std::collections::HashMap;
 
 #[derive(Clone)]
@@ -18,7 +18,7 @@ impl GameMap {
                 if x == 0 || x == width - 1 || y == 0 || y == height - 1 {
                     tiles.insert((x, y), WALL_DEFAULT);
                 } else {
-                    tiles.insert((x, y), SPAWN_POINT_DEFAULT);
+                    tiles.insert((x, y), GRASS_DEFAULT);
                 }
             }
         }
@@ -28,5 +28,9 @@ impl GameMap {
 
     pub fn get_tile(&self, x: usize, y: usize) -> GameTile {
         *self.tiles.get(&(x, y)).unwrap_or(&EMPTY_DEFAULT)
+    }
+
+    pub fn get_tile_size(&self) -> i32 {
+        self.tile_size
     }
 }

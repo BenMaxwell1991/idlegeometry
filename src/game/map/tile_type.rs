@@ -3,4 +3,5 @@ pub enum TileType {
     Empty,
     Wall,
     SpawnPoint,
+    Grass,
 }

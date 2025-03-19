@@ -1,38 +1,46 @@
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::{GAME_MAP, SPRITE_SHEETS_NATIVE};
+use crate::game::data::stored_data::SPRITE_SHEETS_NATIVE;
 use crate::game::map::tile_type::TileType;
 use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 use crate::game::units::unit_type::UnitType;
+use crate::helper::lock_helper::acquire_lock;
 use crate::ui::component::widget::game_graphics::world_to_screen;
 use eframe::emath::{Rect, Vec2};
 use egui::{Color32, Pos2};
 use glow::*;
 use rustc_hash::FxHashMap;
 use std::num::NonZeroU32;
-use std::ops::Add;
-use crate::helper::lock_helper::acquire_lock;
 
 pub fn draw_map(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
     let camera_state_lock = game_data.camera_state.read().unwrap();
-    if let Some(game_map) = game_data.get_field(GAME_MAP) {
-        let tile_size = camera_state_lock.get_zoom_scaled() * game_map.tile_size as f32 / FIXED_POINT_SCALE as f32;
+
+    if let Some(game_map) = acquire_lock(&game_data.game_map, "game_map").as_ref() {
+        let tile_size = camera_state_lock.get_zoom_scaled() * game_map.get_tile_size() as f32 / FIXED_POINT_SCALE as f32;
 
         let mut rects = Vec::new();
         let mut colours = Vec::new();
 
-        for (&(x, y), tile) in &game_map.tiles {
-            let world_pos = Pos2FixedPoint::new(x as i32 * game_map.tile_size, y as i32 * game_map.tile_size);
-            let screen_pos = world_to_screen(world_pos, &camera_state_lock, paintbox_rect);
-            let tile_rect = Rect::from_min_size(screen_pos, Vec2::new(tile_size, tile_size));
+        for x in 0..game_map.width {
+            for y in 0..game_map.height {
+                let tile = game_map.get_tile(x, y);
+                let world_pos = Pos2FixedPoint::new(x as i32 * game_map.get_tile_size(), y as i32 * game_map.get_tile_size());
+                let screen_pos = world_to_screen(world_pos, &camera_state_lock, paintbox_rect);
+                let tile_rect = Rect::from_min_size(screen_pos, Vec2::new(tile_size, tile_size));
 
-            let colour = match tile.tile_type {
-                TileType::Wall => Color32::from_rgb(100, 100, 100),
-                TileType::SpawnPoint => Color32::from_rgb(0, 0, 100),
-                TileType::Empty => Color32::from_rgb(0, 0, 0),
-            };
+                if !tile_rect.intersects(Rect::from_min_size(Pos2::new(0.0, 0.0), paintbox_rect.size())) {
+                    continue;
+                }
 
-            rects.push(tile_rect);
-            colours.push(colour);
+                let colour = match tile.tile_type {
+                    TileType::Wall => Color32::from_rgb(100, 100, 100),
+                    TileType::SpawnPoint => Color32::from_rgb(0, 0, 90),
+                    TileType::Grass => Color32::from_rgb(10, 80, 10),
+                    TileType::Empty => Color32::from_rgb(0, 0, 0),
+                };
+
+                rects.push(tile_rect);
+                colours.push(colour);
+            }
         }
 
         if let shader_lock = game_data.rect_shader.write().unwrap() {
@@ -56,17 +64,18 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
     let mut health_bar_rects = Vec::new();
     let mut health_bar_colours = Vec::new();
     let mut attack_sprites_to_draw = Vec::new();
+    let mut shadow_sprites_to_draw = Vec::new();
 
     for unit_option in units_lock.iter() {
         if let Some(unit) = unit_option {
             let unit_screen_position = world_to_screen(unit_positions_lock[unit.id as usize], &camera_state_lock, paintbox_rect);
 
-            if !paintbox_rect.contains(unit_screen_position.add(paintbox_rect.min.to_vec2())) {
-                continue;
-            }
-
             let unit_size = Vec2::new(unit.animation.size.0 as f32, unit.animation.size.1 as f32) * camera_state_lock.get_zoom_scaled();
             let unit_rect = Rect::from_center_size(unit_screen_position, unit_size);
+
+            if !unit_rect.intersects(Rect::from_min_size(Pos2::new(0.0, 0.0), paintbox_rect.size())) {
+                continue;
+            }
 
             if (unit_size.x < 5.0 || unit_size.y < 5.0) && unit.unit_type != UnitType::Player {
                 rects_to_draw.push(unit_rect);
@@ -83,9 +92,16 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
 
                     let frame = sprite_sheet.get_frame_native(frame_index);
 
+                    let shadow_scale = 1.2;
+                    let shadow_size = unit_size * Vec2::new(shadow_scale, shadow_scale * 0.4);
+                    let shadow_offset = Vec2::new(unit_size.x * 0.07, unit_size.y * 0.35);
+                    let shadow_rect = Rect::from_center_size(unit_screen_position + shadow_offset, shadow_size);
+
+                    shadow_sprites_to_draw.push((frame, shadow_rect, Color32::from_rgba_premultiplied(0, 0, 0, 192)));
+
                     match unit.unit_type {
                         UnitType::Player => {
-                            player_to_draw.push((frame, unit_rect));
+                            player_to_draw.push((frame, unit_rect, Color32::WHITE));
 
                             let health_bar_height = 4.0 * camera_state_lock.get_zoom_scaled();
                             let health_bar_width = unit_size.x * 0.9;
@@ -103,7 +119,7 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
                             health_bar_colours.push(Color32::GREEN);
                         },
                         UnitType::Enemy => {
-                            images_to_draw.push((frame, unit_rect));
+                            images_to_draw.push((frame, unit_rect, Color32::WHITE));
 
                             if unit.health_current != unit.health_max {
                                 let health_bar_height = 3.0 * camera_state_lock.get_zoom_scaled();
@@ -123,7 +139,7 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
                             }
                         }
                         UnitType::Collectable => {
-                            images_to_draw.push((frame, unit_rect));
+                            images_to_draw.push((frame, unit_rect, Color32::WHITE));
 
                             if unit.health_current != unit.health_max {
                                 let health_bar_height = 3.0 * camera_state_lock.get_zoom_scaled();
@@ -152,12 +168,12 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
         if let Some(attack) = attack_option {
             let attack_screen_position = world_to_screen(attack_positions_lock[i], &camera_state_lock, paintbox_rect);
 
-            if !paintbox_rect.contains(attack_screen_position.add(paintbox_rect.min.to_vec2())) {
-                continue;
-            }
-
             let attack_size = Vec2::new(attack.animation.size.0 as f32, attack.animation.size.1 as f32) * camera_state_lock.get_zoom_scaled();
             let attack_rect = Rect::from_center_size(attack_screen_position, attack_size);
+
+            if !attack_rect.intersects(Rect::from_min_size(Pos2::new(0.0, 0.0), paintbox_rect.size())) {
+                continue;
+            }
 
             if let Some(sprite_sheets) = sprite_sheets.as_ref() {
                 if let Some(sprite_sheet) = sprite_sheets.get(&attack.animation.sprite_key) {
@@ -167,13 +183,19 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
 
                     let frame = sprite_sheet.get_frame_native(frame_index);
 
-                    attack_sprites_to_draw.push((frame, attack_rect));
+                    attack_sprites_to_draw.push((frame, attack_rect, Color32::WHITE));
                 } else {
                     rects_to_draw.push(attack_rect);
                     colours_to_draw.push(Color32::YELLOW);
                 }
             }
         }
+    }
+
+    // Draw Shadows
+    // === DRAW SHADOWS FIRST ===
+    if let shader_lock = game_data.sprite_shader.write().unwrap() {
+        draw_colour_sprites(gl, paintbox_rect, &shadow_sprites_to_draw, &*shader_lock);
     }
 
     // rectangles if too far out
@@ -205,7 +227,7 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
 pub fn draw_colour_sprites(
     gl: &Context,
     view_rect: &Rect,
-    sprites: &[(NativeTexture, Rect)], // (Texture ID, Rect)
+    sprites: &[(NativeTexture, Rect, Color32)], // (Texture ID, Rect, Tint Color)
     shader: &Option<NativeProgram>
 ) {
     unsafe {
@@ -213,9 +235,9 @@ pub fn draw_colour_sprites(
         let mut indices = Vec::new();
         let mut index_offset = 0;
 
-        let mut sprite_batches: FxHashMap<u32, Vec<Rect>> = FxHashMap::default();
-        for (texture_id, rect) in sprites.iter() {
-            sprite_batches.entry(texture_id.0.get()).or_default().push(*rect);
+        let mut sprite_batches: FxHashMap<u32, Vec<(Rect, Color32)>> = FxHashMap::default();
+        for (texture_id, rect, colour) in sprites.iter() {
+            sprite_batches.entry(texture_id.0.get()).or_default().push((*rect, *colour));
         }
 
         let vao = gl.create_vertex_array().unwrap();
@@ -230,15 +252,20 @@ pub fn draw_colour_sprites(
             indices.clear();
             index_offset = 0;
 
-            for rect in batch.iter() {
+            for (rect, color) in batch.iter() {
                 let (min_pos, size) = get_gl_rect(&view_rect, rect);
                 let tex_coords = [0.0, 0.0, 1.0, 1.0];
 
+                let r = color.r() as f32 / 255.0;
+                let g = color.g() as f32 / 255.0;
+                let b = color.b() as f32 / 255.0;
+                let a = color.a() as f32 / 255.0;
+
                 let sprite_vertices = [
-                    min_pos.x,           min_pos.y,            tex_coords[0], tex_coords[1], // Bottom-left
-                    min_pos.x + size.x,  min_pos.y,            tex_coords[2], tex_coords[1], // Bottom-right
-                    min_pos.x + size.x,  min_pos.y + size.y,   tex_coords[2], tex_coords[3], // Top-right
-                    min_pos.x,           min_pos.y + size.y,   tex_coords[0], tex_coords[3], // Top-left
+                    min_pos.x,           min_pos.y,            tex_coords[0], tex_coords[1], r, g, b, a, // Bottom-left
+                    min_pos.x + size.x,  min_pos.y,            tex_coords[2], tex_coords[1], r, g, b, a, // Bottom-right
+                    min_pos.x + size.x,  min_pos.y + size.y,   tex_coords[2], tex_coords[3], r, g, b, a, // Top-right
+                    min_pos.x,           min_pos.y + size.y,   tex_coords[0], tex_coords[3], r, g, b, a, // Top-left
                 ];
 
                 vertices.extend_from_slice(&sprite_vertices);
@@ -256,12 +283,15 @@ pub fn draw_colour_sprites(
             gl.bind_buffer(ELEMENT_ARRAY_BUFFER, Some(ebo));
             gl.buffer_data_u8_slice(ELEMENT_ARRAY_BUFFER, bytemuck::cast_slice(&indices), STATIC_DRAW);
 
-            let stride = (2 + 2) * size_of::<f32>() as i32;
+            let stride = (2 + 2 + 4) * std::mem::size_of::<f32>() as i32;
             gl.vertex_attrib_pointer_f32(0, 2, FLOAT, false, stride, 0);
             gl.enable_vertex_attrib_array(0);
 
-            gl.vertex_attrib_pointer_f32(1, 2, FLOAT, false, stride, (2 * size_of::<f32>()) as i32);
+            gl.vertex_attrib_pointer_f32(1, 2, FLOAT, false, stride, (2 * std::mem::size_of::<f32>()) as i32);
             gl.enable_vertex_attrib_array(1);
+
+            gl.vertex_attrib_pointer_f32(2, 4, FLOAT, false, stride, (4 * std::mem::size_of::<f32>()) as i32);
+            gl.enable_vertex_attrib_array(2);
 
             let texture = NativeTexture(NonZeroU32::try_from(texture_id).unwrap());
             gl.bind_texture(TEXTURE_2D, Some(texture));
@@ -350,24 +380,30 @@ pub fn create_sprite_shader_program(gl: &Context) -> NativeProgram {
             #version 330 core
             layout (location = 0) in vec2 aPos;
             layout (location = 1) in vec2 aTexCoord;
+            layout (location = 2) in vec4 aColor;
 
             out vec2 TexCoord;
+            out vec4 VertexColor;
 
             void main() {
                 gl_Position = vec4(aPos, 0.0, 1.0);
                 TexCoord = aTexCoord;
+                VertexColor = aColor;
             }
         "#;
 
         let fragment_shader_source = r#"
             #version 330 core
             in vec2 TexCoord;
+            in vec4 VertexColor; // Receive the color from vertex attributes
+
             out vec4 FragColor;
 
             uniform sampler2D spriteTexture;
 
             void main() {
-                FragColor = texture(spriteTexture, TexCoord);
+                vec4 texColor = texture(spriteTexture, TexCoord);
+                FragColor = texColor * VertexColor; // Apply tinting
             }
         "#;
 

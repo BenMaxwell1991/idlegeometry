@@ -201,7 +201,7 @@ impl GameLoop {
 
                     if *cooldown <= 0.0 {
                         attacks_to_spawn.push((attack_name.clone(), unit_position, unit.id));
-                        let attack = Attack::get_basic_attack(attack_name.clone());
+                        let attack = Attack::get_modified_attack(&unit.upgrades, attack_name.clone());
                         *cooldown = attack.cooldown;
                     }
                 }
@@ -365,7 +365,7 @@ impl GameLoop {
         loop {
             let now = Instant::now();
             self.update();
-            println!("Game_Loop Duration: {}", now.elapsed().as_millis());
+            // println!("Game_Loop Duration: {}", now.elapsed().as_millis());
 
             let elapsed = now.elapsed().as_millis() as u64;
             if GAME_RATE > elapsed {

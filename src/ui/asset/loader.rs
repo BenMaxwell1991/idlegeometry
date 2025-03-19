@@ -3,8 +3,9 @@ use crate::game::data::stored_data::SPRITE_SHEETS_NATIVE;
 use crate::ui::asset::sprite::sprite_sheet::{SpriteSheet, SPRITE_DATA, SPRITE_FOLDERS};
 use eframe::egui;
 use eframe::egui::ColorImage;
-use egui::Context;
+use egui::{Context, FontData, FontDefinitions, FontFamily};
 use rustc_hash::FxHashMap;
+use std::sync::Arc;
 
 
 // Icons
@@ -15,6 +16,10 @@ pub const UPGRADE_IMAGE_BYTES: &[u8] = include_bytes!("icon/upgrade.png");
 pub const EXIT_IMAGE_BYTES: &[u8] = include_bytes!("icon/exit.png");
 pub const COIN_IMAGE_BYTES: &[u8] = include_bytes!("icon/icon_coin.png");
 pub const RUBY_IMAGE_BYTES: &[u8] = include_bytes!("icon/icon_ruby.png");
+
+// Fonts
+pub const SUPER_SHINY_FONT: &str = "super_shiny";
+pub const SUPER_SHINY_FONT_BYTES: &[u8] = include_bytes!("font/super_shiny.ttf");
 
 
 const ICON_DATA: [(&str, &[u8]); 7] = [
@@ -73,6 +78,23 @@ pub fn load_icons_inverted(ctx: &Context, game_data: &GameData) {
 
     *game_data.icons_inverted.write().unwrap() = icons;
 }
+
+pub fn register_custom_font(ctx: &Context) {
+    let mut fonts = FontDefinitions::default();
+
+    fonts.font_data.insert(
+        SUPER_SHINY_FONT.to_owned(),
+        Arc::from(FontData::from_static(SUPER_SHINY_FONT_BYTES)),
+    );
+
+    fonts.families
+        .entry(FontFamily::Name(SUPER_SHINY_FONT.into()))
+        .or_default()
+        .push(SUPER_SHINY_FONT.to_owned());
+
+    ctx.set_fonts(fonts);
+}
+
 
 pub fn load_sprites_native(gl: &glow::Context, game_data: &GameData) {
     let mut native_sprite_sheets = FxHashMap::default();

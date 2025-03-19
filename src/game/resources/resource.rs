@@ -44,7 +44,7 @@ impl Resource {
     }
 }
 
-pub const DEFAULT_MOVE_SPEED: i32 = 400 * FIXED_POINT_SCALE;
+pub const DEFAULT_MOVE_SPEED: i32 = 200 * FIXED_POINT_SCALE;
 
 pub static DEFAULT_HEALTH: LazyLock<Resource> = LazyLock::new(|| {
     Resource::new(

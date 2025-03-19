@@ -15,7 +15,7 @@ impl InputListener {
     pub fn new(game_data: Arc<GameData>) -> Self {
         Self {
             game_data,
-            target_zoom: Arc::new(Mutex::new(1_024)),
+            target_zoom: Arc::new(Mutex::new(2048)),
         }
     }
 

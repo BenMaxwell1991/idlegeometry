@@ -29,7 +29,7 @@ pub fn spawn_attack(
             attack.origin_unit_id = unit_id;
 
             if let Some(unit) = unit {
-                let modified_attack = Attack::get_modified_attack(unit, attack_name);
+                let modified_attack = Attack::get_modified_attack(&unit.upgrades, attack_name);
                 attack.damage = modified_attack.damage;
                 attack.range = modified_attack.range;
                 attack.cooldown = modified_attack.cooldown;

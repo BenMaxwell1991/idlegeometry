@@ -1,7 +1,6 @@
-use std::collections::VecDeque;
 use crate::enums::gametab::GameTab;
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::{CURRENT_TAB, GAME_MAP, KEY_STATE, PLAYER_POSITION, RESOURCES, SETTINGS};
+use crate::game::data::stored_data::{CURRENT_TAB, KEY_STATE, RESOURCES, SETTINGS};
 use crate::game::loops::key_state::KeyState;
 use crate::game::map::camera_state::CameraState;
 use crate::game::map::game_map::GameMap;
@@ -12,15 +11,18 @@ use crate::game::settings::Settings;
 use crate::game::units::animation::Animation;
 use crate::game::units::attack::{Attack, AttackName};
 use crate::game::units::unit::{add_units, Unit};
+use crate::game::units::unit_defaults::{create_01_baby_dragon, create_02_aqua_drake, create_03_adult_white_dragon};
 use crate::game::units::unit_shape::UnitShape;
 use crate::game::units::unit_type::UnitType;
-use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, SLASH_ATTACK, YOUNG_RED_DRAGON};
+use crate::game::units::upgrades::{Upgrade, UpgradeType};
+use crate::helper::lock_helper::{acquire_lock, acquire_lock_mut};
+use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, SLASH_ATTACK};
+use crate::ui::sound::music_player::SOUND_FILES;
 use rand::random_range;
+use rodio::Sink;
+use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::Duration;
-use rodio::Sink;
-use crate::game::units::unit_defaults::{create_01_baby_dragon, create_02_aqua_drake, create_03_adult_white_dragon};
-use crate::ui::sound::music_player::{ATTACK_SWIPE_01, ATTACK_SWIPE_02, COLLECT_RUBY, MONSTER_DEATH_01, SELL_GOLD, SOUND_FILES};
 
 const TILE_SIZE: i32 = 40 * FIXED_POINT_SCALE;
 const X_TILE_COUNT: usize = 50;
@@ -85,12 +87,8 @@ fn init_resources(game_data: &GameData) {
 }
 
 fn init_map(game_data: &GameData) {
-    game_data.set_field(GAME_MAP, GameMap::new(X_TILE_COUNT, Y_TILE_COUNT, TILE_SIZE));
-    game_data.set_field(PLAYER_POSITION, Pos2FixedPoint::new(X_CENTER, Y_CENTER));
-    {
-        let mut camera_state = game_data.camera_state.write().unwrap();
-        *camera_state = CameraState::new(Pos2FixedPoint::new(X_CENTER, Y_CENTER), 256);
-    }
+    *acquire_lock_mut(&game_data.game_map, "game_map") = Some(GameMap::new(X_TILE_COUNT, Y_TILE_COUNT, TILE_SIZE));
+    *acquire_lock_mut(&game_data.camera_state, "camera_state") = CameraState::new(Pos2FixedPoint::new(X_CENTER, Y_CENTER), 2048);
 }
 
 fn init_attacks(game_data: &GameData) {
@@ -109,7 +107,13 @@ fn init_player(game_data: &GameData) {
     let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_secs(1), (50, 50));
     let mut player = Unit::new(UnitType::Player, UnitShape::new(40 * FIXED_POINT_SCALE, 40 * FIXED_POINT_SCALE), DEFAULT_MOVE_SPEED, 10.0, 5.0, animation);
 
+    let upgrade = Upgrade {
+        upgrade_type: UpgradeType::DecreaseCooldown,
+        level: 15,
+    };
+
     player.attack_cooldowns.insert(AttackName::Swipe, 2.0);
+    player.upgrades.push(upgrade);
     player.pickup_radius = Some(300 * FIXED_POINT_SCALE);
 
     add_units(vec![player], vec![Pos2FixedPoint::new(X_CENTER, Y_CENTER)], game_data);
@@ -125,16 +129,16 @@ fn init_player(game_data: &GameData) {
 }
 
 fn init_enemies(game_data: &GameData) {
-    if let Some(map) = game_data.get_field(GAME_MAP) {
+    if let Some(map) = acquire_lock(&game_data.game_map, "game_map").as_ref() {
         let mut units = vec![];
         let mut positions = vec![];
 
         let map_x = map.width as i32 * map.tile_size;
         let map_y = map.height as i32 * map.tile_size;
 
-        let baby_count = 5000;
-        let drake_count = 0;
-        let adult_count = 0;
+        let baby_count = 2500;
+        let drake_count = 100;
+        let adult_count = 20;
 
         for _i in 0..baby_count {
             let pos = Pos2FixedPoint::new(random_range(0..=map_x), random_range(0..=map_y));
