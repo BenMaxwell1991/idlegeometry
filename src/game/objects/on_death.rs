@@ -1,6 +1,6 @@
+use crate::game::objects::animation::Animation;
+use crate::game::objects::sound::Sound;
 use serde::{Deserialize, Serialize};
-use crate::game::units::animation::Animation;
-use crate::game::units::sound::Sound;
 
 #[derive(Clone, Serialize, Deserialize,Debug)]
 pub struct OnDeath {

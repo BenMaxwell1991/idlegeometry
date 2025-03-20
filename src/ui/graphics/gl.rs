@@ -2,7 +2,7 @@ use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::SPRITE_SHEETS_NATIVE;
 use crate::game::map::tile_type::TileType;
 use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
-use crate::game::units::unit_type::UnitType;
+use crate::game::objects::object_type::ObjectType;
 use crate::helper::lock_helper::acquire_lock;
 use crate::ui::component::widget::game_graphics::world_to_screen;
 use eframe::emath::{Rect, Vec2};
@@ -51,10 +51,8 @@ pub fn draw_map(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
 
 pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
     let sprite_sheets = game_data.get_field(SPRITE_SHEETS_NATIVE);
-    let units_lock = acquire_lock(&game_data.units, "Failed to acquire units lock");
+    let units_lock = acquire_lock(&game_data.units, "Failed to acquire objects lock");
     let unit_positions_lock = acquire_lock(&game_data.unit_positions, "Failed to acquire unit_positions lock");
-    let attacks_lock = acquire_lock(&game_data.attacks, "Failed to acquire attacks lock");
-    let attack_positions_lock = acquire_lock(&game_data.attack_positions, "Failed to acquire attack_positions lock");
     let camera_state_lock = acquire_lock(&game_data.camera_state, "Failed to acquire camera_state lock");
 
     let mut images_to_draw = Vec::new();
@@ -77,7 +75,7 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
                 continue;
             }
 
-            if (unit_size.x < 5.0 || unit_size.y < 5.0) && unit.unit_type != UnitType::Player {
+            if (unit_size.x < 5.0 || unit_size.y < 5.0) && unit.object_type != ObjectType::Player {
                 rects_to_draw.push(unit_rect);
                 colours_to_draw.push(Color32::RED);
                 continue;
@@ -99,8 +97,8 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
 
                     shadow_sprites_to_draw.push((frame, shadow_rect, Color32::from_rgba_premultiplied(0, 0, 0, 192)));
 
-                    match unit.unit_type {
-                        UnitType::Player => {
+                    match unit.object_type {
+                        ObjectType::Player => {
                             player_to_draw.push((frame, unit_rect, Color32::WHITE));
 
                             let health_bar_height = 4.0 * camera_state_lock.get_zoom_scaled();
@@ -118,7 +116,7 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
                             health_bar_rects.push(health_bar_rect);
                             health_bar_colours.push(Color32::GREEN);
                         },
-                        UnitType::Enemy => {
+                        ObjectType::Enemy => {
                             images_to_draw.push((frame, unit_rect, Color32::WHITE));
 
                             if unit.health_current != unit.health_max {
@@ -138,7 +136,7 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
                                 health_bar_colours.push(Color32::RED);
                             }
                         }
-                        UnitType::Collectable => {
+                        ObjectType::Collectable => {
                             images_to_draw.push((frame, unit_rect, Color32::WHITE));
 
                             if unit.health_current != unit.health_max {
@@ -157,36 +155,11 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
                                 health_bar_rects.push(health_bar_rect);
                                 health_bar_colours.push(Color32::RED);
                             }
+                        }
+                        ObjectType::Attack => {
+                            attack_sprites_to_draw.push((frame, unit_rect, Color32::WHITE));
                         }
                     }
-                }
-            }
-        }
-    }
-
-    for (i, attack_option) in attacks_lock.iter().enumerate() {
-        if let Some(attack) = attack_option {
-            let attack_screen_position = world_to_screen(attack_positions_lock[i], &camera_state_lock, paintbox_rect);
-
-            let attack_size = Vec2::new(attack.animation.size.0 as f32, attack.animation.size.1 as f32) * camera_state_lock.get_zoom_scaled();
-            let attack_rect = Rect::from_center_size(attack_screen_position, attack_size);
-
-            if !attack_rect.intersects(Rect::from_min_size(Pos2::new(0.0, 0.0), paintbox_rect.size())) {
-                continue;
-            }
-
-            if let Some(sprite_sheets) = sprite_sheets.as_ref() {
-                if let Some(sprite_sheet) = sprite_sheets.get(&attack.animation.sprite_key) {
-                    let frame_index = attack.animation.fixed_frame_index.unwrap_or_else(|| {
-                        (attack.animation.animation_frame * sprite_sheet.get_frame_count_native() as f32).trunc() as usize
-                    });
-
-                    let frame = sprite_sheet.get_frame_native(frame_index);
-
-                    attack_sprites_to_draw.push((frame, attack_rect, Color32::WHITE));
-                } else {
-                    rects_to_draw.push(attack_rect);
-                    colours_to_draw.push(Color32::YELLOW);
                 }
             }
         }
@@ -203,7 +176,7 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
         draw_colour_rectangles(gl, &paintbox_rect, &rects_to_draw, &colours_to_draw, &*shader_lock);
     }
 
-    // draw units
+    // draw objects
     if let shader_lock = game_data.sprite_shader.write().unwrap() {
         draw_colour_sprites(gl, paintbox_rect, &images_to_draw, &*shader_lock);
     }

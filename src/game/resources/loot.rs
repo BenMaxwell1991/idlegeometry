@@ -1,7 +1,7 @@
-use std::sync::Arc;
 use crate::game::data::game_data::GameData;
-use crate::game::units::loot::Loot;
+use crate::game::objects::loot::Loot;
 use crate::helper::lock_helper::acquire_lock_mut;
+use std::sync::Arc;
 
 pub fn collect_loot(loot: Vec<Loot>, game_data: Arc<GameData>) {
     let mut resources = acquire_lock_mut(&game_data.resources, "failed to acquire resources lock");

@@ -5,16 +5,17 @@ use crate::game::loops::key_state::KeyState;
 use crate::game::map::camera_state::CameraState;
 use crate::game::map::game_map::GameMap;
 use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
+use crate::game::objects::animation::Animation;
+use crate::game::objects::attacks::attack_defaults::get_basic_attack;
+use crate::game::objects::attacks::attack_stats::AttackName;
+use crate::game::objects::game_object::{add_units, GameObject};
+use crate::game::objects::object_shape::ObjectShape;
+use crate::game::objects::object_type::ObjectType;
+use crate::game::objects::unit_defaults::{create_01_baby_dragon, create_02_aqua_drake, create_03_adult_white_dragon};
+use crate::game::objects::upgrades::{Upgrade, UpgradeType};
 use crate::game::resources::bignumber::BigNumber;
 use crate::game::resources::resource::{Resource, DEFAULT_MOVE_SPEED};
 use crate::game::settings::Settings;
-use crate::game::units::animation::Animation;
-use crate::game::units::attack::{Attack, AttackName};
-use crate::game::units::unit::{add_units, Unit};
-use crate::game::units::unit_defaults::{create_01_baby_dragon, create_02_aqua_drake, create_03_adult_white_dragon};
-use crate::game::units::unit_shape::UnitShape;
-use crate::game::units::unit_type::UnitType;
-use crate::game::units::upgrades::{Upgrade, UpgradeType};
 use crate::helper::lock_helper::{acquire_lock, acquire_lock_mut};
 use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, SLASH_ATTACK};
 use crate::ui::sound::music_player::SOUND_FILES;
@@ -96,16 +97,16 @@ fn init_attacks(game_data: &GameData) {
     let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_millis(1000), (70, 70));
 
     let pool_config = vec![
-        (AttackName::Swipe, animation.clone(), 1000), // Up to 1000 Swipes available
-        (AttackName::Fireball, animation.clone(), 1000), // Up to 1000 Swipes available
+        (AttackName::Swipe, animation.clone(), 200), // Up to 1000 Swipes available
+        (AttackName::Fireball, animation.clone(), 200), // Up to 1000 Swipes available
     ];
 
     initialise_attack_pools(game_data, &pool_config);
 }
 
 fn init_player(game_data: &GameData) {
-    let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_secs(1), (50, 50));
-    let mut player = Unit::new(UnitType::Player, UnitShape::new(40 * FIXED_POINT_SCALE, 40 * FIXED_POINT_SCALE), DEFAULT_MOVE_SPEED, 10.0, 5.0, animation);
+    let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_secs(2), (50, 50));
+    let mut player = GameObject::new(ObjectType::Player, ObjectShape::new(40 * FIXED_POINT_SCALE, 40 * FIXED_POINT_SCALE), DEFAULT_MOVE_SPEED, 10.0, 5.0, animation);
 
     let upgrade = Upgrade {
         upgrade_type: UpgradeType::DecreaseCooldown,
@@ -121,7 +122,7 @@ fn init_player(game_data: &GameData) {
     let player_id = game_data.units.read().unwrap()
         .iter()
         .filter_map(|unit_option| unit_option.as_ref())
-        .find(|unit| unit.unit_type == UnitType::Player)
+        .find(|unit| unit.object_type == ObjectType::Player)
         .map(|player| player.id);
 
     let mut player_id_lock = game_data.player_id.write().unwrap();
@@ -171,7 +172,8 @@ pub fn initialise_attack_pools(game_data: &GameData, pool_sizes: &[(AttackName, 
     for (attack_name, animation, size) in pool_sizes {
         let mut pool = Vec::with_capacity(*size);
         for _ in 0..*size {
-            pool.push(Attack::get_basic_attack(attack_name.clone()));
+            let attack_unit = get_basic_attack(attack_name.clone());
+            pool.push(attack_unit);
         }
         attack_pools.insert(attack_name.clone(), pool);
     }
@@ -181,19 +183,13 @@ pub fn initialise_sound_pools(game_data: &GameData) {
     let mut sound_pools = game_data.sound_pools.write()
         .expect("❌ Failed to acquire write lock on sound pools");
 
-    let stream_handle = game_data.audio_stream_handle.read()
-        .expect("❌ Failed to acquire read lock on audio stream")
-        .clone();
-
-    println!("🎵 Initializing Sound Pools...");
-
-    if let Some(stream_handle) = stream_handle {
+    if let Some(stream_handle) = &game_data.audio_stream_handle {
         for (sound_name, _, pool_size) in SOUND_FILES.iter() {
             println!("🔹 Initializing Sound Pool for '{}' with {} sinks", sound_name, pool_size);
 
             let mut pool = VecDeque::with_capacity(*pool_size as usize);
             for i in 0..*pool_size {
-                match Sink::try_new(&stream_handle) {
+                match Sink::try_new(stream_handle) {
                     Ok(sink) => {
                         let sink = Arc::new(sink);
                         pool.push_back(sink);

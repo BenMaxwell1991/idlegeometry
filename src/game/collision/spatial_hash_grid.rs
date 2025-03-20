@@ -4,7 +4,7 @@ use rayon::prelude::ParallelSlice;
 use rustc_hash::*;
 use serde::{Deserialize, Serialize};
 
-const CELL_SIZE_BITS: i32 = 17; // 2^14 = 131,072
+const CELL_SIZE_BITS: i32 = 16; // 2^14 = 65536
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SpatialHashGrid {

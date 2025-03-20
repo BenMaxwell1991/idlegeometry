@@ -11,7 +11,7 @@ use std::time::Duration;
 
 const SAVE_FILE: &str = "saved_file";
 
-pub fn load_game_or_new() -> Arc<GameData> {
+pub fn load_game_or_new() -> GameData {
     let game_data = GameData::new();
 
     if let Ok(save_data) = fs::read_to_string(SAVE_FILE) {
@@ -30,7 +30,7 @@ pub fn load_game_or_new() -> Arc<GameData> {
         }
     }
 
-    Arc::new(init(game_data))
+    init(game_data)
 }
 
 pub fn save_game(game_data: &Arc<GameData>) {

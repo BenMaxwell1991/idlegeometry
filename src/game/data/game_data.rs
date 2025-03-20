@@ -5,8 +5,9 @@ use crate::game::data::stored_data::StoredData;
 use crate::game::map::camera_state::CameraState;
 use crate::game::map::game_map::GameMap;
 use crate::game::maths::pos_2::Pos2FixedPoint;
-use crate::game::units::attack::{Attack, AttackName};
-use crate::game::units::unit::Unit;
+use crate::game::objects::attacks::attack_stats::AttackName;
+use crate::game::objects::game_object::GameObject;
+use crate::helper::lock_helper::acquire_lock_mut;
 use crate::ui::graphics::offscreen_renderer::OffscreenRenderer;
 use device_query_revamped::Keycode;
 use eframe::epaint::TextureHandle;
@@ -16,9 +17,8 @@ use rodio::{OutputStreamHandle, Sink};
 use rustc_hash::FxHashMap;
 use std::any::Any;
 use std::collections::{HashMap, VecDeque};
-use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicBool, Ordering};
-use crate::helper::lock_helper::acquire_lock_mut;
+use std::sync::{Arc, RwLock};
 
 #[derive(Clone)]
 pub struct GameData {
@@ -28,15 +28,12 @@ pub struct GameData {
     pub resources: Arc<RwLock<FxHashMap<String, f64>>>,
     pub game_map: Arc<RwLock<Option<GameMap>>>,
 
-    pub units: Arc<RwLock<Vec<Option<Unit>>>>,
+    pub units: Arc<RwLock<Vec<Option<GameObject>>>>,
     pub unit_positions: Arc<RwLock<Vec<Pos2FixedPoint>>>,
     pub empty_unit_indexes: Arc<RwLock<Vec<u32>>>,
-    pub player_id: Arc<RwLock<Option<u32>>>,
+    pub attack_pools: Arc<RwLock<FxHashMap<AttackName, Vec<GameObject>>>>,
 
-    pub attacks: Arc<RwLock<Vec<Option<Attack>>>>,
-    pub attack_positions: Arc<RwLock<Vec<Pos2FixedPoint>>>,
-    pub empty_attack_indexes: Arc<RwLock<Vec<u32>>>,
-    pub attack_pools: Arc<RwLock<FxHashMap<AttackName, Vec<Attack>>>>,
+    pub player_id: Arc<RwLock<Option<u32>>>,
 
     pub spatial_hash_grid: Arc<RwLock<SpatialHashGrid>>,
     pub offscreen_renderer: Arc<RwLock<Option<OffscreenRenderer>>>,
@@ -52,7 +49,7 @@ pub struct GameData {
 
     pub sounds: Arc<RwLock<FxHashMap<String, Arc<Sink>>>>,
     pub sound_pools: Arc<RwLock<FxHashMap<String, VecDeque<Arc<Sink>>>>>,
-    pub audio_stream_handle: Arc<RwLock<Option<OutputStreamHandle>>>,
+    pub audio_stream_handle: Option<OutputStreamHandle>,
     pub current_track: Arc<RwLock<Option<String>>>,
     pub active_sounds: Arc<RwLock<Vec<Sink>>>,
 
@@ -71,12 +68,9 @@ impl GameData {
             units: Arc::new(RwLock::new(Vec::new())),
             unit_positions: Arc::new(RwLock::new(Vec::new())),
             empty_unit_indexes: Arc::new(RwLock::new(Vec::new())),
-            player_id: Arc::new(RwLock::new(None)),
-
-            attacks: Arc::new(RwLock::new(Vec::new())),
-            attack_positions: Arc::new(RwLock::new(Vec::new())),
-            empty_attack_indexes: Arc::new(RwLock::new(Vec::new())),
             attack_pools: Arc::new(RwLock::new(FxHashMap::default())),
+
+            player_id: Arc::new(RwLock::new(None)),
 
             spatial_hash_grid: Arc::new(RwLock::new(SpatialHashGrid::new())),
             offscreen_renderer: Arc::new(RwLock::new(None)),
@@ -91,7 +85,7 @@ impl GameData {
 
             sounds: Arc::new(RwLock::new(FxHashMap::default())),
             sound_pools: Arc::new(RwLock::new(FxHashMap::default())),
-            audio_stream_handle: Arc::new(RwLock::new(None)),
+            audio_stream_handle: None,
             current_track: Arc::new(RwLock::new(None)),
             active_sounds: Arc::new(RwLock::new(Vec::new())),
 

@@ -1,12 +1,11 @@
-pub mod unit;
-pub mod unit_type;
+pub mod game_object;
+pub mod object_type;
 pub mod animation;
 pub mod create_units;
-pub mod attack;
-pub mod unit_shape;
-pub mod create_attacks;
+pub mod object_shape;
 pub mod upgrades;
 pub mod loot;
 pub mod unit_defaults;
 pub mod on_death;
 pub mod sound;
+pub mod attacks;

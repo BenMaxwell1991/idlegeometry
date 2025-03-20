@@ -1,29 +1,32 @@
-use std::cmp::max;
 use crate::game::data::game_data::GameData;
 use crate::game::maths::pos_2::{normalize_i64_upscaled, project_onto_i64, Pos2FixedPoint, FIXED_POINT_SCALE};
-use crate::game::units::unit::remove_units;
-use crate::game::units::unit_shape::UnitShape;
-use crate::game::units::unit_type::UnitType;
+use crate::game::objects::game_object::{add_units, remove_units, GameObject};
+use crate::game::objects::object_shape::ObjectShape;
+use crate::game::objects::object_type::ObjectType;
 use rayon::iter::*;
 use rayon::slice::ParallelSliceMut;
 
-use crate::game::resources::loot::collect_loot;
-use crate::game::units::loot::Loot;
-use crate::helper::lock_helper::acquire_lock;
-use std::sync::{Arc, Mutex};
 use crate::game::map::game_map::GameMap;
 use crate::game::maths::integers::int_sqrt_64;
+use crate::game::resources::loot::collect_loot;
+use crate::game::objects::attacks::attack_landed::AttackLanded;
+use crate::game::objects::attacks::attack_stats::AttackStats;
+use crate::game::objects::loot::Loot;
+use crate::helper::lock_helper::{acquire_lock, acquire_lock_mut};
+use rustc_hash::FxHashSet;
+use std::sync::{Arc, Mutex};
 
-pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2FixedPoint)], game_data: Arc<GameData>) {
+pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2FixedPoint)], game_data: Arc<GameData>, delta_time: f64) {
     let collectables_collected = Arc::new(Mutex::new(Vec::new()));
+    let mut units_to_remove = FxHashSet::default();
 
     {
-        let units = acquire_lock(&game_data.units, "units");
-        let unit_positions = acquire_lock(&game_data.unit_positions, "unit_positions");
-        let spatial_grid = acquire_lock(&game_data.spatial_hash_grid, "spatial_grid");
-        let game_map = acquire_lock(&game_data.game_map, "game_map");
-        let player_id = acquire_lock(&game_data.player_id, "player_id");
+        let mut units = acquire_lock_mut(&game_data.units, "objects");
+        let unit_positions = acquire_lock_mut(&game_data.unit_positions, "unit_positions");
+        let spatial_grid = acquire_lock_mut(&game_data.spatial_hash_grid, "spatial_grid");
+        let game_map = acquire_lock_mut(&game_data.game_map, "game_map");
 
+        let player_id = acquire_lock_mut(&game_data.player_id, "player_id");
         let player_position = player_id
             .and_then(|id| unit_positions.get(id as usize))
             .copied()
@@ -32,28 +35,69 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
         let tile_size = game_map.as_ref().map(|m| m.get_tile_size()).unwrap_or(1);
         let chunk_size = ((unit_positions_updates.len() / rayon::current_num_threads()).max(1)).max(1);
 
+        let mut attack_hits_to_process = Arc::new(Mutex::new(Vec::default()));
+
         unit_positions_updates
             .par_chunks_mut(chunk_size)
             .for_each(|chunk| {
                 for (unit_id, old_position, new_position) in chunk {
                     let Some(unit) = units.get(*unit_id as usize).and_then(|u| u.as_ref()) else { continue; };
 
-                    match unit.unit_type {
-                        UnitType::Player => {
+                    match unit.object_type {
+                        ObjectType::Player => {
                             if let Some(game_map) = game_map.as_ref() {
-                                handle_terrain(new_position, old_position, &unit.unit_shape, game_map, tile_size);
+                                handle_terrain(new_position, old_position, &unit.object_shape, game_map, tile_size);
                             }
                             continue
                         },
-                        UnitType::Collectable => {
-                            let collectable_shape = &unit.unit_shape;
-                            if rectangles_collide(*new_position, collectable_shape, player_position, &unit.unit_shape) {
+                        ObjectType::Collectable => {
+                            let collectable_shape = &unit.object_shape;
+                            if rectangles_collide(*new_position, collectable_shape, player_position, &unit.object_shape) {
                                 collectables_collected.lock().unwrap().push(*unit_id);
                             }
                         },
+                        ObjectType::Attack => {
+                            if let Some(attack_stats) = &unit.attack_stats {
+                                if is_in_damage_window(&attack_stats, delta_time) {
+                                    let attack = unit;
+                                    let attack_id = unit.id;
+                                    let attack_pos = unit_positions[attack_id as usize];
+                                    let attack_shape = &unit.object_shape;
 
+                                    let nearby_unit_ids = spatial_grid.get_nearby_units(*new_position);
+                                    for &nearby_unit_id in &nearby_unit_ids {
+                                        let Some(nearby_unit) = units.get(nearby_unit_id as usize).and_then(|u| u.as_ref()) else { continue; };
+
+                                        // Attacks don't hit collectables or other attacks
+                                        if nearby_unit.object_type == ObjectType::Collectable || nearby_unit.object_type == ObjectType::Attack {
+                                            continue
+                                        }
+
+                                        // Attacks don't hit their parents
+                                        if Some(nearby_unit_id) == attack.parent_unit_id {
+                                            continue;
+                                        }
+
+                                        // Attacks only hit objects once
+                                        if attack_stats.units_hit.contains(&nearby_unit_id) {
+                                            continue;
+                                        }
+
+                                        let nearby_unit_pos = unit_positions[nearby_unit_id as usize];
+                                        if rectangles_collide(attack_pos, &attack_shape, nearby_unit_pos, &nearby_unit.object_shape) {
+                                            let attack_to_process = AttackLanded {
+                                                attack_id: attack.id,
+                                                target_id: nearby_unit_id,
+                                                damage: attack_stats.damage,
+                                            };
+                                            attack_hits_to_process.lock().unwrap().push(attack_to_process);
+                                        }
+                                    }
+                                }
+                            }
+                        },
                         _ => {
-                            let unit_shape = &unit.unit_shape;
+                            let unit_shape = &unit.object_shape;
                             let nearby_unit_ids = spatial_grid.get_nearby_units(*new_position);
                             let mut collision_normals = Vec::new();
                             let mut nearby_positions = Vec::new();
@@ -65,9 +109,9 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
 
                                 let Some(other_unit) = units.get(other_unit_id as usize).and_then(|u| u.as_ref()) else { continue; };
 
-                                if other_unit.unit_type == UnitType::Collectable { continue; }
+                                if other_unit.object_type == ObjectType::Collectable { continue; }
 
-                                let other_unit_shape = &other_unit.unit_shape;
+                                let other_unit_shape = &other_unit.object_shape;
                                 let other_unit_pos = unit_positions[other_unit_id as usize];
 
                                 if rectangles_collide(*new_position, unit_shape, other_unit_pos, other_unit_shape) {
@@ -101,12 +145,39 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
                             }
 
                             if let Some(game_map) = game_map.as_ref() {
-                                handle_terrain(new_position, old_position, &unit.unit_shape, game_map, tile_size);
+                                handle_terrain(new_position, old_position, &unit.object_shape, game_map, tile_size);
                             }
                         }
                     }
                 }
             });
+
+        for attack_to_process in attack_hits_to_process.lock().unwrap().iter() {
+            let attack_id = attack_to_process.attack_id as usize;
+            let target_id = attack_to_process.target_id as usize;
+
+            let (attack, target) = if attack_id < target_id {
+                let (low, high) = units.split_at_mut(target_id);
+                (low.get_mut(attack_id), high.get_mut(0))
+            } else {
+                let (low, high) = units.split_at_mut(attack_id);
+                (high.get_mut(0), low.get_mut(target_id))
+            };
+
+            if let (Some(Some(attack)), Some(Some(target))) = (attack, target) {
+                if let Some(attack_stats) = attack.attack_stats.as_mut() {
+                    if attack_stats.hit_count < attack_stats.max_targets {
+                        let is_dead = target.apply_damage(attack_to_process.damage);
+                        attack_stats.units_hit.push(attack_to_process.target_id);
+                        attack_stats.hit_count += 1;
+
+                        if is_dead {
+                            units_to_remove.insert(attack_to_process.target_id);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     let collected_items = collectables_collected.lock().unwrap();
@@ -120,9 +191,17 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
         remove_units(collected_items.clone(), Arc::clone(&game_data));
         collect_loot(collected_loot, Arc::clone(&game_data));
     }
+
+    let mut units_to_remove_vec: Vec<u32> = units_to_remove.into_iter().collect();
+
+    if !units_to_remove_vec.is_empty() {
+        let collectables = remove_units(units_to_remove_vec, Arc::clone(&game_data));
+        let (collectable_units, collectable_positions): (Vec<GameObject>, Vec<Pos2FixedPoint>) = collectables.into_iter().unzip();
+        add_units(collectable_units, collectable_positions, &game_data);
+    }
 }
 
-pub fn handle_terrain(new_position: &mut Pos2FixedPoint, old_position: &Pos2FixedPoint, unit_shape: &UnitShape, game_map: &GameMap, tile_size: i32) {
+pub fn handle_terrain(new_position: &mut Pos2FixedPoint, old_position: &Pos2FixedPoint, unit_shape: &ObjectShape, game_map: &GameMap, tile_size: i32) {
     let movement_vector = new_position.sub(*old_position);
     let movement_length_squared = movement_vector.x as i64 * movement_vector.x as i64 + movement_vector.y as i64 * movement_vector.y as i64;
     let step_count = int_sqrt_64((movement_length_squared * 256 / (tile_size * tile_size) as i64).max(1)) as i32;
@@ -153,7 +232,7 @@ pub fn handle_terrain(new_position: &mut Pos2FixedPoint, old_position: &Pos2Fixe
     *new_position = adjusted_position;
 }
 
-fn check_tile_collision(pos: Pos2FixedPoint, unit_shape: &UnitShape, game_map: &GameMap, tile_size: i32) -> bool {
+fn check_tile_collision(pos: Pos2FixedPoint, unit_shape: &ObjectShape, game_map: &GameMap, tile_size: i32) -> bool {
     let (unit_min, unit_max) = unit_shape.bounding_box(pos);
 
     let min_tile_x = unit_min.x / tile_size;
@@ -167,7 +246,7 @@ fn check_tile_collision(pos: Pos2FixedPoint, unit_shape: &UnitShape, game_map: &
             if tile.blocks_collision() {
                 let half_tile_size = tile_size / 2;
                 let tile_pos = Pos2FixedPoint::new(tile_x as i32 * tile_size + half_tile_size, tile_y as i32 * tile_size + half_tile_size);
-                let tile_shape = UnitShape::new(tile_size, tile_size);
+                let tile_shape = ObjectShape::new(tile_size, tile_size);
                 if rectangles_collide(pos, unit_shape, tile_pos, &tile_shape) {
                     return true;
                 }
@@ -193,7 +272,7 @@ fn compute_separation_vector(pos: Pos2FixedPoint, nearby_positions: &[Pos2FixedP
     )
 }
 
-fn compute_collision_normal_upscaled(pos1: Pos2FixedPoint, shape1: &UnitShape, pos2: Pos2FixedPoint, shape2: &UnitShape) -> Pos2FixedPoint {
+fn compute_collision_normal_upscaled(pos1: Pos2FixedPoint, shape1: &ObjectShape, pos2: Pos2FixedPoint, shape2: &ObjectShape) -> Pos2FixedPoint {
     let (min1, max1) = shape1.bounding_box(pos1);
     let (min2, max2) = shape2.bounding_box(pos2);
 
@@ -216,7 +295,7 @@ fn sum_vectors(vectors: &[Pos2FixedPoint]) -> Pos2FixedPoint {
     vectors.iter().fold(Pos2FixedPoint::new(0, 0), |sum, v| sum.add(*v))
 }
 
-pub fn rectangles_collide(pos1: Pos2FixedPoint, shape1: &UnitShape, pos2: Pos2FixedPoint, shape2: &UnitShape) -> bool {
+pub fn rectangles_collide(pos1: Pos2FixedPoint, shape1: &ObjectShape, pos2: Pos2FixedPoint, shape2: &ObjectShape) -> bool {
     let (min1, max1) = shape1.bounding_box(pos1);
     let (min2, max2) = shape2.bounding_box(pos2);
 
@@ -224,4 +303,17 @@ pub fn rectangles_collide(pos1: Pos2FixedPoint, shape1: &UnitShape, pos2: Pos2Fi
     let y_overlap = min1.y < max2.y && max1.y > min2.y;
 
     x_overlap && y_overlap
+}
+
+fn is_in_damage_window(attack: &AttackStats, delta_time: f64) -> bool {
+    let current_time = attack.elapsed;
+    let next_time = attack.elapsed + delta_time as f32;
+
+    let damage_start = attack.damage_point;
+    let damage_end = attack.damage_point + attack.damage_duration;
+
+    let in_window = current_time >= damage_start && current_time <= damage_end;
+    let will_miss_next_window = current_time < damage_start && next_time > damage_end;
+
+    in_window || will_miss_next_window
 }

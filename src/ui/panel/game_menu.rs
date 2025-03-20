@@ -1,12 +1,10 @@
-use std::sync::Arc;
-use std::sync::atomic::Ordering;
 use crate::enums::gamestate::GameState;
 use crate::game::data::game_data::GameData;
 use crate::ui::component::widget::custom_button::CustomButton;
 use crate::ui::component::widget::custom_heading::CustomHeading;
 use eframe::egui::{Color32, Rect, Ui, Vec2};
 use eframe::emath::Align;
-use egui::{CentralPanel, Frame, Layout, UiBuilder};
+use egui::{CentralPanel, Layout, UiBuilder};
 
 pub fn show_game_menu(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
     let menu_rect = Rect::from_center_size(game_rect.center(), Vec2::new(300.0, 250.0));

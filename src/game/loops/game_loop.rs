@@ -1,30 +1,23 @@
 use crate::enums::gamestate::GameState;
-use crate::enums::gametab::GameTab;
-use crate::enums::gametab::GameTab::NullGameTab;
-use crate::game::collision::detect_collision::{handle_collision, rectangles_collide};
+use crate::game::collision::detect_collision::handle_collision;
 use crate::game::constants::GAME_RATE;
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::{CURRENT_TAB, GAME_IN_FOCUS, KEY_STATE, RESOURCES};
-use crate::game::loops::key_state::KeyState;
+use crate::game::data::stored_data::RESOURCES;
 use crate::game::maths::integers::int_sqrt_64;
-use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE, INVALID_POSITION};
-use crate::game::units::attack::Attack;
-use crate::game::units::create_attacks::{despawn_attack, spawn_attack};
-use crate::game::units::unit::{add_units, move_units_batched, remove_units, Unit};
-use crate::game::units::unit_type::UnitType;
+use crate::game::maths::pos_2::{Pos2FixedPoint, INVALID_POSITION};
+use crate::game::objects::attacks::attack_defaults::get_modified_attack;
+use crate::game::objects::attacks::create_attacks::{despawn_attack, spawn_attack};
+use crate::game::objects::game_object::move_units_batched;
+use crate::game::objects::object_type::ObjectType;
 use crate::helper::lock_helper::{acquire_lock, acquire_lock_mut};
-use crate::ui::sound::music_player::{play_sound, MONSTER_DEATH_01};
 use device_query_revamped::Keycode;
 use rand::prelude::IndexedRandom;
-use rand::rng;
 use rayon::current_num_threads;
 use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use rayon::prelude::ParallelSliceMut;
-use rustc_hash::FxHashSet;
 use std::cmp::max;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use std::thread;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
@@ -62,170 +55,150 @@ impl GameLoop {
         let (player_id, player_position) = get_player_position(&self.game_data);
 
         if let Some(player_id) = player_id {
-            let units = acquire_lock(&self.game_data.units, "units");
+            let units = acquire_lock(&self.game_data.units, "objects");
+            let attack_name = units.get(player_id as usize)
+                .and_then(|u| u.as_ref())
+                .and_then(|player| player.attack_cooldowns.keys().next().cloned());
 
-            if let Some(player) = units.get(player_id as usize).and_then(|u| u.as_ref()) {
-                while let Some(key) = key_queue.pop() {
-                    match key {
-                        Keycode::Space => {
-                            if let Some((attack_name, _)) = player.attack_cooldowns.iter().next() {
-                                println!("Spawning {:?} attack at {:?}", attack_name, player_position);
-                                spawn_attack(Arc::clone(&self.game_data), attack_name.clone(), player_position, Some(player_id));
-                            } else {
-                                println!("Player has no attacks assigned.");
-                            }
+            drop(units);
+
+            while let Some(key) = key_queue.pop() {
+                match key {
+                    Keycode::Space => {
+                        if let Some(attack_name) = &attack_name {
+                            println!("Spawning {:?} attack at {:?}", attack_name.clone(), player_position);
+                            spawn_attack(Arc::clone(&self.game_data), attack_name.clone(), player_position, Some(player_id));
+                        } else {
+                            println!("Player has no attacks assigned.");
                         }
-                        Keycode::Escape => {
-                            self.game_data.set_game_state(GameState::Ready);
-                        }
-                        _ => {}
                     }
+                    Keycode::Escape => {
+                        self.game_data.set_game_state(GameState::Ready);
+                    }
+                    _ => {}
                 }
             }
         }
     }
 
-    fn handle_attack_movement(&self, delta_time: f64) {
-        let player_id = self.game_data.player_id.read().unwrap();
-        let unit_positions = acquire_lock(&self.game_data.unit_positions, "unit_positions");
-        let attacks = acquire_lock(&self.game_data.attacks, "attacks");
-        let mut attack_positions = acquire_lock_mut(&self.game_data.attack_positions, "attack_positions");
+    // fn is_in_damage_window(&self, attack: &Attack, delta_time: f64) -> bool {
+        // let current_time = attack.elapsed;
+        // let next_time = attack.elapsed + delta_time as f32;
+        //
+        // let damage_start = attack.damage_point;
+        // let damage_end = attack.damage_point + attack.damage_duration;
+        //
+        // let in_window = current_time >= damage_start && current_time <= damage_end;
+        // let will_miss_next_window = current_time < damage_start && next_time > damage_end;
+        //
+        // in_window || will_miss_next_window
+    // }
 
-        let Some(player) = *player_id else {
-            return;
-        };
-
-        attacks.iter().enumerate().for_each(|(id, attack_option)| {
-            if let Some(attack) = attack_option {
-                attack_positions[id].x += (attack.direction.0 * (attack.speed) as f32 * delta_time as f32) as i32;
-                attack_positions[id].y += (attack.direction.1 * (attack.speed) as f32 * delta_time as f32) as i32;
-            }
-        });
-    }
-
-    fn is_in_damage_window(&self, attack: &Attack, delta_time: f64) -> bool {
-        let current_time = attack.elapsed;
-        let next_time = attack.elapsed + delta_time as f32;
-
-        let damage_start = attack.damage_point;
-        let damage_end = attack.damage_point + attack.damage_duration;
-
-        let in_window = current_time >= damage_start && current_time <= damage_end;
-        let will_miss_next_window = current_time < damage_start && next_time > damage_end;
-
-        in_window || will_miss_next_window
-    }
-
-    fn handle_attack_collisions(&self, delta_time: f64) {
-        let mut units_to_remove = FxHashSet::default();
-        {
-            let mut units = acquire_lock_mut(&self.game_data.units, "units");
-            let unit_positions = acquire_lock_mut(&self.game_data.unit_positions, "unit_positions");
-            let spatial_grid = acquire_lock(&self.game_data.spatial_hash_grid, "spatial_grid");
-            let mut attacks = acquire_lock_mut(&self.game_data.attacks, "attacks");
-            let attack_positions = acquire_lock_mut(&self.game_data.attack_positions, "attack_positions");
-
-            for (attack_id, attack_option) in attacks.iter_mut().enumerate() {
-                let Some(attack) = attack_option else { continue; };
-                let attack_pos = attack_positions[attack_id];
-
-                if !self.is_in_damage_window(attack, delta_time) {
-                    continue;
-                }
-
-                let nearby_unit_ids = spatial_grid.get_nearby_units(attack_pos);
-                for &unit_id in &nearby_unit_ids {
-                    let Some(unit) = units.get_mut(unit_id as usize).and_then(|u| u.as_mut()) else { continue; };
-                    if unit.unit_type == UnitType::Collectable {
-                        continue
-                    }
-                    if Some(unit.id) == attack.origin_unit_id {
-                        continue;
-                    }
-                    if attack.units_hit.contains(&unit_id) {
-                        continue;
-                    }
-                    let unit_pos = unit_positions[unit_id as usize];
-
-                    if rectangles_collide(attack_pos, &attack.attack_shape, unit_pos, &unit.unit_shape) {
-                        let is_dead = unit.apply_damage(attack.damage);
-                        attack.units_hit.push(unit_id);
-                        attack.hit_count += 1;
-
-                        if is_dead {
-                            units_to_remove.insert(unit_id);
-                        }
-                    }
-                }
-            }
-        }
-
-        let units_to_remove_vec: Vec<u32> = units_to_remove.into_iter().collect();
-        if !units_to_remove_vec.is_empty() {
-            play_sound(Arc::clone(&self.game_data), MONSTER_DEATH_01, 0.04);
-            let collectables = remove_units(units_to_remove_vec, Arc::clone(&self.game_data));
-            let (collectable_units, collectable_positions): (Vec<Unit>, Vec<Pos2FixedPoint>) = collectables.into_iter().unzip();
-            add_units(collectable_units, collectable_positions, &self.game_data);
-        }
-    }
+    // fn handle_attack_collisions(&self, delta_time: f64) {
+    //     let mut units_to_remove = FxHashSet::default();
+    //     {
+    //         let mut objects = acquire_lock_mut(&self.game_data.objects, "objects");
+    //         let unit_positions = acquire_lock_mut(&self.game_data.unit_positions, "unit_positions");
+    //         let spatial_grid = acquire_lock(&self.game_data.spatial_hash_grid, "spatial_grid");
+    //         let mut attacks = acquire_lock_mut(&self.game_data.attacks, "attacks");
+    //         let attack_positions = acquire_lock_mut(&self.game_data.attack_positions, "attack_positions");
+    //
+    //         for (attack_id, attack_option) in attacks.iter_mut().enumerate() {
+    //             let Some(attack) = attack_option else { continue; };
+    //             let attack_pos = attack_positions[attack_id];
+    //
+    //             if !self.is_in_damage_window(attack, delta_time) {
+    //                 continue;
+    //             }
+    //
+    //             let nearby_unit_ids = spatial_grid.get_nearby_units(attack_pos);
+    //             for &unit_id in &nearby_unit_ids {
+    //                 let Some(unit) = objects.get_mut(unit_id as usize).and_then(|u| u.as_mut()) else { continue; };
+    //                 if unit.unit_type == UnitType::Collectable {
+    //                     continue
+    //                 }
+    //                 if Some(unit.id) == attack.origin_unit_id {
+    //                     continue;
+    //                 }
+    //                 if attack.units_hit.contains(&unit_id) {
+    //                     continue;
+    //                 }
+    //                 let unit_pos = unit_positions[unit_id as usize];
+    //
+    //                 if rectangles_collide(attack_pos, &attack.attack_shape, unit_pos, &unit.unit_shape) {
+    //                     let is_dead = unit.apply_damage(attack.damage);
+    //                     attack.units_hit.push(unit_id);
+    //                     attack.hit_count += 1;
+    //
+    //                     if is_dead {
+    //                         units_to_remove.insert(unit_id);
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    //
+    //     let units_to_remove_vec: Vec<u32> = units_to_remove.into_iter().collect();
+    //     if !units_to_remove_vec.is_empty() {
+    //         play_sound(Arc::clone(&self.game_data), MONSTER_DEATH_01, 0.04);
+    //         let collectables = remove_units(units_to_remove_vec, Arc::clone(&self.game_data));
+    //         let (collectable_units, collectable_positions): (Vec<Unit>, Vec<Pos2FixedPoint>) = collectables.into_iter().unzip();
+    //         add_units(collectable_units, collectable_positions, &self.game_data);
+    //     }
+    // }
 
     fn handle_attacks(&self, delta_time: f64) {
-        self.handle_attack_movement(delta_time);
-        self.handle_attack_collisions(delta_time);
-
+        // self.handle_attack_collisions(delta_time);
         let mut expired_attacks = Vec::new();
         let mut attacks_to_spawn = Vec::new();
 
         {
             let mut game_units = acquire_lock_mut(&self.game_data.units, "game_units");
             let mut unit_positions = acquire_lock_mut(&self.game_data.unit_positions, "unit_positions");
-            let mut attacks = acquire_lock_mut(&self.game_data.attacks, "attacks");
-            let mut attack_positions = acquire_lock_mut(&self.game_data.attack_positions, "attack_positions");
 
-            // Handle attack lifetimes, collect expired attacks (Destroy later)
-            attacks.iter_mut().enumerate().for_each(|(id, attack_option)| {
-                if let Some(attack) = attack_option {
-                    attack.elapsed += delta_time as f32;
+            // **Handle attack lifetimes** → Remove expired attacks
+            for unit in game_units.iter_mut().flatten() {
+                if unit.object_type == ObjectType::Attack {
+                    if let Some(attack_stats) = &mut unit.attack_stats {
+                        attack_stats.elapsed += delta_time as f32;
 
-                    if attack.elapsed >= attack.lifetime || attack.hit_count >= attack.max_targets {
-                        expired_attacks.push(id as u32);
+                        if attack_stats.elapsed >= attack_stats.lifetime || attack_stats.hit_count >= attack_stats.max_targets {
+                            expired_attacks.push(unit.id);
+                        }
                     }
                 }
-            });
+            }
 
-            // Handle attack cooldowns, queue new attacks to spawn
+            // **Handle attack cooldowns** → Queue new attacks for spawning
             for unit in game_units.iter_mut().flatten() {
-                let unit_position = unit_positions[unit.id as usize];
+                if unit.object_type != ObjectType::Attack { // Ignore attacks here
+                    let unit_position = unit_positions[unit.id as usize];
 
-                for (attack_name, cooldown) in unit.attack_cooldowns.iter_mut() {
-                    *cooldown -= delta_time as f32;
+                    for (attack_name, cooldown) in unit.attack_cooldowns.iter_mut() {
+                        *cooldown -= delta_time as f32;
 
-                    if *cooldown <= 0.0 {
-                        attacks_to_spawn.push((attack_name.clone(), unit_position, unit.id));
-                        let attack = Attack::get_modified_attack(&unit.upgrades, attack_name.clone());
-                        *cooldown = attack.cooldown;
+                        if *cooldown <= 0.0 {
+                            attacks_to_spawn.push((attack_name.clone(), unit_position, unit.id));
+                            let attack = get_modified_attack(&unit.upgrades, attack_name.clone());
+                            *cooldown = attack.attack_stats.as_ref().unwrap().cooldown;
+                        }
                     }
                 }
             }
         }
 
-        // Clear up finished attacks
         for attack_id in expired_attacks {
             despawn_attack(attack_id, &self.game_data);
         }
 
-        // Spawn new attacks, queue their sounds
-        let mut attack_sounds = FxHashSet::default();
         for (attack_name, unit_position, unit_id) in attacks_to_spawn {
             spawn_attack(Arc::clone(&self.game_data), attack_name.clone(), unit_position, Some(unit_id));
-            if let Some(attack_sound) = Attack::get_basic_attack(attack_name).cast_sounds.choose(&mut rng()) {
-                attack_sounds.insert(attack_sound.clone());
-            }
         }
 
-        for sound in attack_sounds {
-            play_sound(Arc::clone(&self.game_data), &sound, 0.4);
-        }
+        // **Play attack sounds**
+        // for sound in attack_sounds {
+        //     play_sound(Arc::clone(&self.game_data), &sound, 0.4);
+        // }
     }
 
     fn handle_animations(&self, delta_time: f64) {
@@ -239,23 +212,9 @@ impl GameLoop {
             }
         });
         drop(game_units);
-
-        let mut game_attacks = acquire_lock_mut(&self.game_data.attacks, "game_attacks");
-        game_attacks.par_iter_mut().for_each(|attack| {
-            if let Some(attack) = attack {
-                if !attack.animation.fixed_frame_index.is_some() {
-                    attack.animation.animation_frame =
-                        (attack.animation.animation_frame + delta_time as f32 / attack.animation.animation_length.as_secs_f32()).fract();
-                }
-            }
-        });
-        drop(game_attacks);
     }
 
     fn handle_movement(&self, delta_time: f64) {
-        let current_tab = self.game_data.get_field(CURRENT_TAB).unwrap_or(NullGameTab);
-        let in_focus = self.game_data.get_field(GAME_IN_FOCUS).unwrap_or(false);
-        let key_state = self.game_data.get_field(KEY_STATE).unwrap_or(Arc::new(KeyState::new()));
         let (player_id, player_position) = get_player_position(&self.game_data);
 
         let mut game_units = acquire_lock_mut(&self.game_data.units, "game_units");
@@ -283,11 +242,17 @@ impl GameLoop {
                         let old_position = unit_positions[unit.id as usize];
                         let mut new_position = old_position;
 
-                        match unit.unit_type {
-                            UnitType::Player => {
+                        match unit.object_type {
+                            ObjectType::Attack => {
+                                if let Some(attack_stats) = &unit.attack_stats {
+                                    new_position.x += (attack_stats.direction.0 * (unit.move_speed) as f32 * delta_time as f32) as i32;
+                                    new_position.y += (attack_stats.direction.1 * (unit.move_speed) as f32 * delta_time as f32) as i32;
+                                }
+                            }
+                            ObjectType::Player => {
                                 // Player moved in its own loop to reduce lag
                             }
-                            UnitType::Enemy => {
+                            ObjectType::Enemy => {
                                 let direction_vec = player_position.sub(old_position);
                                 let length_squared = direction_vec.x as i64 * direction_vec.x as i64 + direction_vec.y as i64 * direction_vec.y as i64;
                                 if length_squared > 0 {
@@ -298,7 +263,7 @@ impl GameLoop {
                                     }
                                 }
                             }
-                            UnitType::Collectable => {
+                            ObjectType::Collectable => {
                                 let direction_vec = player_position.sub(old_position);
                                 let length_squared = direction_vec.x as i64 * direction_vec.x as i64 + direction_vec.y as i64 * direction_vec.y as i64;
                                 let pickup_radius_squared = pickup_radius as i64 * pickup_radius as i64;
@@ -331,7 +296,6 @@ impl GameLoop {
                                 }
                             }
                         };
-
                         local_buffer.push((unit.id, old_position, new_position));
                     } else {
                         let invalid_position = Pos2FixedPoint::new(INVALID_POSITION, INVALID_POSITION);
@@ -352,7 +316,7 @@ impl GameLoop {
         drop(game_units);
         drop(unit_positions);
 
-        handle_collision(&mut unit_movements, Arc::clone(&self.game_data));
+        handle_collision(&mut unit_movements, Arc::clone(&self.game_data), delta_time);
         move_units_batched(&unit_movements, &self.game_data, delta_time);
     }
 
@@ -369,9 +333,9 @@ impl GameLoop {
             let elapsed = now.elapsed().as_millis() as u64;
             if GAME_RATE > elapsed {
                 let sleep_milli = max(GAME_RATE - elapsed, 10);
-                thread::sleep(Duration::from_millis(sleep_milli));
+                sleep(Duration::from_millis(sleep_milli));
             } else {
-                thread::sleep(Duration::from_millis(10));
+                sleep(Duration::from_millis(10));
             }
         }
     }

@@ -10,7 +10,7 @@ pub fn acquire_lock<'a, T>(lock: &'a RwLock<T>, name: &str) -> RwLockReadGuard<'
         if let Ok(guard) = lock.try_read() {
             return guard;
         }
-        thread::sleep(Duration::from_millis(5));
+        thread::sleep(Duration::from_millis(1));
     }
 
     eprintln!("Failed to acquire read lock for {} within 2 seconds", name);
@@ -25,7 +25,7 @@ pub fn acquire_lock_mut<'a, T>(lock: &'a RwLock<T>, name: &str) -> RwLockWriteGu
         if let Ok(guard) = lock.try_write() {
             return guard;
         }
-        thread::sleep(Duration::from_millis(5));
+        thread::sleep(Duration::from_millis(1));
     }
 
     eprintln!("Failed to acquire write lock for {} within 2 seconds", name);

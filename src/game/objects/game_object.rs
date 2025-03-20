@@ -1,26 +1,28 @@
 use crate::game::data::game_data::GameData;
-use crate::game::maths::pos_2::{Pos2FixedPoint, INVALID_POSITION};
-use crate::game::units::animation::Animation;
-use crate::game::units::attack::AttackName;
-use crate::game::units::unit_shape::UnitShape;
-use crate::game::units::unit_type::UnitType;
-use crate::game::units::upgrades::{Upgrade, UpgradeType};
+use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE, INVALID_POSITION};
+use crate::game::objects::animation::Animation;
+use crate::game::objects::attacks::attack_stats::{AttackName, AttackStats};
+use crate::game::objects::loot::Loot;
+use crate::game::objects::on_death::OnDeath;
+use crate::game::objects::unit_defaults::collectable_01_basic_monster;
+use crate::game::objects::object_shape::ObjectShape;
+use crate::game::objects::object_type::ObjectType;
+use crate::game::objects::upgrades::{Upgrade, UpgradeType};
+use crate::helper::lock_helper::acquire_lock_mut;
+use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, SLASH_ATTACK};
+use crate::ui::sound::music_player::{play_sound, ATTACK_SWIPE_02};
 use rayon::iter::*;
+use rustc_hash::{FxHashMap, FxHashSet};
 use serde::{Deserialize, Serialize};
 use std::mem::swap;
 use std::sync::Arc;
-use rustc_hash::{FxHashMap, FxHashSet};
-use crate::game::units::loot::Loot;
-use crate::game::units::on_death::OnDeath;
-use crate::game::units::unit_defaults::collectable_01_basic_monster;
-use crate::helper::lock_helper::acquire_lock_mut;
-use crate::ui::sound::music_player::play_sound;
+use std::time::Duration;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct Unit {
+pub struct GameObject {
     pub id: u32,
-    pub unit_type: UnitType,
-    pub unit_shape: UnitShape,
+    pub object_type: ObjectType,
+    pub object_shape: ObjectShape,
     pub move_speed: i32,
     pub health_max: f32,
     pub health_current: f32,
@@ -30,14 +32,17 @@ pub struct Unit {
     pub pickup_radius: Option<i32>,
     pub loot: Option<Loot>,
     pub on_death: OnDeath,
+
+    pub parent_unit_id: Option<u32>,
+    pub attack_stats: Option<AttackStats>,
 }
 
-impl Unit {
-    pub fn new(unit_type: UnitType, unit_shape: UnitShape, move_speed: i32, health_max: f32, health_current: f32, animation: Animation) -> Self {
+impl GameObject {
+    pub fn new(object_type: ObjectType, object_shape: ObjectShape, move_speed: i32, health_max: f32, health_current: f32, animation: Animation) -> Self {
         Self {
             id: u32::MAX,
-            unit_type,
-            unit_shape,
+            object_type,
+            object_shape,
             move_speed,
             health_max,
             health_current,
@@ -47,6 +52,8 @@ impl Unit {
             pickup_radius: None,
             loot: None,
             on_death: OnDeath::default(),
+            parent_unit_id: None,
+            attack_stats: None,
         }
     }
     pub fn apply_damage(&mut self, damage: f64) -> bool {
@@ -55,7 +62,7 @@ impl Unit {
     }
 }
 
-pub fn add_units(units: Vec<Unit>, positions: Vec<Pos2FixedPoint>, game_data: &GameData) {
+pub fn add_units(units: Vec<GameObject>, positions: Vec<Pos2FixedPoint>, game_data: &GameData) {
     let mut game_units = acquire_lock_mut(&game_data.units, "Failed to acquire game_units lock");
     let mut unit_positions = acquire_lock_mut(&game_data.unit_positions, "Failed to acquire unit_positions lock");
     let mut empty_indexes = acquire_lock_mut(&game_data.empty_unit_indexes, "Failed to acquire empty_unit_indexes lock");
@@ -79,7 +86,7 @@ pub fn add_units(units: Vec<Unit>, positions: Vec<Pos2FixedPoint>, game_data: &G
     }
 }
 
-pub fn remove_units(unit_ids: Vec<u32>, game_data: Arc<GameData>) -> Vec<(Unit, Pos2FixedPoint)> {
+pub fn remove_units(unit_ids: Vec<u32>, game_data: Arc<GameData>) -> Vec<(GameObject, Pos2FixedPoint)> {
     let mut game_units = acquire_lock_mut(&game_data.units, "Failed to acquire game_units lock");
     let mut unit_positions = acquire_lock_mut(&game_data.unit_positions, "Failed to acquire unit_positions lock");
     let mut spatial_grid = acquire_lock_mut(&game_data.spatial_hash_grid, "Failed to acquire spatial_grid lock");
@@ -98,7 +105,7 @@ pub fn remove_units(unit_ids: Vec<u32>, game_data: Arc<GameData>) -> Vec<(Unit, 
                 }
 
                 // If the unit is an enemy with loot, return a collectable
-                if unit.unit_type == UnitType::Enemy {
+                if unit.object_type == ObjectType::Enemy {
                     if let Some(loot) = unit.loot {
                         let collectable = collectable_01_basic_monster(Some(loot));
                         collectables_to_spawn.push((collectable, position));
@@ -121,7 +128,7 @@ pub fn remove_units(unit_ids: Vec<u32>, game_data: Arc<GameData>) -> Vec<(Unit, 
 }
 
 pub fn move_units_batched(unit_positions_updates: &[(u32, Pos2FixedPoint, Pos2FixedPoint)], game_data: &GameData, delta_time: f64) {
-    // let mut game_units = game_data.units.write().unwrap();
+    // let mut game_units = game_data.objects.write().unwrap();
     let mut unit_positions = game_data.unit_positions.write().unwrap();
     let mut spatial_grid = game_data.spatial_hash_grid.write().unwrap();
     // let mut camera_state = game_data.camera_state.write().unwrap();
@@ -146,7 +153,7 @@ pub fn move_units_batched(unit_positions_updates: &[(u32, Pos2FixedPoint, Pos2Fi
     // camera_state.move_to_target();
 }
 
-pub fn apply_upgrade(unit: &mut Unit, upgrade_type: UpgradeType) {
+pub fn apply_upgrade(unit: &mut GameObject, upgrade_type: UpgradeType) {
     if let Some(existing_upgrade) = unit.upgrades.iter_mut().find(|u| u.upgrade_type == upgrade_type) {
         existing_upgrade.level += 1;
     } else {

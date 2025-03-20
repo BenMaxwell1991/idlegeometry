@@ -1,12 +1,11 @@
 use crate::enums::gamestate::GameState;
 use crate::game::data::game_data::GameData;
+use crate::helper::lock_helper::acquire_lock_mut;
 use rodio::{Decoder, Sink, Source};
 use std::io::Cursor;
 use std::sync::Arc;
-use std::thread;
 use std::thread::{sleep, spawn};
-use std::time::{Duration, Instant};
-use crate::helper::lock_helper::acquire_lock_mut;
+use std::time::Duration;
 
 /// ✅ Sound Names
 pub const MIDNIGHT_WANDER: &str = "midnight_wander";
@@ -35,7 +34,7 @@ pub const SOUND_FILES: [(&str, &[u8], u32); 6] = [
 ];
 
 pub fn start_music_thread(game_data: Arc<GameData>) {
-    thread::spawn(move || {
+    spawn(move || {
         loop {
             let game_state = *game_data.game_state.read().unwrap();
 
@@ -51,7 +50,7 @@ pub fn start_music_thread(game_data: Arc<GameData>) {
 
                 if track_name.is_none() {
                     let active_sounds_clone = Arc::clone(&game_data.active_sounds);
-                    thread::spawn(move || {
+                    spawn(move || {
                         let mut active_sounds = active_sounds_clone.write().unwrap();
                         for sink in active_sounds.iter() {
                             smooth_set_volume(sink, 0.0, 50, 300);

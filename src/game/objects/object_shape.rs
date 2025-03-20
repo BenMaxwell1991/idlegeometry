@@ -2,12 +2,12 @@ use crate::game::maths::pos_2::Pos2FixedPoint;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct UnitShape {
+pub struct ObjectShape {
     pub width: i32,
     pub height: i32,
 }
 
-impl UnitShape {
+impl ObjectShape {
     pub fn new(width: i32, height: i32) -> Self {
         Self {
             width,

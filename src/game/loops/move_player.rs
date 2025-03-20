@@ -1,7 +1,3 @@
-use std::sync::Arc;
-use std::sync::atomic::Ordering;
-use std::thread::sleep;
-use std::time::{Duration, Instant};
 use crate::enums::gametab::GameTab;
 use crate::enums::gametab::GameTab::NullGameTab;
 use crate::game::collision::detect_collision::handle_terrain;
@@ -10,6 +6,10 @@ use crate::game::data::stored_data::{CURRENT_TAB, GAME_IN_FOCUS, KEY_STATE};
 use crate::game::loops::game_loop::get_player_position;
 use crate::game::loops::key_state::KeyState;
 use crate::helper::lock_helper::{acquire_lock, acquire_lock_mut};
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::thread::sleep;
+use std::time::{Duration, Instant};
 
 pub fn move_player(game_data: Arc<GameData>) {
     let mut delta_time = 0.0;
@@ -29,7 +29,7 @@ pub fn move_player(game_data: Arc<GameData>) {
         if let Some(player_id) = player_id {
             if let Some(Some(player_unit)) = game_units.get_mut(player_id as usize) {
                 let movement_speed = player_unit.move_speed;
-                let shape = player_unit.unit_shape.clone();
+                let shape = player_unit.object_shape.clone();
                 drop(game_units);
                 let distance: f32 = movement_speed as f32 * delta_time as f32;
                 let mut new_position = player_position;
