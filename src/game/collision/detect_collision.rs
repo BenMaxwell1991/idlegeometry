@@ -8,10 +8,10 @@ use rayon::slice::ParallelSliceMut;
 
 use crate::game::map::game_map::GameMap;
 use crate::game::maths::integers::int_sqrt_64;
-use crate::game::resources::loot::collect_loot;
 use crate::game::objects::attacks::attack_landed::AttackLanded;
 use crate::game::objects::attacks::attack_stats::AttackStats;
 use crate::game::objects::loot::Loot;
+use crate::game::resources::loot::collect_loot;
 use crate::helper::lock_helper::{acquire_lock, acquire_lock_mut};
 use rustc_hash::FxHashSet;
 use std::sync::{Arc, Mutex};
@@ -155,6 +155,10 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
         for attack_to_process in attack_hits_to_process.lock().unwrap().iter() {
             let attack_id = attack_to_process.attack_id as usize;
             let target_id = attack_to_process.target_id as usize;
+
+            if units_to_remove.contains(&attack_to_process.target_id) {
+                continue;
+            }
 
             let (attack, target) = if attack_id < target_id {
                 let (low, high) = units.split_at_mut(target_id);

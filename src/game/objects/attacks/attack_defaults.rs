@@ -13,47 +13,35 @@ use crate::game::objects::on_death::OnDeath;
 pub fn get_basic_attack(attack_name: AttackName) -> GameObject {
     let animation = match attack_name {
         AttackName::Swipe => Animation::new(SLASH_ATTACK, Duration::from_millis(1000), (200, 70)),
-        AttackName::Fireball => Animation::new(BABY_GREEN_DRAGON, Duration::from_millis(300), (70, 70)),
+        AttackName::Firebolt => Animation::new(BABY_GREEN_DRAGON, Duration::from_millis(2000), (30, 30)),
     };
 
-    let attack_stats = match attack_name {
-        AttackName::Swipe => AttackStats {
-            name: AttackName::Swipe,
-            damage: 1.0,
-            range: 50.0,
-            cooldown: 1.0,
-            direction: (0.0, 1.0),
-            speed: 300 * FIXED_POINT_SCALE,
-            area: 2000.0,
-            lifetime: 1.0,
-            elapsed: 0.0,
-            damage_point: 0.0,
-            damage_duration: 1.0,
-            enabled: false,
-            hit_count: 0,
-            max_targets: u32::MAX,
-            units_hit: Vec::new(),
-            cast_sounds: vec![ATTACK_SWIPE_02.to_string()],
-        },
-        AttackName::Fireball => AttackStats {
-            name: AttackName::Fireball,
-            damage: 50.0,
-            range: 200.0,
-            cooldown: 5.0,
-            direction: (1.0, 0.0),
-            speed: 2 * FIXED_POINT_SCALE,
-            area: 30.0,
-            lifetime: 1.0,
-            elapsed: 0.0,
-            damage_point: 0.0,
-            damage_duration: 1.0,
-            enabled: false,
-            hit_count: 0,
-            max_targets: 1,
-            units_hit: Vec::new(),
-            cast_sounds: Vec::new(),
-        },
+    let mut attack_stats = AttackStats {
+        name: attack_name.clone(),
+        ..AttackStats::default()
     };
+
+    match attack_name {
+        AttackName::Swipe => {
+            attack_stats.damage = 1.5;
+            attack_stats.range = 50.0;
+            attack_stats.cooldown = 6.0;
+            attack_stats.area = 2000.0;
+            attack_stats.cast_sounds = vec![ATTACK_SWIPE_02.to_string()];
+        }
+        AttackName::Firebolt => {
+            attack_stats.damage = 2.5;
+            attack_stats.range = 80.0;
+            attack_stats.cooldown = 20.0;
+            attack_stats.speed = 600 * FIXED_POINT_SCALE;
+            attack_stats.projectile_count = 50; // Fires 3 fireballs in a spread
+            attack_stats.spread_angle = 360.0;
+            attack_stats.starting_angle = 90.0;
+            attack_stats.burst_count = 2;
+            attack_stats.burst_delay = 0.5;
+            attack_stats.cast_sounds = vec![ATTACK_SWIPE_02.to_string()];
+        }
+    }
 
     GameObject {
         id: u32::MAX,

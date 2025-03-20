@@ -97,8 +97,8 @@ fn init_attacks(game_data: &GameData) {
     let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_millis(1000), (70, 70));
 
     let pool_config = vec![
-        (AttackName::Swipe, animation.clone(), 200), // Up to 1000 Swipes available
-        (AttackName::Fireball, animation.clone(), 200), // Up to 1000 Swipes available
+        (AttackName::Swipe, animation.clone(), 2000), // Up to 1000 Swipes available
+        (AttackName::Firebolt, animation.clone(), 2000), // Up to 1000 Swipes available
     ];
 
     initialise_attack_pools(game_data, &pool_config);
@@ -113,7 +113,8 @@ fn init_player(game_data: &GameData) {
         level: 15,
     };
 
-    player.attack_cooldowns.insert(AttackName::Swipe, 2.0);
+    player.attack_cooldowns.insert(AttackName::Firebolt, 2.0);
+    // player.attack_cooldowns.insert(AttackName::Swipe, 2.0);
     player.upgrades.push(upgrade);
     player.pickup_radius = Some(300 * FIXED_POINT_SCALE);
 
@@ -137,9 +138,9 @@ fn init_enemies(game_data: &GameData) {
         let map_x = map.width as i32 * map.tile_size;
         let map_y = map.height as i32 * map.tile_size;
 
-        let baby_count = 2500;
-        let drake_count = 100;
-        let adult_count = 20;
+        let baby_count = 200;
+        let drake_count = 10;
+        let adult_count = 2;
 
         for _i in 0..baby_count {
             let pos = Pos2FixedPoint::new(random_range(0..=map_x), random_range(0..=map_y));

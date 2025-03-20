@@ -1,22 +1,20 @@
 use crate::game::data::game_data::GameData;
-use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE, INVALID_POSITION};
+use crate::game::maths::pos_2::{Pos2FixedPoint, INVALID_POSITION};
 use crate::game::objects::animation::Animation;
 use crate::game::objects::attacks::attack_stats::{AttackName, AttackStats};
 use crate::game::objects::loot::Loot;
-use crate::game::objects::on_death::OnDeath;
-use crate::game::objects::unit_defaults::collectable_01_basic_monster;
 use crate::game::objects::object_shape::ObjectShape;
 use crate::game::objects::object_type::ObjectType;
+use crate::game::objects::on_death::OnDeath;
+use crate::game::objects::unit_defaults::collectable_01_basic_monster;
 use crate::game::objects::upgrades::{Upgrade, UpgradeType};
 use crate::helper::lock_helper::acquire_lock_mut;
-use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, SLASH_ATTACK};
-use crate::ui::sound::music_player::{play_sound, ATTACK_SWIPE_02};
+use crate::ui::sound::music_player::play_sound;
 use rayon::iter::*;
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::{Deserialize, Serialize};
 use std::mem::swap;
 use std::sync::Arc;
-use std::time::Duration;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct GameObject {

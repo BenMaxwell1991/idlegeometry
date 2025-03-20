@@ -67,7 +67,7 @@ impl GameLoop {
                     Keycode::Space => {
                         if let Some(attack_name) = &attack_name {
                             println!("Spawning {:?} attack at {:?}", attack_name.clone(), player_position);
-                            spawn_attack(Arc::clone(&self.game_data), attack_name.clone(), player_position, Some(player_id));
+                            spawn_attack(Arc::clone(&self.game_data), attack_name.clone(), player_position, Some(player_id), true);
                         } else {
                             println!("Player has no attacks assigned.");
                         }
@@ -192,7 +192,7 @@ impl GameLoop {
         }
 
         for (attack_name, unit_position, unit_id) in attacks_to_spawn {
-            spawn_attack(Arc::clone(&self.game_data), attack_name.clone(), unit_position, Some(unit_id));
+            spawn_attack(Arc::clone(&self.game_data), attack_name.clone(), unit_position, Some(unit_id), true);
         }
 
         // **Play attack sounds**

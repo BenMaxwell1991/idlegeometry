@@ -92,7 +92,7 @@ pub fn create_03_adult_white_dragon() -> GameObject {
 pub fn collectable_01_basic_monster(loot: Option<Loot>) -> GameObject {
     let mut animation = Animation::new(TREASURE, Duration::from_secs(1), (45, 45));
 
-    animation.fixed_frame_index = Some(1);
+    animation.fixed_frame_index = Some(0);
 
     let mut collectable = GameObject::new(
         ObjectType::Collectable,
