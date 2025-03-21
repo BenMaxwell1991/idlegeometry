@@ -1,4 +1,8 @@
+use crate::ui::asset::loader::load_sprites_native;
+use crate::ui::asset::sprite::sprite_sheet::SpriteSheet;
+use crate::ui::graphics::gl::{create_rect_shader_program, create_sprite_shader_program};
 use glow::*;
+use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
 pub struct OffscreenRenderer {
@@ -7,9 +11,9 @@ pub struct OffscreenRenderer {
     texture: Texture,
     width: i32,
     height: i32,
-    pub vao: NativeVertexArray,
-    pub vbo: NativeBuffer,
-    pub ebo: NativeBuffer,
+    pub rect_shader: NativeProgram,
+    pub sprite_shader: NativeProgram,
+    pub sprite_sheets: FxHashMap<String, SpriteSheet>,
 }
 
 impl OffscreenRenderer {
@@ -17,9 +21,8 @@ impl OffscreenRenderer {
         unsafe {
             let framebuffer = gl.create_framebuffer().unwrap();
             let texture = gl.create_texture().unwrap();
-            let vao = gl.create_vertex_array().unwrap();
-            let vbo = gl.create_buffer().unwrap();
-            let ebo = gl.create_buffer().unwrap();
+            let rect_shader = create_rect_shader_program(&gl);
+            let sprite_shader = create_sprite_shader_program(&gl);
 
             gl.bind_framebuffer(FRAMEBUFFER, Some(framebuffer));
             gl.enable(BLEND);
@@ -48,15 +51,17 @@ impl OffscreenRenderer {
 
             gl.bind_framebuffer(FRAMEBUFFER, None); // Unbind
 
+            let sprite_sheets = load_sprites_native(&gl);
+
             Self {
                 gl,
                 framebuffer,
                 texture,
                 width,
                 height,
-                vao,
-                vbo,
-                ebo,
+                rect_shader,
+                sprite_shader,
+                sprite_sheets,
             }
         }
     }

@@ -1,5 +1,4 @@
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::SPRITE_SHEETS_NATIVE;
 use crate::ui::asset::sprite::sprite_sheet::{SpriteSheet, SPRITE_DATA, SPRITE_FOLDERS};
 use eframe::egui;
 use eframe::egui::ColorImage;
@@ -96,7 +95,7 @@ pub fn register_custom_font(ctx: &Context) {
 }
 
 
-pub fn load_sprites_native(gl: &glow::Context, game_data: &GameData) {
+pub fn load_sprites_native(gl: &glow::Context) -> FxHashMap<String, SpriteSheet> {
     let mut native_sprite_sheets = FxHashMap::default();
 
     load_sprite_sheets_native(gl, &mut native_sprite_sheets);
@@ -104,7 +103,7 @@ pub fn load_sprites_native(gl: &glow::Context, game_data: &GameData) {
     load_sprite_folders_native(gl, &mut native_sprite_sheets);
 
     println!("✅ All native sprites loaded!");
-    game_data.set_field(SPRITE_SHEETS_NATIVE, native_sprite_sheets);
+    native_sprite_sheets
 }
 
 fn load_sprite_sheets_native(gl: &glow::Context, native_sprite_sheets: &mut FxHashMap<String, SpriteSheet>) {

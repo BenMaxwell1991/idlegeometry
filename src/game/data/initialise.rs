@@ -135,9 +135,9 @@ fn init_enemies(game_data: &GameData) {
         let map_x = map.width as i32 * map.tile_size;
         let map_y = map.height as i32 * map.tile_size;
 
-        let baby_count = 200;
-        let drake_count = 10;
-        let adult_count = 2;
+        let baby_count = 1000;
+        let drake_count = 50;
+        let adult_count = 15;
 
         for _i in 0..baby_count {
             let pos = Pos2FixedPoint::new(random_range(0..=map_x), random_range(0..=map_y));

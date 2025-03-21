@@ -1,10 +1,9 @@
-use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::SPRITE_SHEETS_NATIVE;
 use crate::game::map::tile_type::TileType;
 use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 use crate::game::objects::object_type::ObjectType;
-use crate::helper::lock_helper::acquire_lock;
 use crate::ui::component::widget::game_graphics::world_to_screen;
+use crate::ui::graphics::offscreen_renderer::OffscreenRenderer;
+use crate::ui::graphics::rendering_data::RenderData;
 use crate::ui::graphics::sprite_to_draw::SpriteToDraw;
 use eframe::emath::{Rect, Vec2};
 use egui::{Color32, Pos2};
@@ -14,11 +13,10 @@ use std::f32::consts::PI;
 use std::num::NonZeroU32;
 use std::time::Instant;
 
-pub fn draw_map(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
-    let camera_state_lock = game_data.camera_state.read().unwrap();
-
-    if let Some(game_map) = acquire_lock(&game_data.game_map, "game_map").as_ref() {
-        let tile_size = camera_state_lock.get_zoom_scaled() * game_map.get_tile_size() as f32 / FIXED_POINT_SCALE as f32;
+pub fn draw_map(gl: &Context, render_data: &RenderData, paintbox_rect: &Rect, renderer: &OffscreenRenderer) {
+    let camera_state = &render_data.camera_state;
+    if let Some(game_map) = &render_data.game_map {
+        let tile_size = camera_state.get_zoom_scaled() * game_map.get_tile_size() as f32 / FIXED_POINT_SCALE as f32;
 
         let mut rects = Vec::new();
         let mut colours = Vec::new();
@@ -27,7 +25,7 @@ pub fn draw_map(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
             for y in 0..game_map.height {
                 let tile = game_map.get_tile(x, y);
                 let world_pos = Pos2FixedPoint::new(x as i32 * game_map.get_tile_size(), y as i32 * game_map.get_tile_size());
-                let screen_pos = world_to_screen(world_pos, &camera_state_lock, paintbox_rect);
+                let screen_pos = world_to_screen(world_pos, camera_state, paintbox_rect);
                 let tile_rect = Rect::from_min_size(screen_pos, Vec2::new(tile_size, tile_size));
 
                 if !tile_rect.intersects(Rect::from_min_size(Pos2::new(0.0, 0.0), paintbox_rect.size())) {
@@ -46,9 +44,7 @@ pub fn draw_map(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
             }
         }
 
-        if let shader_lock = game_data.rect_shader.write().unwrap() {
-            draw_colour_rectangles(gl, &paintbox_rect, &rects, &colours, &*shader_lock);
-        }
+        draw_colour_rectangles(gl, &paintbox_rect, &rects, &colours, &Some(renderer.rect_shader));
     }
 }
 
@@ -72,11 +68,11 @@ fn get_colour_blend_amount(last_damage_time: Option<Instant>) -> f32 {
     colour_blend_amount
 }
 
-pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
-    let sprite_sheets = game_data.get_field(SPRITE_SHEETS_NATIVE);
-    let units_lock = acquire_lock(&game_data.units, "Failed to acquire objects lock");
-    let unit_positions_lock = acquire_lock(&game_data.unit_positions, "Failed to acquire unit_positions lock");
-    let camera_state_lock = acquire_lock(&game_data.camera_state, "Failed to acquire camera_state lock");
+pub fn draw_units(gl: &Context, render_data: &RenderData, paintbox_rect: &Rect, renderer: &OffscreenRenderer) {
+    let sprite_sheets = &renderer.sprite_sheets;
+    let game_units = &render_data.game_units;
+    let unit_positions = &render_data.unit_positions;
+    let camera_state = &render_data.camera_state;
 
     let mut images_to_draw = Vec::new();
     let mut rects_to_draw = Vec::new();
@@ -84,14 +80,13 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
     let mut player_to_draw = Vec::new();
     let mut health_bar_rects = Vec::new();
     let mut health_bar_colours = Vec::new();
-    let mut attack_sprites_to_draw = Vec::new();
     let mut shadow_sprites_to_draw = Vec::new();
 
-    for unit_option in units_lock.iter() {
+    for unit_option in game_units.iter() {
         if let Some(unit) = unit_option {
-            let unit_screen_position = world_to_screen(unit_positions_lock[unit.id as usize], &camera_state_lock, paintbox_rect);
+            let unit_screen_position = world_to_screen(unit_positions[unit.id as usize], &camera_state, paintbox_rect);
 
-            let unit_size = Vec2::new(unit.animation.size.0 as f32, unit.animation.size.1 as f32) * camera_state_lock.get_zoom_scaled();
+            let unit_size = Vec2::new(unit.animation.size.0 as f32, unit.animation.size.1 as f32) * camera_state.get_zoom_scaled();
             let unit_rect = Rect::from_center_size(unit_screen_position, unit_size);
 
             if !unit_rect.intersects(Rect::from_min_size(Pos2::new(0.0, 0.0), paintbox_rect.size())) {
@@ -104,44 +99,71 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
                 continue;
             }
 
-            if let Some(sprite_sheets) = sprite_sheets.as_ref() {
-                if let Some(sprite_sheet) = sprite_sheets.get(&unit.animation.sprite_key) {
+            if let Some(sprite_sheet) = sprite_sheets.get(&unit.animation.sprite_key) {
+                let frame_index = unit.animation.fixed_frame_index.unwrap_or_else(|| {
+                    (unit.animation.animation_frame * sprite_sheet.get_frame_count_native() as f32).trunc() as usize
+                });
 
-                    let frame_index = unit.animation.fixed_frame_index.unwrap_or_else(|| {
-                        (unit.animation.animation_frame * sprite_sheet.get_frame_count_native() as f32).trunc() as usize
-                    });
+                let last_damage_taken = unit.animation.last_damage_time.clone();
+                let frame = sprite_sheet.get_frame_native(frame_index);
 
-                    let last_damage_taken = unit.animation.last_damage_time.clone();
-                    let frame = sprite_sheet.get_frame_native(frame_index);
+                let shadow_scale = 1.2;
+                let shadow_size = unit_size * Vec2::new(shadow_scale, shadow_scale * 0.4);
+                let shadow_offset = Vec2::new(unit_size.x * 0.07, unit_size.y * 0.35);
+                let shadow_rect = Rect::from_center_size(unit_screen_position + shadow_offset, shadow_size);
 
-                    let shadow_scale = 1.2;
-                    let shadow_size = unit_size * Vec2::new(shadow_scale, shadow_scale * 0.4);
-                    let shadow_offset = Vec2::new(unit_size.x * 0.07, unit_size.y * 0.35);
-                    let shadow_rect = Rect::from_center_size(unit_screen_position + shadow_offset, shadow_size);
+                shadow_sprites_to_draw.push(SpriteToDraw {
+                    texture: frame,
+                    rect: shadow_rect,
+                    tint: Color32::from_rgba_premultiplied(0, 0, 0, 192),
+                    blend_target: Color32::WHITE,
+                    colour_blend_amount: 0.0,
+                    alpha_blend_amount: 0.0,
+                    rotation: 0.0,
+                });
 
-                    shadow_sprites_to_draw.push(SpriteToDraw {
-                        texture: frame,
-                        rect: shadow_rect,
-                        tint: Color32::from_rgba_premultiplied(0, 0, 0, 192),
-                        blend_target: Color32::WHITE,
-                        colour_blend_amount: 0.0,
-                        alpha_blend_amount: 0.0,
-                    });
+                match unit.object_type {
+                    ObjectType::Player => {
+                        player_to_draw.push(SpriteToDraw {
+                            texture: frame,
+                            rect: unit_rect,
+                            tint: Color32::WHITE,
+                            blend_target: Color32::WHITE,
+                            colour_blend_amount: get_colour_blend_amount(last_damage_taken),
+                            alpha_blend_amount: 1.0,
+                            rotation: 0.0,
+                        });
 
-                    match unit.object_type {
-                        ObjectType::Player => {
-                            player_to_draw.push(SpriteToDraw {
-                                texture: frame,
-                                rect: unit_rect,
-                                tint: Color32::WHITE,
-                                blend_target: Color32::WHITE,
-                                colour_blend_amount: get_colour_blend_amount(last_damage_taken),
-                                alpha_blend_amount: 1.0,
-                            });
+                        let health_bar_height = 4.0 * camera_state.get_zoom_scaled();
+                        let health_bar_width = unit_size.x * 0.9;
+                        let current_health_width = health_bar_width * (unit.health_current / unit.health_max);
 
-                            let health_bar_height = 4.0 * camera_state_lock.get_zoom_scaled();
-                            let health_bar_width = unit_size.x * 0.9;
-                            let current_health_width = health_bar_width * (unit.health_current / unit.health_max);
+                        let health_bar_bg_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
+                        let health_bar_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
+
+                        let health_bar_bg_rect = Rect::from_min_size(health_bar_bg_min, Vec2::new(health_bar_width, health_bar_height));
+                        let health_bar_rect = Rect::from_min_size(health_bar_min, Vec2::new(current_health_width, health_bar_height));
+
+                        health_bar_rects.push(health_bar_bg_rect);
+                        health_bar_colours.push(Color32::BLACK);
+                        health_bar_rects.push(health_bar_rect);
+                        health_bar_colours.push(Color32::GREEN);
+                    },
+                    ObjectType::Enemy => {
+                        images_to_draw.push(SpriteToDraw {
+                            texture: frame,
+                            rect: unit_rect,
+                            tint: Color32::WHITE,
+                            blend_target: Color32::WHITE,
+                            colour_blend_amount: get_colour_blend_amount(last_damage_taken),
+                            alpha_blend_amount: 0.0,
+                            rotation: 0.0,
+                        });
+
+                        if unit.health_current != unit.health_max {
+                            let health_bar_height = 3.0 * camera_state.get_zoom_scaled();
+                            let health_bar_width = unit_size.x * 0.7;
+                            let current_health_width = health_bar_width * (unit.health_current / unit.health_max).max(0.0);
 
                             let health_bar_bg_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
                             let health_bar_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
@@ -152,92 +174,185 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
                             health_bar_rects.push(health_bar_bg_rect);
                             health_bar_colours.push(Color32::BLACK);
                             health_bar_rects.push(health_bar_rect);
-                            health_bar_colours.push(Color32::GREEN);
-                        },
-                        ObjectType::Enemy => {
-                            images_to_draw.push(SpriteToDraw {
-                                texture: frame,
-                                rect: unit_rect,
-                                tint: Color32::WHITE,
-                                blend_target: Color32::WHITE,
-                                colour_blend_amount: get_colour_blend_amount(last_damage_taken),
-                                alpha_blend_amount: 0.0,
-                            });
-
-                            if unit.health_current != unit.health_max {
-                                let health_bar_height = 3.0 * camera_state_lock.get_zoom_scaled();
-                                let health_bar_width = unit_size.x * 0.7;
-                                let current_health_width = health_bar_width * (unit.health_current / unit.health_max).max(0.0);
-
-                                let health_bar_bg_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
-                                let health_bar_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
-
-                                let health_bar_bg_rect = Rect::from_min_size(health_bar_bg_min, Vec2::new(health_bar_width, health_bar_height));
-                                let health_bar_rect = Rect::from_min_size(health_bar_min, Vec2::new(current_health_width, health_bar_height));
-
-                                health_bar_rects.push(health_bar_bg_rect);
-                                health_bar_colours.push(Color32::BLACK);
-                                health_bar_rects.push(health_bar_rect);
-                                health_bar_colours.push(Color32::RED);
-                            }
+                            health_bar_colours.push(Color32::RED);
                         }
-                        ObjectType::Collectable => {
-                            images_to_draw.push(SpriteToDraw {
-                                texture: frame,
-                                rect: unit_rect,
-                                tint: Color32::WHITE,
-                                blend_target: Color32::WHITE,
-                                colour_blend_amount: 0.0,
-                                alpha_blend_amount: 0.0,
-                            });
+                    }
+                    ObjectType::Collectable => {
+                        images_to_draw.push(SpriteToDraw {
+                            texture: frame,
+                            rect: unit_rect,
+                            tint: Color32::WHITE,
+                            blend_target: Color32::WHITE,
+                            colour_blend_amount: 0.0,
+                            alpha_blend_amount: 0.0,
+                            rotation: 0.0,
+                        });
 
-                            if unit.health_current != unit.health_max {
-                                let health_bar_height = 3.0 * camera_state_lock.get_zoom_scaled();
-                                let health_bar_width = unit_size.x * 0.7;
-                                let current_health_width = health_bar_width * (unit.health_current / unit.health_max).max(0.0);
+                        if unit.health_current != unit.health_max {
+                            let health_bar_height = 3.0 * camera_state.get_zoom_scaled();
+                            let health_bar_width = unit_size.x * 0.7;
+                            let current_health_width = health_bar_width * (unit.health_current / unit.health_max).max(0.0);
 
-                                let health_bar_bg_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
-                                let health_bar_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
+                            let health_bar_bg_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
+                            let health_bar_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
 
-                                let health_bar_bg_rect = Rect::from_min_size(health_bar_bg_min, Vec2::new(health_bar_width, health_bar_height));
-                                let health_bar_rect = Rect::from_min_size(health_bar_min, Vec2::new(current_health_width, health_bar_height));
+                            let health_bar_bg_rect = Rect::from_min_size(health_bar_bg_min, Vec2::new(health_bar_width, health_bar_height));
+                            let health_bar_rect = Rect::from_min_size(health_bar_min, Vec2::new(current_health_width, health_bar_height));
 
-                                health_bar_rects.push(health_bar_bg_rect);
-                                health_bar_colours.push(Color32::BLACK);
-                                health_bar_rects.push(health_bar_rect);
-                                health_bar_colours.push(Color32::RED);
-                            }
+                            health_bar_rects.push(health_bar_bg_rect);
+                            health_bar_colours.push(Color32::BLACK);
+                            health_bar_rects.push(health_bar_rect);
+                            health_bar_colours.push(Color32::RED);
                         }
-                        ObjectType::Attack => {
-                            images_to_draw.push(SpriteToDraw {
-                                texture: frame,
-                                rect: unit_rect,
-                                tint: Color32::WHITE,
-                                blend_target: Color32::WHITE,
-                                colour_blend_amount: 0.0,
-                                alpha_blend_amount: 0.0,
-                            });
+                    }
+                    ObjectType::Attack => {
+                        let mut rotation = 0.0;
+                        if let Some(stats) = &unit.attack_stats {
+                            rotation = 90.0 + stats.direction.1.atan2(stats.direction.0) * 360.0 / (2.0 * PI);
                         }
+
+                        images_to_draw.push(SpriteToDraw {
+                            texture: frame,
+                            rect: unit_rect,
+                            tint: Color32::WHITE,
+                            blend_target: Color32::WHITE,
+                            colour_blend_amount: 0.0,
+                            alpha_blend_amount: 0.0,
+                            rotation,
+                        });
                     }
                 }
             }
         }
     }
 
-    if let (Some(sprite_shader), Some(rect_shader)) = (
-        game_data.sprite_shader.write().ok(),
-        game_data.rect_shader.write().ok(),
-    ) {
-        draw_colour_sprites(gl, paintbox_rect, &shadow_sprites_to_draw, &sprite_shader);
-        draw_colour_rectangles(gl, paintbox_rect, &rects_to_draw, &colours_to_draw, &rect_shader);
-        draw_colour_sprites(gl, paintbox_rect, &images_to_draw, &sprite_shader);
-        draw_colour_rectangles(gl, paintbox_rect, &health_bar_rects, &health_bar_colours, &rect_shader);
-        draw_colour_sprites(gl, paintbox_rect, &player_to_draw, &sprite_shader);
-        draw_colour_sprites(gl, paintbox_rect, &attack_sprites_to_draw, &sprite_shader);
-    }
+    draw_colour_sprites(gl, paintbox_rect, &shadow_sprites_to_draw, &Some(renderer.sprite_shader));
+    draw_colour_rectangles(gl, paintbox_rect, &rects_to_draw, &colours_to_draw, &Some(renderer.rect_shader));
+    draw_colour_sprites(gl, paintbox_rect, &images_to_draw, &Some(renderer.sprite_shader));
+    draw_colour_rectangles(gl, paintbox_rect, &health_bar_rects, &health_bar_colours, &Some(renderer.rect_shader));
+    draw_colour_sprites(gl, paintbox_rect, &player_to_draw, &Some(renderer.sprite_shader));
 }
 
 pub fn draw_colour_sprites(
+    gl: &Context,
+    view_rect: &Rect,
+    sprites: &[SpriteToDraw],
+    shader: &Option<NativeProgram>
+) {
+    unsafe {
+        let mut vertices = Vec::new();
+        let mut indices = Vec::new();
+        let mut index_offset = 0;
+
+        let mut sprite_batches: FxHashMap<u32, Vec<&SpriteToDraw>> = FxHashMap::default();
+        for sprite in sprites.iter() {
+            sprite_batches.entry(sprite.texture.0.get()).or_default().push(sprite);
+        }
+
+        let vao = gl.create_vertex_array().unwrap();
+        let vbo = gl.create_buffer().unwrap();
+        let ebo = gl.create_buffer().unwrap();
+
+        gl.use_program(*shader);
+        gl.bind_vertex_array(Some(vao));
+
+        for (texture_id, batch) in sprite_batches {
+            vertices.clear();
+            indices.clear();
+            index_offset = 0;
+
+            for sprite in batch.iter() {
+                let tint = sprite.tint;
+                let blend_target = sprite.blend_target;
+                let colour_blend = sprite.colour_blend_amount;
+                let alpha_blend = sprite.alpha_blend_amount;
+
+                let screen_center = sprite.rect.center();
+                let size = sprite.rect.size();
+
+                let rotation_radians = sprite.rotation.to_radians();
+                let cos = rotation_radians.cos();
+                let sin = rotation_radians.sin();
+
+                // Corners in local space relative to center
+                let corners = [
+                    (-size.x / 2.0, -size.y / 2.0, 0.0, 0.0), // Bottom-left
+                    ( size.x / 2.0, -size.y / 2.0, 1.0, 0.0), // Bottom-right
+                    ( size.x / 2.0,  size.y / 2.0, 1.0, 1.0), // Top-right
+                    (-size.x / 2.0,  size.y / 2.0, 0.0, 1.0), // Top-left
+                ];
+
+                for (dx, dy, u, v) in corners {
+                    let rotated_x = dx * cos - dy * sin;
+                    let rotated_y = dx * sin + dy * cos;
+
+                    let screen_x = screen_center.x + rotated_x;
+                    let screen_y = screen_center.y + rotated_y;
+
+                    let ndc_pos = to_gl_position(view_rect, Pos2::new(screen_x, screen_y));
+
+                    vertices.extend_from_slice(&[
+                        ndc_pos.x, ndc_pos.y, u, v,
+                        tint.r() as f32 / 255.0,
+                        tint.g() as f32 / 255.0,
+                        tint.b() as f32 / 255.0,
+                        tint.a() as f32 / 255.0,
+                        colour_blend,
+                        alpha_blend,
+                        blend_target.r() as f32 / 255.0,
+                        blend_target.g() as f32 / 255.0,
+                        blend_target.b() as f32 / 255.0,
+                        blend_target.a() as f32 / 255.0,
+                    ]);
+                }
+
+                indices.extend_from_slice(&[
+                    index_offset, index_offset + 1, index_offset + 2,
+                    index_offset + 2, index_offset + 3, index_offset,
+                ]);
+
+                index_offset += 4;
+            }
+
+            gl.bind_buffer(ARRAY_BUFFER, Some(vbo));
+            gl.buffer_data_u8_slice(ARRAY_BUFFER, bytemuck::cast_slice(&vertices), STATIC_DRAW);
+
+            gl.bind_buffer(ELEMENT_ARRAY_BUFFER, Some(ebo));
+            gl.buffer_data_u8_slice(ELEMENT_ARRAY_BUFFER, bytemuck::cast_slice(&indices), STATIC_DRAW);
+
+            let stride = (14) * std::mem::size_of::<f32>() as i32;
+
+            gl.vertex_attrib_pointer_f32(0, 2, FLOAT, false, stride, 0);
+            gl.enable_vertex_attrib_array(0);
+
+            gl.vertex_attrib_pointer_f32(1, 2, FLOAT, false, stride, 2 * 4);
+            gl.enable_vertex_attrib_array(1);
+
+            gl.vertex_attrib_pointer_f32(2, 4, FLOAT, false, stride, 4 * 4);
+            gl.enable_vertex_attrib_array(2);
+
+            gl.vertex_attrib_pointer_f32(3, 1, FLOAT, false, stride, 8 * 4); // colour_blend_amount
+            gl.enable_vertex_attrib_array(3);
+
+            gl.vertex_attrib_pointer_f32(4, 1, FLOAT, false, stride, 9 * 4); // alpha_blend_amount
+            gl.enable_vertex_attrib_array(4);
+
+            gl.vertex_attrib_pointer_f32(5, 4, FLOAT, false, stride, 10 * 4); // blend_target
+            gl.enable_vertex_attrib_array(5);
+
+            let texture = NativeTexture(NonZeroU32::try_from(texture_id).unwrap());
+            gl.bind_texture(TEXTURE_2D, Some(texture));
+            gl.draw_elements(TRIANGLES, indices.len() as i32, UNSIGNED_INT, 0);
+        }
+
+        gl.delete_vertex_array(vao);
+        gl.delete_buffer(vbo);
+        gl.delete_buffer(ebo);
+    }
+}
+
+
+pub fn draw_colour_spritess(
     gl: &Context,
     view_rect: &Rect,
     sprites: &[SpriteToDraw],
@@ -349,6 +464,11 @@ pub fn get_gl_rect(view: &Rect, rect: &Rect) -> (Pos2, Vec2) {
     (Pos2::new(min_x, min_y), Vec2::new(w, h))
 }
 
+pub fn to_gl_position(view_rect: &Rect, point: Pos2) -> Pos2 {
+    let x = (point.x / view_rect.size().x) * 2.0 - 1.0;
+    let y = (point.y / view_rect.size().y) * 2.0 - 1.0;
+    Pos2::new(x, y)
+}
 
 pub fn get_vertex_from_gl_rect(min_pos: Pos2, size: Vec2, rgba: Color32) -> [f32; 24] {
     let r = rgba.r() as f32 / 255.0;

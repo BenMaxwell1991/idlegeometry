@@ -30,12 +30,12 @@ pub fn get_basic_attack(attack_name: AttackName) -> GameObject {
             attack_stats.cast_sounds = vec![SOUND_01.to_string()];
         }
         AttackName::Firebolt => {
-            attack_stats.damage = 0.5;
+            attack_stats.damage = 1.0;
             attack_stats.lifetime = 3.0;
             attack_stats.range = 80.0;
             attack_stats.cooldown = 50.0;
             attack_stats.speed = 150 * FIXED_POINT_SCALE;
-            attack_stats.projectile_count = 30; // Fires 3 fireballs in a spread
+            attack_stats.projectile_count = 30;
             attack_stats.spread_angle = 360.0;
             attack_stats.starting_angle = 90.0;
             attack_stats.burst_count = 1;

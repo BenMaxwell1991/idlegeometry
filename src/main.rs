@@ -1,4 +1,4 @@
-use crate::ui::sound::kira_audio::{KiraAudio};
+use crate::ui::sound::kira_audio::KiraAudio;
 use crate::ui::window::create_window;
 use game::data::save_load::{auto_save, load_game_or_new};
 use game::loops::game_loop::GameLoop;

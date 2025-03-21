@@ -8,13 +8,13 @@ use crate::ui::component::widget::game_graphics::GameGraphics;
 use crate::ui::panel::game_menu::show_game_menu;
 use eframe::{egui, Frame};
 use egui::{Align, Color32, FontFamily, FontId, Image, Layout, Pos2, Rect, RichText, StrokeKind, Ui, UiBuilder, Vec2};
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 use uuid::Uuid;
 
 static GAME_GRAPHICS_ID: OnceLock<Uuid> = OnceLock::new();
 static RESOURCE_HUD_ID: OnceLock<Uuid> = OnceLock::new();
 
-pub fn show_main_game(ui: &mut Ui, game_data: &GameData, frame: &mut Frame) {
+pub fn show_main_game(ui: &mut Ui, game_data: Arc<GameData>, frame: &mut Frame) {
     let game_state = *game_data.game_state.read().unwrap();
     let hud_id = RESOURCE_HUD_ID.get_or_init(Uuid::new_v4);
 
@@ -26,15 +26,15 @@ pub fn show_main_game(ui: &mut Ui, game_data: &GameData, frame: &mut Frame) {
 
     match game_state {
         GameState::Ready => {
-            show_game_menu(ui, game_data, game_rect);
+            show_game_menu(ui, &game_data, game_rect);
         }
         GameState::Playing => {
-            ui.put(game_rect, GameGraphics::new(game_data, frame));
+            ui.put(game_rect, GameGraphics::new(Arc::clone(&game_data), frame));
         }
         _ => {}
     }
 
-    draw_resource_hud(ui, game_data, hud_rect);
+    draw_resource_hud(ui, &game_data, hud_rect);
 
     if let Some(points) = game_data.get_field(RESOURCES)
         .unwrap().iter()

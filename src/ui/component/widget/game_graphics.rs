@@ -2,19 +2,22 @@ use crate::game::data::game_data::GameData;
 use crate::game::map::camera_state::CameraState;
 use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 use crate::ui::graphics::gl::{draw_map, draw_units};
+use crate::ui::graphics::rendering_data::RenderData;
 use eframe::egui::{Color32, Sense, Ui, Widget};
 use eframe::Frame;
 use egui::{Pos2, Rect, Response, Stroke, StrokeKind};
 use glow::*;
 use std::hash::Hash;
+use std::sync::Arc;
+use std::time::Instant;
 
 pub struct GameGraphics<'a> {
-    game_data: &'a GameData,
+    game_data: Arc<GameData>,
     frame: &'a mut Frame,
 }
 
 impl<'a> GameGraphics<'a> {
-    pub fn new(game_data: &'a GameData, frame: &'a mut Frame) -> Self {
+    pub fn new(game_data: Arc<GameData>, frame: &'a mut Frame) -> Self {
         Self { game_data, frame }
     }
 }
@@ -23,6 +26,10 @@ impl<'a> Widget for GameGraphics<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
         let available_size = ui.available_size_before_wrap();
         let (rect, response) = ui.allocate_exact_size(available_size, Sense::click());
+
+        let now = Instant::now();
+        let render_data = RenderData::from(Arc::clone(&self.game_data));
+        println!("Copied all render data: {}", now.elapsed().as_micros());
 
         let mut renderer_lock = self.game_data.offscreen_renderer.write().unwrap();
         if let Some(renderer) = renderer_lock.as_mut() {
@@ -39,8 +46,8 @@ impl<'a> Widget for GameGraphics<'a> {
                 gl.clear_color(0.0, 0.0, 0.0, 1.0);
                 gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
             }
-            draw_map(&gl, &self.game_data, &rect);
-            draw_units(&gl, &self.game_data, &rect);
+            draw_map(&gl, &render_data, &rect, renderer);
+            draw_units(&gl, &render_data, &rect, renderer);
             renderer.unbind();
 
             let texture_id = self.frame.register_native_glow_texture(renderer.get_texture());

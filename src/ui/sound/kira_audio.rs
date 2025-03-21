@@ -1,6 +1,6 @@
 use kira::sound::static_sound::StaticSoundData;
 use kira::sound::streaming::{StreamingSoundData, StreamingSoundHandle, StreamingSoundSettings};
-use kira::sound::{FromFileError, PlaybackState, SoundData};
+use kira::sound::{FromFileError, PlaybackState};
 use kira::{AudioManager, AudioManagerSettings};
 use rustc_hash::FxHashMap;
 use std::io::Cursor;
@@ -93,7 +93,7 @@ impl KiraAudio {
             println!("Played");
 
             while handle.state() == PlaybackState::Playing {
-                sleep(Duration::from_millis(100)); // Check every 100ms
+                sleep(Duration::from_millis(100));
             }
 
         } else {

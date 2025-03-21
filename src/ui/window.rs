@@ -3,8 +3,7 @@ use crate::game::constants::{FRAME_RATE, GAME_NAME};
 use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::{CURRENT_TAB, GAME_IN_FOCUS, SETTINGS};
 use crate::game::settings::Settings;
-use crate::ui::asset::loader::{load_icons, load_icons_inverted, load_sprites_native, register_custom_font};
-use crate::ui::graphics::gl::{create_rect_shader_program, create_sprite_shader_program};
+use crate::ui::asset::loader::{load_icons, load_icons_inverted, register_custom_font};
 use crate::ui::graphics::offscreen_renderer::OffscreenRenderer;
 use crate::ui::panel::main_game::show_main_game;
 use crate::ui::panel::settings::show_settings_panel;
@@ -16,28 +15,19 @@ use eframe::Renderer::Glow;
 use eframe::{egui, App, Frame, NativeOptions};
 use glow::HasContext;
 use std::sync::Arc;
-use std::thread;
+use std::thread::spawn;
 use std::time::{Duration, Instant};
 
 pub const BACKGROUND_COLOUR: Color32 = Color32::from_rgb(5, 5, 5);
 
-pub struct MyAppWindow<'a> {
-    game_data: &'a GameData,
+pub struct MyAppWindow {
+    game_data: Arc<GameData>,
     gl_ctx: Arc<glow::Context>,
     last_update: Instant,
 }
 
-impl<'a> MyAppWindow<'a> {
-    pub fn new(game_data: &'a GameData, ctx: Context, gl: Arc<glow::Context>) -> Self {
-        let rect_shader = create_rect_shader_program(&gl);
-        let sprite_shader = create_sprite_shader_program(&gl);
-        if let mut rect_shader_lock = game_data.rect_shader.write().unwrap() {
-            *rect_shader_lock = Some(rect_shader);
-        }
-        if let mut sprite_shader_lock = game_data.sprite_shader.write().unwrap() {
-            *sprite_shader_lock = Some(sprite_shader);
-        }
-
+impl MyAppWindow {
+    pub fn new(game_data: Arc<GameData>, ctx: Context, gl: Arc<glow::Context>) -> Self {
         {
             let mut offscreen_renderer = game_data.offscreen_renderer.write().unwrap();
             let width = game_data.get_field(SETTINGS).unwrap().window_width;
@@ -48,11 +38,10 @@ impl<'a> MyAppWindow<'a> {
         let frame_time = Duration::from_secs_f64(1.0 / FRAME_RATE);
 
         register_custom_font(&ctx);
-        load_icons(&ctx, game_data);
-        load_icons_inverted(&ctx, game_data);
-        load_sprites_native(&gl, game_data);
+        load_icons(&ctx, &game_data);
+        load_icons_inverted(&ctx, &game_data);
 
-        thread::spawn(move || {
+        spawn(move || {
             let mut last_frame = Instant::now();
             loop {
                 let now = Instant::now();
@@ -72,7 +61,7 @@ impl<'a> MyAppWindow<'a> {
     }
 }
 
-impl<'a> App for MyAppWindow<'a> {
+impl App for MyAppWindow {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         self.last_update = Instant::now();
         self.game_data.update_or_set(GAME_IN_FOCUS, false, |in_focus| { *in_focus = ctx.input(|i| i.focused) });
@@ -95,7 +84,7 @@ impl<'a> App for MyAppWindow<'a> {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.with_layout(Layout::top_down(Align::Center), |ui| {
                 match current_tab {
-                    GameTab::Adventure => show_main_game(ui, &self.game_data, _frame),
+                    GameTab::Adventure => show_main_game(ui, Arc::clone(&self.game_data), _frame),
                     GameTab::Settings => show_settings_panel(ui, &self.game_data),
                     GameTab::Shop => show_shop(ui, &self.game_data),
                     GameTab::Upgrades => show_upgrades(ui, &self.game_data),
@@ -106,7 +95,7 @@ impl<'a> App for MyAppWindow<'a> {
     }
 }
 
-impl<'a> Drop for MyAppWindow<'a> {
+impl Drop for MyAppWindow {
     fn drop(&mut self) {
         if let Some(shader) = self.game_data.rect_shader.write().unwrap().take() {
             unsafe {
@@ -155,7 +144,7 @@ pub fn create_window(game_data: Arc<GameData>) -> eframe::Result {
         options,
         Box::new(|cc| {
             if let Some(gl_ctx) = cc.gl.clone() {
-                Ok(Box::new(MyAppWindow::new(game_data.as_ref(), cc.egui_ctx.clone(), gl_ctx)) as Box<dyn App>)
+                Ok(Box::new(MyAppWindow::new(Arc::clone(&game_data), cc.egui_ctx.clone(), gl_ctx)) as Box<dyn App>)
             } else {
                 Err("Failed to get OpenGL context".into())
             }

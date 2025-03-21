@@ -8,4 +8,5 @@ pub struct SpriteToDraw {
     pub blend_target: Color32,
     pub colour_blend_amount: f32,
     pub alpha_blend_amount: f32,
+    pub rotation: f32,
 }
