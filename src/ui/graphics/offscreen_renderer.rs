@@ -22,6 +22,8 @@ impl OffscreenRenderer {
             let ebo = gl.create_buffer().unwrap();
 
             gl.bind_framebuffer(FRAMEBUFFER, Some(framebuffer));
+            gl.enable(BLEND);
+            gl.blend_func(SRC_ALPHA, ONE_MINUS_SRC_ALPHA);
 
             // Create the texture to render into
             gl.bind_texture(TEXTURE_2D, Some(texture));

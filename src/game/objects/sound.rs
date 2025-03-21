@@ -1,4 +1,3 @@
-use crate::ui::sound::music_player::MONSTER_DEATH_01;
 use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
 
@@ -11,7 +10,7 @@ pub struct Sound {
 impl Sound {
     pub fn death_01_default() -> Self {
         Self {
-            name: MONSTER_DEATH_01.to_string(),
+            name: "".to_string(),
             volume: 0.1,
         }
     }

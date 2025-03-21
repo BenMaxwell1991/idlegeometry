@@ -4,16 +4,16 @@ use crate::game::objects::attacks::attack_stats::{AttackName, AttackStats};
 use crate::game::objects::game_object::GameObject;
 use crate::game::objects::object_shape::ObjectShape;
 use crate::game::objects::object_type::ObjectType;
+use crate::game::objects::on_death::OnDeath;
 use crate::game::objects::upgrades::{Upgrade, UpgradeType};
 use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, SLASH_ATTACK};
-use crate::ui::sound::music_player::ATTACK_SWIPE_02;
+use crate::ui::sound::kira_audio::SOUND_01;
 use std::time::Duration;
-use crate::game::objects::on_death::OnDeath;
 
 pub fn get_basic_attack(attack_name: AttackName) -> GameObject {
     let animation = match attack_name {
         AttackName::Swipe => Animation::new(SLASH_ATTACK, Duration::from_millis(1000), (200, 70)),
-        AttackName::Firebolt => Animation::new(BABY_GREEN_DRAGON, Duration::from_millis(2000), (30, 30)),
+        AttackName::Firebolt => Animation::new(BABY_GREEN_DRAGON, Duration::from_millis(3000), (30, 30)),
     };
 
     let mut attack_stats = AttackStats {
@@ -27,19 +27,20 @@ pub fn get_basic_attack(attack_name: AttackName) -> GameObject {
             attack_stats.range = 50.0;
             attack_stats.cooldown = 6.0;
             attack_stats.area = 2000.0;
-            attack_stats.cast_sounds = vec![ATTACK_SWIPE_02.to_string()];
+            attack_stats.cast_sounds = vec![SOUND_01.to_string()];
         }
         AttackName::Firebolt => {
-            attack_stats.damage = 2.5;
+            attack_stats.damage = 0.5;
+            attack_stats.lifetime = 3.0;
             attack_stats.range = 80.0;
-            attack_stats.cooldown = 20.0;
-            attack_stats.speed = 600 * FIXED_POINT_SCALE;
-            attack_stats.projectile_count = 50; // Fires 3 fireballs in a spread
+            attack_stats.cooldown = 50.0;
+            attack_stats.speed = 150 * FIXED_POINT_SCALE;
+            attack_stats.projectile_count = 30; // Fires 3 fireballs in a spread
             attack_stats.spread_angle = 360.0;
             attack_stats.starting_angle = 90.0;
-            attack_stats.burst_count = 2;
+            attack_stats.burst_count = 1;
             attack_stats.burst_delay = 0.5;
-            attack_stats.cast_sounds = vec![ATTACK_SWIPE_02.to_string()];
+            attack_stats.cast_sounds = vec![SOUND_01.to_string()];
         }
     }
 

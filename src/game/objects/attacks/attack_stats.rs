@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::game::maths::pos_2::FIXED_POINT_SCALE;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct AttackStats {
@@ -48,7 +48,7 @@ impl Default for AttackStats {
             lifetime: 2.0,
             elapsed: 0.0,
             damage_point: 0.0,
-            damage_duration: 2.0,
+            damage_duration: 3.0,
             enabled: false,
             hit_count: 0,
             max_targets: 1,

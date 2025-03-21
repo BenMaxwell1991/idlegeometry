@@ -1,2 +1,1 @@
-pub mod music_player;
-mod audio_manager;
+pub mod kira_audio;

@@ -5,7 +5,6 @@ use crate::game::objects::attacks::attack_stats::AttackName;
 use crate::helper::lock_helper::acquire_lock_mut;
 use rand::prelude::IndexedRandom;
 use std::sync::Arc;
-use std::thread;
 use std::thread::{sleep, spawn};
 use std::time::Duration;
 

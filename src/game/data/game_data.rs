@@ -1,6 +1,7 @@
 use crate::enums::gamestate::GameState;
 use crate::enums::gamestate::GameState::Ready;
 use crate::game::collision::spatial_hash_grid::SpatialHashGrid;
+use crate::game::data::damage_numbers::DamageNumber;
 use crate::game::data::stored_data::StoredData;
 use crate::game::map::camera_state::CameraState;
 use crate::game::map::game_map::GameMap;
@@ -13,10 +14,9 @@ use device_query_revamped::Keycode;
 use eframe::epaint::TextureHandle;
 use egui::Vec2;
 use glow::NativeProgram;
-use rodio::{OutputStreamHandle, Sink};
 use rustc_hash::FxHashMap;
 use std::any::Any;
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 
@@ -32,6 +32,7 @@ pub struct GameData {
     pub unit_positions: Arc<RwLock<Vec<Pos2FixedPoint>>>,
     pub empty_unit_indexes: Arc<RwLock<Vec<u32>>>,
     pub attack_pools: Arc<RwLock<FxHashMap<AttackName, Vec<GameObject>>>>,
+    pub damage_numbers: Arc<RwLock<Vec<DamageNumber>>>,
 
     pub player_id: Arc<RwLock<Option<u32>>>,
 
@@ -46,12 +47,7 @@ pub struct GameData {
     pub game_state: Arc<RwLock<GameState>>,
     pub icons: Arc<RwLock<FxHashMap<String, TextureHandle>>>,
     pub icons_inverted: Arc<RwLock<FxHashMap<String, TextureHandle>>>,
-
-    pub sounds: Arc<RwLock<FxHashMap<String, Arc<Sink>>>>,
-    pub sound_pools: Arc<RwLock<FxHashMap<String, VecDeque<Arc<Sink>>>>>,
-    pub audio_stream_handle: Option<OutputStreamHandle>,
     pub current_track: Arc<RwLock<Option<String>>>,
-    pub active_sounds: Arc<RwLock<Vec<Sink>>>,
 
     pub fonts: Arc<RwLock<FxHashMap<String, String>>>
 }
@@ -69,6 +65,7 @@ impl GameData {
             unit_positions: Arc::new(RwLock::new(Vec::new())),
             empty_unit_indexes: Arc::new(RwLock::new(Vec::new())),
             attack_pools: Arc::new(RwLock::new(FxHashMap::default())),
+            damage_numbers: Arc::new(RwLock::new(Vec::new())),
 
             player_id: Arc::new(RwLock::new(None)),
 
@@ -83,11 +80,7 @@ impl GameData {
             icons: Arc::new(RwLock::new(FxHashMap::default())),
             icons_inverted: Arc::new(RwLock::new(FxHashMap::default())),
 
-            sounds: Arc::new(RwLock::new(FxHashMap::default())),
-            sound_pools: Arc::new(RwLock::new(FxHashMap::default())),
-            audio_stream_handle: None,
             current_track: Arc::new(RwLock::new(None)),
-            active_sounds: Arc::new(RwLock::new(Vec::new())),
 
             fonts: Arc::new(RwLock::new(FxHashMap::default())),
         }

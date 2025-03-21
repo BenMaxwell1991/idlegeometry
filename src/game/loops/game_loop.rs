@@ -1,8 +1,11 @@
 use crate::enums::gamestate::GameState;
+use crate::enums::gametab::GameTab;
+use crate::enums::gametab::GameTab::NullGameTab;
 use crate::game::collision::detect_collision::handle_collision;
 use crate::game::constants::GAME_RATE;
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::RESOURCES;
+use crate::game::data::stored_data::{CURRENT_TAB, GAME_IN_FOCUS, KEY_STATE, RESOURCES};
+use crate::game::loops::key_state::KeyState;
 use crate::game::maths::integers::int_sqrt_64;
 use crate::game::maths::pos_2::{Pos2FixedPoint, INVALID_POSITION};
 use crate::game::objects::attacks::attack_defaults::get_modified_attack;
@@ -81,72 +84,6 @@ impl GameLoop {
         }
     }
 
-    // fn is_in_damage_window(&self, attack: &Attack, delta_time: f64) -> bool {
-        // let current_time = attack.elapsed;
-        // let next_time = attack.elapsed + delta_time as f32;
-        //
-        // let damage_start = attack.damage_point;
-        // let damage_end = attack.damage_point + attack.damage_duration;
-        //
-        // let in_window = current_time >= damage_start && current_time <= damage_end;
-        // let will_miss_next_window = current_time < damage_start && next_time > damage_end;
-        //
-        // in_window || will_miss_next_window
-    // }
-
-    // fn handle_attack_collisions(&self, delta_time: f64) {
-    //     let mut units_to_remove = FxHashSet::default();
-    //     {
-    //         let mut objects = acquire_lock_mut(&self.game_data.objects, "objects");
-    //         let unit_positions = acquire_lock_mut(&self.game_data.unit_positions, "unit_positions");
-    //         let spatial_grid = acquire_lock(&self.game_data.spatial_hash_grid, "spatial_grid");
-    //         let mut attacks = acquire_lock_mut(&self.game_data.attacks, "attacks");
-    //         let attack_positions = acquire_lock_mut(&self.game_data.attack_positions, "attack_positions");
-    //
-    //         for (attack_id, attack_option) in attacks.iter_mut().enumerate() {
-    //             let Some(attack) = attack_option else { continue; };
-    //             let attack_pos = attack_positions[attack_id];
-    //
-    //             if !self.is_in_damage_window(attack, delta_time) {
-    //                 continue;
-    //             }
-    //
-    //             let nearby_unit_ids = spatial_grid.get_nearby_units(attack_pos);
-    //             for &unit_id in &nearby_unit_ids {
-    //                 let Some(unit) = objects.get_mut(unit_id as usize).and_then(|u| u.as_mut()) else { continue; };
-    //                 if unit.unit_type == UnitType::Collectable {
-    //                     continue
-    //                 }
-    //                 if Some(unit.id) == attack.origin_unit_id {
-    //                     continue;
-    //                 }
-    //                 if attack.units_hit.contains(&unit_id) {
-    //                     continue;
-    //                 }
-    //                 let unit_pos = unit_positions[unit_id as usize];
-    //
-    //                 if rectangles_collide(attack_pos, &attack.attack_shape, unit_pos, &unit.unit_shape) {
-    //                     let is_dead = unit.apply_damage(attack.damage);
-    //                     attack.units_hit.push(unit_id);
-    //                     attack.hit_count += 1;
-    //
-    //                     if is_dead {
-    //                         units_to_remove.insert(unit_id);
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    //
-    //     let units_to_remove_vec: Vec<u32> = units_to_remove.into_iter().collect();
-    //     if !units_to_remove_vec.is_empty() {
-    //         play_sound(Arc::clone(&self.game_data), MONSTER_DEATH_01, 0.04);
-    //         let collectables = remove_units(units_to_remove_vec, Arc::clone(&self.game_data));
-    //         let (collectable_units, collectable_positions): (Vec<Unit>, Vec<Pos2FixedPoint>) = collectables.into_iter().unzip();
-    //         add_units(collectable_units, collectable_positions, &self.game_data);
-    //     }
-    // }
-
     fn handle_attacks(&self, delta_time: f64) {
         // self.handle_attack_collisions(delta_time);
         let mut expired_attacks = Vec::new();
@@ -219,6 +156,9 @@ impl GameLoop {
 
         let mut game_units = acquire_lock_mut(&self.game_data.units, "game_units");
         let unit_positions = acquire_lock(&self.game_data.unit_positions, "unit_positions");
+        let current_tab = self.game_data.get_field(CURRENT_TAB).unwrap_or(NullGameTab).clone();
+        let in_focus = self.game_data.get_field(GAME_IN_FOCUS).unwrap_or(false).clone();
+        let key_state = self.game_data.get_field(KEY_STATE).unwrap_or(Arc::new(KeyState::new())).clone();
 
         let pickup_radius = player_id
             .and_then(|id| game_units.get(id as usize))
@@ -250,7 +190,13 @@ impl GameLoop {
                                 }
                             }
                             ObjectType::Player => {
-                                // Player moved in its own loop to reduce lag
+                                if current_tab == GameTab::Adventure && in_focus {
+                                    let dx = key_state.d.load(Ordering::Relaxed) as i32 - key_state.a.load(Ordering::Relaxed) as i32;
+                                    let dy = key_state.s.load(Ordering::Relaxed) as i32 - key_state.w.load(Ordering::Relaxed) as i32;
+
+                                    new_position.x += dx * distance as i32;
+                                    new_position.y += dy * distance as i32;
+                                }
                             }
                             ObjectType::Enemy => {
                                 let direction_vec = player_position.sub(old_position);
@@ -317,7 +263,7 @@ impl GameLoop {
         drop(unit_positions);
 
         handle_collision(&mut unit_movements, Arc::clone(&self.game_data), delta_time);
-        move_units_batched(&unit_movements, &self.game_data, delta_time);
+        move_units_batched(&unit_movements, &self.game_data, delta_time, player_id);
     }
 
     pub fn start_game(mut self) {

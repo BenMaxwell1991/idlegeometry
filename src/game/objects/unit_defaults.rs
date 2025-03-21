@@ -1,14 +1,14 @@
 use crate::game::maths::pos_2::FIXED_POINT_SCALE;
 use crate::game::objects::animation::Animation;
-use crate::game::objects::loot::Loot;
-use crate::game::objects::on_death::OnDeath;
-use crate::game::objects::sound::Sound;
 use crate::game::objects::game_object::GameObject;
+use crate::game::objects::loot::Loot;
 use crate::game::objects::object_shape::ObjectShape;
 use crate::game::objects::object_type::ObjectType;
+use crate::game::objects::on_death::OnDeath;
+use crate::game::objects::sound::Sound;
 use crate::ui::asset::sprite::sprite_sheet::{ADULT_WHITE_DRAGON, AQUA_DRAKE, TREASURE, YOUNG_RED_DRAGON};
-use crate::ui::sound::music_player::SELL_GOLD;
 use std::time::Duration;
+use crate::ui::sound::kira_audio::SOUND_01;
 
 pub fn create_01_baby_dragon() -> GameObject {
     let animation = Animation::new(YOUNG_RED_DRAGON, Duration::from_secs(2), (25, 25));
@@ -104,7 +104,7 @@ pub fn collectable_01_basic_monster(loot: Option<Loot>) -> GameObject {
     );
 
     let sound = Sound {
-        name: SELL_GOLD.to_string(),
+        name: SOUND_01.to_string(),
         volume: 0.1,
     };
 

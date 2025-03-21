@@ -6,6 +6,7 @@ use crate::game::objects::object_type::ObjectType;
 use rayon::iter::*;
 use rayon::slice::ParallelSliceMut;
 
+use crate::game::data::damage_numbers::DamageNumber;
 use crate::game::map::game_map::GameMap;
 use crate::game::maths::integers::int_sqrt_64;
 use crate::game::objects::attacks::attack_landed::AttackLanded;
@@ -13,8 +14,10 @@ use crate::game::objects::attacks::attack_stats::AttackStats;
 use crate::game::objects::loot::Loot;
 use crate::game::resources::loot::collect_loot;
 use crate::helper::lock_helper::{acquire_lock, acquire_lock_mut};
+use egui::Color32;
 use rustc_hash::FxHashSet;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2FixedPoint)], game_data: Arc<GameData>, delta_time: f64) {
     let collectables_collected = Arc::new(Mutex::new(Vec::new()));
@@ -152,6 +155,7 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
                 }
             });
 
+        let mut damage_numbers = acquire_lock_mut(&game_data.damage_numbers, "damage_numbers");
         for attack_to_process in attack_hits_to_process.lock().unwrap().iter() {
             let attack_id = attack_to_process.attack_id as usize;
             let target_id = attack_to_process.target_id as usize;
@@ -177,6 +181,16 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
 
                         if is_dead {
                             units_to_remove.insert(attack_to_process.target_id);
+                        } else {
+                            if let Some(target_pos) = unit_positions.get(target_id) {
+                                let damage_number = DamageNumber {
+                                    position: target_pos.clone(),
+                                    value: attack_stats.damage,
+                                    spawn_time: Instant::now(),
+                                    colour: Color32::RED,
+                                };
+                                damage_numbers.push(damage_number);
+                            }
                         }
                     }
                 }

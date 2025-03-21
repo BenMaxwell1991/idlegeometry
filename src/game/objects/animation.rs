@@ -1,14 +1,14 @@
 use rand::Rng;
-use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Debug)]
 pub struct Animation {
     pub tracked_unit_id: Option<u32>,
     pub fixed_frame_index: Option<usize>,
     pub sprite_key: String,
     pub animation_length: Duration,
     pub animation_frame: f32,
+    pub last_damage_time: Option<Instant>,
     pub size: (u32, u32),
 }
 
@@ -20,6 +20,7 @@ impl Animation {
             sprite_key: sprite_key.to_string(),
             animation_length,
             animation_frame: rand::rng().random_range(0.0..=1.0),
+            last_damage_time: None,
             size,
         }
     }

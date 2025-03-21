@@ -5,11 +5,14 @@ use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 use crate::game::objects::object_type::ObjectType;
 use crate::helper::lock_helper::acquire_lock;
 use crate::ui::component::widget::game_graphics::world_to_screen;
+use crate::ui::graphics::sprite_to_draw::SpriteToDraw;
 use eframe::emath::{Rect, Vec2};
 use egui::{Color32, Pos2};
 use glow::*;
 use rustc_hash::FxHashMap;
+use std::f32::consts::PI;
 use std::num::NonZeroU32;
+use std::time::Instant;
 
 pub fn draw_map(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
     let camera_state_lock = game_data.camera_state.read().unwrap();
@@ -47,6 +50,26 @@ pub fn draw_map(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
             draw_colour_rectangles(gl, &paintbox_rect, &rects, &colours, &*shader_lock);
         }
     }
+}
+
+fn get_colour_blend_amount(last_damage_time: Option<Instant>) -> f32 {
+    let damage_visual_duration_millis = 100f32;
+    let inverse = 1f32 / damage_visual_duration_millis;
+    let offset = damage_visual_duration_millis / 4f32;
+
+    let time =  if let Some(instant) = last_damage_time {
+        instant.elapsed().as_millis() as f32 + offset
+    } else {
+        damage_visual_duration_millis + 1.0
+    };
+
+    let colour_blend_amount = if time < damage_visual_duration_millis {
+        (PI * time * inverse).sin()
+    } else {
+        0.0
+    };
+
+    colour_blend_amount
 }
 
 pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
@@ -88,6 +111,7 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
                         (unit.animation.animation_frame * sprite_sheet.get_frame_count_native() as f32).trunc() as usize
                     });
 
+                    let last_damage_taken = unit.animation.last_damage_time.clone();
                     let frame = sprite_sheet.get_frame_native(frame_index);
 
                     let shadow_scale = 1.2;
@@ -95,11 +119,25 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
                     let shadow_offset = Vec2::new(unit_size.x * 0.07, unit_size.y * 0.35);
                     let shadow_rect = Rect::from_center_size(unit_screen_position + shadow_offset, shadow_size);
 
-                    shadow_sprites_to_draw.push((frame, shadow_rect, Color32::from_rgba_premultiplied(0, 0, 0, 192)));
+                    shadow_sprites_to_draw.push(SpriteToDraw {
+                        texture: frame,
+                        rect: shadow_rect,
+                        tint: Color32::from_rgba_premultiplied(0, 0, 0, 192),
+                        blend_target: Color32::WHITE,
+                        colour_blend_amount: 0.0,
+                        alpha_blend_amount: 0.0,
+                    });
 
                     match unit.object_type {
                         ObjectType::Player => {
-                            player_to_draw.push((frame, unit_rect, Color32::WHITE));
+                            player_to_draw.push(SpriteToDraw {
+                                texture: frame,
+                                rect: unit_rect,
+                                tint: Color32::WHITE,
+                                blend_target: Color32::WHITE,
+                                colour_blend_amount: get_colour_blend_amount(last_damage_taken),
+                                alpha_blend_amount: 1.0,
+                            });
 
                             let health_bar_height = 4.0 * camera_state_lock.get_zoom_scaled();
                             let health_bar_width = unit_size.x * 0.9;
@@ -117,7 +155,14 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
                             health_bar_colours.push(Color32::GREEN);
                         },
                         ObjectType::Enemy => {
-                            images_to_draw.push((frame, unit_rect, Color32::WHITE));
+                            images_to_draw.push(SpriteToDraw {
+                                texture: frame,
+                                rect: unit_rect,
+                                tint: Color32::WHITE,
+                                blend_target: Color32::WHITE,
+                                colour_blend_amount: get_colour_blend_amount(last_damage_taken),
+                                alpha_blend_amount: 0.0,
+                            });
 
                             if unit.health_current != unit.health_max {
                                 let health_bar_height = 3.0 * camera_state_lock.get_zoom_scaled();
@@ -137,7 +182,14 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
                             }
                         }
                         ObjectType::Collectable => {
-                            images_to_draw.push((frame, unit_rect, Color32::WHITE));
+                            images_to_draw.push(SpriteToDraw {
+                                texture: frame,
+                                rect: unit_rect,
+                                tint: Color32::WHITE,
+                                blend_target: Color32::WHITE,
+                                colour_blend_amount: 0.0,
+                                alpha_blend_amount: 0.0,
+                            });
 
                             if unit.health_current != unit.health_max {
                                 let health_bar_height = 3.0 * camera_state_lock.get_zoom_scaled();
@@ -157,7 +209,14 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
                             }
                         }
                         ObjectType::Attack => {
-                            attack_sprites_to_draw.push((frame, unit_rect, Color32::WHITE));
+                            images_to_draw.push(SpriteToDraw {
+                                texture: frame,
+                                rect: unit_rect,
+                                tint: Color32::WHITE,
+                                blend_target: Color32::WHITE,
+                                colour_blend_amount: 0.0,
+                                alpha_blend_amount: 0.0,
+                            });
                         }
                     }
                 }
@@ -165,42 +224,23 @@ pub fn draw_units(gl: &Context, game_data: &GameData, paintbox_rect: &Rect) {
         }
     }
 
-    // Draw Shadows
-    // === DRAW SHADOWS FIRST ===
-    if let shader_lock = game_data.sprite_shader.write().unwrap() {
-        draw_colour_sprites(gl, paintbox_rect, &shadow_sprites_to_draw, &*shader_lock);
-    }
-
-    // rectangles if too far out
-    if let shader_lock = game_data.rect_shader.write().unwrap() {
-        draw_colour_rectangles(gl, &paintbox_rect, &rects_to_draw, &colours_to_draw, &*shader_lock);
-    }
-
-    // draw objects
-    if let shader_lock = game_data.sprite_shader.write().unwrap() {
-        draw_colour_sprites(gl, paintbox_rect, &images_to_draw, &*shader_lock);
-    }
-
-    // draw health bars
-    if let shader_lock = game_data.rect_shader.write().unwrap() {
-        draw_colour_rectangles(gl, &paintbox_rect, &health_bar_rects, &health_bar_colours, &*shader_lock);
-    }
-
-    // draw player
-    if let shader_lock = game_data.sprite_shader.write().unwrap() {
-        draw_colour_sprites(gl, paintbox_rect, &player_to_draw, &*shader_lock);
-    }
-
-    // Draw attacks
-    if let shader_lock = game_data.sprite_shader.write().unwrap() {
-        draw_colour_sprites(gl, paintbox_rect, &attack_sprites_to_draw, &*shader_lock);
+    if let (Some(sprite_shader), Some(rect_shader)) = (
+        game_data.sprite_shader.write().ok(),
+        game_data.rect_shader.write().ok(),
+    ) {
+        draw_colour_sprites(gl, paintbox_rect, &shadow_sprites_to_draw, &sprite_shader);
+        draw_colour_rectangles(gl, paintbox_rect, &rects_to_draw, &colours_to_draw, &rect_shader);
+        draw_colour_sprites(gl, paintbox_rect, &images_to_draw, &sprite_shader);
+        draw_colour_rectangles(gl, paintbox_rect, &health_bar_rects, &health_bar_colours, &rect_shader);
+        draw_colour_sprites(gl, paintbox_rect, &player_to_draw, &sprite_shader);
+        draw_colour_sprites(gl, paintbox_rect, &attack_sprites_to_draw, &sprite_shader);
     }
 }
 
 pub fn draw_colour_sprites(
     gl: &Context,
     view_rect: &Rect,
-    sprites: &[(NativeTexture, Rect, Color32)], // (Texture ID, Rect, Tint Color)
+    sprites: &[SpriteToDraw],
     shader: &Option<NativeProgram>
 ) {
     unsafe {
@@ -208,9 +248,9 @@ pub fn draw_colour_sprites(
         let mut indices = Vec::new();
         let mut index_offset = 0;
 
-        let mut sprite_batches: FxHashMap<u32, Vec<(Rect, Color32)>> = FxHashMap::default();
-        for (texture_id, rect, colour) in sprites.iter() {
-            sprite_batches.entry(texture_id.0.get()).or_default().push((*rect, *colour));
+        let mut sprite_batches: FxHashMap<u32, Vec<&SpriteToDraw>> = FxHashMap::default();
+        for sprite in sprites.iter() {
+            sprite_batches.entry(sprite.texture.0.get()).or_default().push(sprite);
         }
 
         let vao = gl.create_vertex_array().unwrap();
@@ -225,20 +265,33 @@ pub fn draw_colour_sprites(
             indices.clear();
             index_offset = 0;
 
-            for (rect, color) in batch.iter() {
+            for sprite in batch.iter() {
+                let rect = &sprite.rect;
+                let tint = sprite.tint;
+
                 let (min_pos, size) = get_gl_rect(&view_rect, rect);
                 let tex_coords = [0.0, 0.0, 1.0, 1.0];
 
-                let r = color.r() as f32 / 255.0;
-                let g = color.g() as f32 / 255.0;
-                let b = color.b() as f32 / 255.0;
-                let a = color.a() as f32 / 255.0;
+                // Tint Colour
+                let r = tint.r() as f32 / 255.0;
+                let g = tint.g() as f32 / 255.0;
+                let b = tint.b() as f32 / 255.0;
+                let a = tint.a() as f32 / 255.0;
+
+                // Blend target colour
+                let tr = sprite.blend_target.r() as f32 / 255.0;
+                let tg = sprite.blend_target.g() as f32 / 255.0;
+                let tb = sprite.blend_target.b() as f32 / 255.0;
+                let ta = sprite.blend_target.a() as f32 / 255.0;
+
+                let colour_blend = sprite.colour_blend_amount;
+                let alpha_blend = sprite.alpha_blend_amount;
 
                 let sprite_vertices = [
-                    min_pos.x,           min_pos.y,            tex_coords[0], tex_coords[1], r, g, b, a, // Bottom-left
-                    min_pos.x + size.x,  min_pos.y,            tex_coords[2], tex_coords[1], r, g, b, a, // Bottom-right
-                    min_pos.x + size.x,  min_pos.y + size.y,   tex_coords[2], tex_coords[3], r, g, b, a, // Top-right
-                    min_pos.x,           min_pos.y + size.y,   tex_coords[0], tex_coords[3], r, g, b, a, // Top-left
+                    min_pos.x,           min_pos.y,            tex_coords[0], tex_coords[1], r, g, b, a, colour_blend, alpha_blend, tr, tg, tb, ta, // Bottom-left
+                    min_pos.x + size.x,  min_pos.y,            tex_coords[2], tex_coords[1], r, g, b, a, colour_blend, alpha_blend, tr, tg, tb, ta, // Bottom-right
+                    min_pos.x + size.x,  min_pos.y + size.y,   tex_coords[2], tex_coords[3], r, g, b, a, colour_blend, alpha_blend, tr, tg, tb, ta, // Top-right
+                    min_pos.x,           min_pos.y + size.y,   tex_coords[0], tex_coords[3], r, g, b, a, colour_blend, alpha_blend, tr, tg, tb, ta, // Top-left
                 ];
 
                 vertices.extend_from_slice(&sprite_vertices);
@@ -256,15 +309,24 @@ pub fn draw_colour_sprites(
             gl.bind_buffer(ELEMENT_ARRAY_BUFFER, Some(ebo));
             gl.buffer_data_u8_slice(ELEMENT_ARRAY_BUFFER, bytemuck::cast_slice(&indices), STATIC_DRAW);
 
-            let stride = (2 + 2 + 4) * std::mem::size_of::<f32>() as i32;
+            let stride = (14) * size_of::<f32>() as i32;
             gl.vertex_attrib_pointer_f32(0, 2, FLOAT, false, stride, 0);
             gl.enable_vertex_attrib_array(0);
 
-            gl.vertex_attrib_pointer_f32(1, 2, FLOAT, false, stride, (2 * std::mem::size_of::<f32>()) as i32);
+            gl.vertex_attrib_pointer_f32(1, 2, FLOAT, false, stride, (2 * size_of::<f32>()) as i32);
             gl.enable_vertex_attrib_array(1);
 
-            gl.vertex_attrib_pointer_f32(2, 4, FLOAT, false, stride, (4 * std::mem::size_of::<f32>()) as i32);
+            gl.vertex_attrib_pointer_f32(2, 4, FLOAT, false, stride, (4 * size_of::<f32>()) as i32);
             gl.enable_vertex_attrib_array(2);
+
+            gl.vertex_attrib_pointer_f32(3, 1, FLOAT, false, stride, (8 * size_of::<f32>()) as i32); // colour_blend_amount
+            gl.enable_vertex_attrib_array(3);
+
+            gl.vertex_attrib_pointer_f32(4, 1, FLOAT, false, stride, (9 * size_of::<f32>()) as i32); // alpha_blend_amount
+            gl.enable_vertex_attrib_array(4);
+
+            gl.vertex_attrib_pointer_f32(5, 4, FLOAT, false, stride, 10 * size_of::<f32>() as i32); // Blend target colour
+            gl.enable_vertex_attrib_array(5);
 
             let texture = NativeTexture(NonZeroU32::try_from(texture_id).unwrap());
             gl.bind_texture(TEXTURE_2D, Some(texture));
@@ -276,7 +338,6 @@ pub fn draw_colour_sprites(
         gl.delete_buffer(ebo);
     }
 }
-
 
 pub fn get_gl_rect(view: &Rect, rect: &Rect) -> (Pos2, Vec2) {
     let min_x= (rect.min.x / view.size().x) * 2.0 - 1.0;
@@ -354,29 +415,58 @@ pub fn create_sprite_shader_program(gl: &Context) -> NativeProgram {
             layout (location = 0) in vec2 aPos;
             layout (location = 1) in vec2 aTexCoord;
             layout (location = 2) in vec4 aColor;
+            layout (location = 3) in float inColourBlendAmount;
+            layout (location = 4) in float inAlphaBlendAmount;
+            layout (location = 5) in vec4 inBlendTarget;
 
             out vec2 TexCoord;
             out vec4 VertexColor;
+            out float vColourBlendAmount;
+            out float vAlphaBlendAmount;
+            out vec4 vBlendTarget;
 
             void main() {
                 gl_Position = vec4(aPos, 0.0, 1.0);
                 TexCoord = aTexCoord;
                 VertexColor = aColor;
+                vColourBlendAmount = inColourBlendAmount;
+                vAlphaBlendAmount = inAlphaBlendAmount;
+                vBlendTarget = inBlendTarget;
             }
         "#;
 
         let fragment_shader_source = r#"
             #version 330 core
             in vec2 TexCoord;
-            in vec4 VertexColor; // Receive the color from vertex attributes
+            in vec4 VertexColor;
 
             out vec4 FragColor;
 
             uniform sampler2D spriteTexture;
+            in vec4 vBlendTarget;
+            in float vColourBlendAmount;
+            in float vAlphaBlendAmount;
+
+            vec3 blendRGB(vec3 original, vec3 target, float amount) {
+                return original * (1.0 - amount) + target * amount;
+            }
+
+            float blendAlpha(float original, float target, float amount) {
+                return original * (1.0 - amount) + target * amount;
+            }
 
             void main() {
                 vec4 texColor = texture(spriteTexture, TexCoord);
-                FragColor = texColor * VertexColor; // Apply tinting
+                vec4 tintedColor = texColor * VertexColor;
+
+                if (tintedColor.a < 0.01) {
+                    discard;
+                }
+
+                vec3 blendedRGB = blendRGB(tintedColor.rgb, vBlendTarget.rgb, vColourBlendAmount);
+                float blendedAlpha = blendAlpha(tintedColor.a, vBlendTarget.a, vAlphaBlendAmount);
+
+                FragColor = vec4(blendedRGB, blendedAlpha);
             }
         "#;
 
@@ -404,6 +494,7 @@ pub fn create_sprite_shader_program(gl: &Context) -> NativeProgram {
         shader_program
     }
 }
+
 
 pub fn create_rect_shader_program(gl: &Context) -> NativeProgram {
     unsafe {

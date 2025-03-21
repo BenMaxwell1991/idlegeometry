@@ -18,10 +18,7 @@ use crate::game::resources::resource::{Resource, DEFAULT_MOVE_SPEED};
 use crate::game::settings::Settings;
 use crate::helper::lock_helper::{acquire_lock, acquire_lock_mut};
 use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, SLASH_ATTACK};
-use crate::ui::sound::music_player::SOUND_FILES;
 use rand::random_range;
-use rodio::Sink;
-use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -178,36 +175,4 @@ pub fn initialise_attack_pools(game_data: &GameData, pool_sizes: &[(AttackName, 
         }
         attack_pools.insert(attack_name.clone(), pool);
     }
-}
-
-pub fn initialise_sound_pools(game_data: &GameData) {
-    let mut sound_pools = game_data.sound_pools.write()
-        .expect("❌ Failed to acquire write lock on sound pools");
-
-    if let Some(stream_handle) = &game_data.audio_stream_handle {
-        for (sound_name, _, pool_size) in SOUND_FILES.iter() {
-            println!("🔹 Initializing Sound Pool for '{}' with {} sinks", sound_name, pool_size);
-
-            let mut pool = VecDeque::with_capacity(*pool_size as usize);
-            for i in 0..*pool_size {
-                match Sink::try_new(stream_handle) {
-                    Ok(sink) => {
-                        let sink = Arc::new(sink);
-                        pool.push_back(sink);
-                        println!("   ✅ Created Sink {} for '{}'", i + 1, sound_name);
-                    }
-                    Err(e) => {
-                        println!("   ❌ Failed to create Sink {} for '{}': {:?}", i + 1, sound_name, e);
-                    }
-                }
-            }
-
-            println!("   🎵 Final pool size for '{}': {}", sound_name, pool.len());
-            sound_pools.insert(sound_name.to_string(), pool);
-        }
-    } else {
-        println!("❌ Stream handle is None. Sound pools cannot be initialized!");
-    }
-
-    println!("✅ Sound Pools Initialized Successfully");
 }
