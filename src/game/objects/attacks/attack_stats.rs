@@ -32,17 +32,18 @@ pub struct AttackStats {
 #[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Debug, Copy)]
 pub enum AttackName {
     Swipe,
-    Firebolt
+    FireBolt,
+    LightningBolt,
 }
 
 impl Default for AttackStats {
     fn default() -> Self {
         AttackStats {
-            name: AttackName::Firebolt,
+            name: AttackName::FireBolt,
             damage: 1.0,
             range: 50.0,
             cooldown: 8.0,
-            direction: (0.0, 1.0),
+            direction: (1.0, 0.0),
             speed: 300 * FIXED_POINT_SCALE,
             area: 0.0,
             lifetime: 2.0,

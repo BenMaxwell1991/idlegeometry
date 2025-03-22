@@ -27,7 +27,6 @@ pub fn create_01_baby_dragon() -> GameObject {
         exp: 1.0,
     };
 
-
     // unit.on_death = OnDeath {
     //     sound: Some(Sound::death_01_default()),
     //     animation: None,

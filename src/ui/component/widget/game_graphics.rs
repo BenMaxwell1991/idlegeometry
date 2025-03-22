@@ -29,7 +29,6 @@ impl<'a> Widget for GameGraphics<'a> {
 
         let now = Instant::now();
         let render_data = RenderData::from(Arc::clone(&self.game_data));
-        println!("Copied all render data: {}", now.elapsed().as_micros());
 
         let mut renderer_lock = self.game_data.offscreen_renderer.write().unwrap();
         if let Some(renderer) = renderer_lock.as_mut() {

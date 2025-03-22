@@ -2,13 +2,13 @@ use crate::game::maths::pos_2::Pos2FixedPoint;
 use rayon::iter::*;
 use rayon::prelude::ParallelSlice;
 use rustc_hash::*;
-use serde::{Deserialize, Serialize};
+use smallvec::SmallVec;
 
 const CELL_SIZE_BITS: i32 = 16; // 2^14 = 65536
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone)]
 pub struct SpatialHashGrid {
-    pub grid: FxHashMap<(i32, i32), Vec<u32>>,
+    pub grid: FxHashMap<(i32, i32), SmallVec<[u32; 16]>>,
 }
 
 impl SpatialHashGrid {
@@ -31,35 +31,39 @@ impl SpatialHashGrid {
         }
     }
 
-    pub fn get_nearby_units(&self, position: Pos2FixedPoint) -> Vec<u32> {
+    pub fn get_nearby_units_into(
+        &self,
+        position: Pos2FixedPoint,
+        out: &mut SmallVec<[u32; 64]>
+    ) {
+        out.clear();
+
         let (cx, cy) = hash_position(position);
-        let mut nearby_units = Vec::new();
 
         for dx in -1..=1 {
             for dy in -1..=1 {
                 if let Some(units) = self.grid.get(&(cx + dx, cy + dy)) {
-                    nearby_units.extend(units);
+                    out.extend(units.iter().copied());
                 }
             }
         }
-
-        nearby_units
     }
+
 
     pub fn update_units_position_in_grid(&mut self, updates: &[(u32, Pos2FixedPoint, Pos2FixedPoint)]) {
         let chunk_size = (updates.len() / rayon::current_num_threads().max(1)).max(1);
         let thread_local_maps: Vec<_> = updates
             .par_chunks(chunk_size)
             .map(|chunk| {
-                let mut local_grid: FxHashMap<(i32, i32), Vec<u32>> = FxHashMap::default();
+                let mut local_grid: FxHashMap<(i32, i32), SmallVec<[u32; 16]>> = FxHashMap::default();
                 for &(unit_id, _, new_position) in chunk {
-                    local_grid.entry(hash_position(new_position)).or_insert_with(Vec::new).push(unit_id);
+                    local_grid.entry(hash_position(new_position)).or_insert_with(SmallVec::default).push(unit_id);
                 }
                 local_grid
             })
             .collect();
 
-        let mut new_grid: FxHashMap<(i32, i32), Vec<u32>> = FxHashMap::default();
+        let mut new_grid: FxHashMap<(i32, i32), SmallVec<[u32; 16]>> = FxHashMap::default();
         for local_map in thread_local_maps {
             for (cell, unit_list) in local_map {
                 new_grid.entry(cell).or_default().extend(unit_list);

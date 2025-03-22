@@ -13,6 +13,7 @@ pub const AQUA_DRAKE: &str = "aqua_drake";
 pub const ADULT_WHITE_DRAGON: &str = "adult_white_dragon";
 pub const TREASURE: &str = "treasure";
 pub const SLASH_ATTACK: &str = "slash_attack";
+pub const LIGHTNING_ZAP: &str = "lightning_zap";
 
 pub(crate) const SPRITE_DATA: [(&str, &[u8], u32, u32); 6] = [
     (ADULT_GREEN_DRAGON, include_bytes!("dragons/Basic Dragon Animations/Adult Green Dragon/AdultGreenDragon.png"), 16, 16),
@@ -23,8 +24,9 @@ pub(crate) const SPRITE_DATA: [(&str, &[u8], u32, u32); 6] = [
     (TREASURE, include_bytes!("resources/treasure_sheet.png"), 16, 16),
 ];
 
-pub(crate) const SPRITE_FOLDERS: [(&str, &str); 1] = [
-    (SLASH_ATTACK, "src/ui/asset/sprite/attacks/slash")
+pub(crate) const SPRITE_FOLDERS: [(&str, &str); 2] = [
+    (SLASH_ATTACK, "src/ui/asset/sprite/attacks/slash"),
+    (LIGHTNING_ZAP, "src/ui/asset/sprite/attacks/lightning/VFX1")
 ];
 
 #[derive(Clone)]
@@ -73,7 +75,7 @@ impl SpriteSheet {
 
         for (index, file) in files.iter().enumerate() {
             println!("📂 Loading image {}", index);
-            let image_data = fs::read(file).expect("Failed to read image file");
+            let image_data = read(file).expect("Failed to read image file");
             let sprite = image::load_from_memory(&image_data).expect("Failed to load image");
 
             let rgba_image = sprite.to_rgba8();

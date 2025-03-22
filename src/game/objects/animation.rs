@@ -10,6 +10,7 @@ pub struct Animation {
     pub animation_frame: f32,
     pub last_damage_time: Option<Instant>,
     pub size: (u32, u32),
+    pub rotation_offset: Option<f32>,
 }
 
 impl Animation {
@@ -22,6 +23,13 @@ impl Animation {
             animation_frame: rand::rng().random_range(0.0..=1.0),
             last_damage_time: None,
             size,
+            rotation_offset: None,
         }
+    }
+
+    pub fn with_rotation_offset(&self, offset: f32) -> Self {
+        let mut new = self.clone();
+        new.rotation_offset = Some(offset);
+        new
     }
 }

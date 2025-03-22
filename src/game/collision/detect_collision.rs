@@ -18,6 +18,7 @@ use egui::Color32;
 use rustc_hash::FxHashSet;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
+use smallvec::SmallVec;
 
 pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2FixedPoint)], game_data: Arc<GameData>, delta_time: f64) {
     let collectables_collected = Arc::new(Mutex::new(Vec::new()));
@@ -43,6 +44,8 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
         unit_positions_updates
             .par_chunks_mut(chunk_size)
             .for_each(|chunk| {
+                let mut nearby_unit_ids = SmallVec::<[u32; 64]>::new();
+
                 for (unit_id, old_position, new_position) in chunk {
                     let Some(unit) = units.get(*unit_id as usize).and_then(|u| u.as_ref()) else { continue; };
 
@@ -67,7 +70,7 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
                                     let attack_pos = unit_positions[attack_id as usize];
                                     let attack_shape = &unit.object_shape;
 
-                                    let nearby_unit_ids = spatial_grid.get_nearby_units(*new_position);
+                                    spatial_grid.get_nearby_units_into(*new_position, &mut nearby_unit_ids);
                                     for &nearby_unit_id in &nearby_unit_ids {
                                         let Some(nearby_unit) = units.get(nearby_unit_id as usize).and_then(|u| u.as_ref()) else { continue; };
 
@@ -101,7 +104,11 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
                         },
                         _ => {
                             let unit_shape = &unit.object_shape;
-                            let nearby_unit_ids = spatial_grid.get_nearby_units(*new_position);
+
+                            // let now = Instant::now();
+                            spatial_grid.get_nearby_units_into(*new_position, &mut nearby_unit_ids);
+                            // println!("elapsed 1: {}", now.elapsed().as_nanos());
+
                             let mut collision_normals = Vec::new();
                             let mut nearby_positions = Vec::new();
 

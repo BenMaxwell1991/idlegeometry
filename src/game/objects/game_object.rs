@@ -125,7 +125,7 @@ pub fn remove_units(unit_ids: Vec<u32>, game_data: Arc<GameData>) -> Vec<(GameOb
     collectables_to_spawn
 }
 
-pub fn move_units_batched(unit_positions_updates: &[(u32, Pos2FixedPoint, Pos2FixedPoint)], game_data: &GameData, delta_time: f64, player_id: Option<u32>) {
+pub fn move_units_batched(unit_positions_updates: &[(u32, Pos2FixedPoint, Pos2FixedPoint)], game_data: &GameData, player_id: Option<u32>) {
     let mut unit_positions = game_data.unit_positions.write().unwrap();
     let mut spatial_grid = game_data.spatial_hash_grid.write().unwrap();
     let mut camera_state = game_data.camera_state.write().unwrap();

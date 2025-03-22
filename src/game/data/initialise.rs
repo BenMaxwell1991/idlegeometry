@@ -90,12 +90,10 @@ fn init_map(game_data: &GameData) {
 }
 
 fn init_attacks(game_data: &GameData) {
-    let animation = Animation::new(SLASH_ATTACK, Duration::from_millis(1000), (70, 70));
-    let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_millis(1000), (70, 70));
-
     let pool_config = vec![
-        (AttackName::Swipe, animation.clone(), 2000), // Up to 1000 Swipes available
-        (AttackName::Firebolt, animation.clone(), 2000), // Up to 1000 Swipes available
+        (AttackName::Swipe, 200),
+        (AttackName::FireBolt, 1000),
+        (AttackName::LightningBolt, 3000),
     ];
 
     initialise_attack_pools(game_data, &pool_config);
@@ -107,11 +105,12 @@ fn init_player(game_data: &GameData) {
 
     let upgrade = Upgrade {
         upgrade_type: UpgradeType::DecreaseCooldown,
-        level: 15,
+        level: 2,
     };
 
-    player.attack_cooldowns.insert(AttackName::Firebolt, 2.0);
-    // player.attack_cooldowns.insert(AttackName::Swipe, 2.0);
+    player.attack_cooldowns.insert(AttackName::Swipe, 2.0);
+    player.attack_cooldowns.insert(AttackName::FireBolt, 3.0);
+    player.attack_cooldowns.insert(AttackName::LightningBolt, 5.0);
     player.upgrades.push(upgrade);
     player.pickup_radius = Some(300 * FIXED_POINT_SCALE);
 
@@ -164,10 +163,10 @@ fn init_enemies(game_data: &GameData) {
     }
 }
 
-pub fn initialise_attack_pools(game_data: &GameData, pool_sizes: &[(AttackName, Animation, usize)]) {
+pub fn initialise_attack_pools(game_data: &GameData, pool_sizes: &[(AttackName, usize)]) {
     let mut attack_pools = game_data.attack_pools.write().unwrap();
 
-    for (attack_name, animation, size) in pool_sizes {
+    for (attack_name, size) in pool_sizes {
         let mut pool = Vec::with_capacity(*size);
         for _ in 0..*size {
             let attack_unit = get_basic_attack(attack_name.clone());

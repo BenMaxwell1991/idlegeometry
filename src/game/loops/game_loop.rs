@@ -23,6 +23,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
+use crate::game::objects::attacks::attack_stats::AttackName;
 
 pub struct GameLoop {
     pub game_data: Arc<GameData>,
@@ -47,10 +48,21 @@ impl GameLoop {
             }
         });
 
+        let now = Instant::now();
         self.handle_input_actions();
+        // println!("elapsed 1: {}", now.elapsed().as_micros());
+
+        let now = Instant::now();
         self.handle_animations(delta_time);
+        // println!("elapsed 2: {}", now.elapsed().as_micros());
+
+        let now = Instant::now();
         self.handle_attacks(delta_time);
+        // println!("elapsed 3: {}", now.elapsed().as_micros());
+
+        let now = Instant::now();
         self.handle_movement(delta_time);
+        // println!("elapsed 4: {}", now.elapsed().as_micros());
     }
 
     fn handle_input_actions(&self) {
@@ -58,13 +70,13 @@ impl GameLoop {
         let (player_id, player_position) = get_player_position(&self.game_data);
 
         if let Some(player_id) = player_id {
-            let units = acquire_lock(&self.game_data.units, "objects");
-            let attack_name = units.get(player_id as usize)
-                .and_then(|u| u.as_ref())
-                .and_then(|player| player.attack_cooldowns.keys().next().cloned());
+            // let units = acquire_lock(&self.game_data.units, "objects");
+            // let attack_name = units.get(player_id as usize)
+            //     .and_then(|u| u.as_ref())
+            //     .and_then(|player| player.attack_cooldowns.keys().next().cloned());
+            // drop(units);
 
-            drop(units);
-
+            let attack_name = Some(AttackName::LightningBolt);
             while let Some(key) = key_queue.pop() {
                 match key {
                     Keycode::Space => {
@@ -263,7 +275,7 @@ impl GameLoop {
         drop(unit_positions);
 
         handle_collision(&mut unit_movements, Arc::clone(&self.game_data), delta_time);
-        move_units_batched(&unit_movements, &self.game_data, delta_time, player_id);
+        move_units_batched(&unit_movements, &self.game_data, player_id);
     }
 
     pub fn start_game(mut self) {

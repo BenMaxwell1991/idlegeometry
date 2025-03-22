@@ -6,14 +6,15 @@ use crate::game::objects::object_shape::ObjectShape;
 use crate::game::objects::object_type::ObjectType;
 use crate::game::objects::on_death::OnDeath;
 use crate::game::objects::upgrades::{Upgrade, UpgradeType};
-use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, SLASH_ATTACK};
+use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, LIGHTNING_ZAP, SLASH_ATTACK};
 use crate::ui::sound::kira_audio::SOUND_01;
 use std::time::Duration;
 
 pub fn get_basic_attack(attack_name: AttackName) -> GameObject {
     let animation = match attack_name {
-        AttackName::Swipe => Animation::new(SLASH_ATTACK, Duration::from_millis(1000), (200, 70)),
-        AttackName::Firebolt => Animation::new(BABY_GREEN_DRAGON, Duration::from_millis(3000), (30, 30)),
+        AttackName::Swipe => Animation::new(SLASH_ATTACK, Duration::from_millis(500), (200, 70)).with_rotation_offset(0.0),
+        AttackName::FireBolt => Animation::new(BABY_GREEN_DRAGON, Duration::from_millis(300), (40, 40)).with_rotation_offset(90.0),
+        AttackName::LightningBolt => Animation::new(LIGHTNING_ZAP, Duration::from_millis(300), (40, 40)).with_rotation_offset(0.0),
     };
 
     let mut attack_stats = AttackStats {
@@ -23,23 +24,35 @@ pub fn get_basic_attack(attack_name: AttackName) -> GameObject {
 
     match attack_name {
         AttackName::Swipe => {
-            attack_stats.damage = 1.5;
+            attack_stats.damage = 2.5;
             attack_stats.range = 50.0;
-            attack_stats.cooldown = 6.0;
+            attack_stats.cooldown = 3.0;
+            attack_stats.speed = 0 * FIXED_POINT_SCALE;
+            attack_stats.lifetime = 0.5;
+            attack_stats.direction = (1.0, 0.0);
+            attack_stats.damage_duration = 0.1;
             attack_stats.area = 2000.0;
+            attack_stats.max_targets = u32::MAX;
             attack_stats.cast_sounds = vec![SOUND_01.to_string()];
         }
-        AttackName::Firebolt => {
-            attack_stats.damage = 1.0;
+        AttackName::FireBolt => {
+            attack_stats.damage = 4.0;
             attack_stats.lifetime = 3.0;
             attack_stats.range = 80.0;
-            attack_stats.cooldown = 50.0;
-            attack_stats.speed = 150 * FIXED_POINT_SCALE;
-            attack_stats.projectile_count = 30;
+            attack_stats.cooldown = 2.0;
+            attack_stats.speed = 200 * FIXED_POINT_SCALE;
+            attack_stats.projectile_count = 1;
+            attack_stats.cast_sounds = vec![SOUND_01.to_string()];
+        }
+        AttackName::LightningBolt => {
+            attack_stats.damage = 0.5;
+            attack_stats.lifetime = 2.0;
+            attack_stats.range = 80.0;
+            attack_stats.cooldown = 4.0;
+            attack_stats.speed = 400 * FIXED_POINT_SCALE;
+            attack_stats.projectile_count = 60;
             attack_stats.spread_angle = 360.0;
             attack_stats.starting_angle = 90.0;
-            attack_stats.burst_count = 1;
-            attack_stats.burst_delay = 0.5;
             attack_stats.cast_sounds = vec![SOUND_01.to_string()];
         }
     }

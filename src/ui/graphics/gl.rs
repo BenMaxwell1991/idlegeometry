@@ -112,15 +112,10 @@ pub fn draw_units(gl: &Context, render_data: &RenderData, paintbox_rect: &Rect, 
                 let shadow_offset = Vec2::new(unit_size.x * 0.07, unit_size.y * 0.35);
                 let shadow_rect = Rect::from_center_size(unit_screen_position + shadow_offset, shadow_size);
 
-                shadow_sprites_to_draw.push(SpriteToDraw {
-                    texture: frame,
-                    rect: shadow_rect,
-                    tint: Color32::from_rgba_premultiplied(0, 0, 0, 192),
-                    blend_target: Color32::WHITE,
-                    colour_blend_amount: 0.0,
-                    alpha_blend_amount: 0.0,
-                    rotation: 0.0,
-                });
+                let mut offset = 0.0;
+                if let Some(animation_offset) = unit.animation.rotation_offset {
+                    offset = animation_offset;
+                }
 
                 match unit.object_type {
                     ObjectType::Player => {
@@ -131,7 +126,7 @@ pub fn draw_units(gl: &Context, render_data: &RenderData, paintbox_rect: &Rect, 
                             blend_target: Color32::WHITE,
                             colour_blend_amount: get_colour_blend_amount(last_damage_taken),
                             alpha_blend_amount: 1.0,
-                            rotation: 0.0,
+                            rotation: offset,
                         });
 
                         let health_bar_height = 4.0 * camera_state.get_zoom_scaled();
@@ -157,7 +152,7 @@ pub fn draw_units(gl: &Context, render_data: &RenderData, paintbox_rect: &Rect, 
                             blend_target: Color32::WHITE,
                             colour_blend_amount: get_colour_blend_amount(last_damage_taken),
                             alpha_blend_amount: 0.0,
-                            rotation: 0.0,
+                            rotation: offset,
                         });
 
                         if unit.health_current != unit.health_max {
@@ -185,7 +180,7 @@ pub fn draw_units(gl: &Context, render_data: &RenderData, paintbox_rect: &Rect, 
                             blend_target: Color32::WHITE,
                             colour_blend_amount: 0.0,
                             alpha_blend_amount: 0.0,
-                            rotation: 0.0,
+                            rotation: offset,
                         });
 
                         if unit.health_current != unit.health_max {
@@ -206,11 +201,9 @@ pub fn draw_units(gl: &Context, render_data: &RenderData, paintbox_rect: &Rect, 
                         }
                     }
                     ObjectType::Attack => {
-                        let mut rotation = 0.0;
                         if let Some(stats) = &unit.attack_stats {
-                            rotation = 90.0 + stats.direction.1.atan2(stats.direction.0) * 360.0 / (2.0 * PI);
+                            offset += stats.direction.1.atan2(stats.direction.0).to_degrees();
                         }
-
                         images_to_draw.push(SpriteToDraw {
                             texture: frame,
                             rect: unit_rect,
@@ -218,10 +211,19 @@ pub fn draw_units(gl: &Context, render_data: &RenderData, paintbox_rect: &Rect, 
                             blend_target: Color32::WHITE,
                             colour_blend_amount: 0.0,
                             alpha_blend_amount: 0.0,
-                            rotation,
+                            rotation: offset,
                         });
                     }
                 }
+                shadow_sprites_to_draw.push(SpriteToDraw {
+                    texture: frame,
+                    rect: shadow_rect,
+                    tint: Color32::from_rgba_premultiplied(0, 0, 0, 192),
+                    blend_target: Color32::WHITE,
+                    colour_blend_amount: 0.0,
+                    alpha_blend_amount: 0.0,
+                    rotation: offset,
+                });
             }
         }
     }
