@@ -14,6 +14,7 @@ pub const ADULT_WHITE_DRAGON: &str = "adult_white_dragon";
 pub const TREASURE: &str = "treasure";
 pub const SLASH_ATTACK: &str = "slash_attack";
 pub const LIGHTNING_ZAP: &str = "lightning_zap";
+pub const GRASS: &str = "grass_textures";
 
 pub(crate) const SPRITE_DATA: [(&str, &[u8], u32, u32); 6] = [
     (ADULT_GREEN_DRAGON, include_bytes!("dragons/Basic Dragon Animations/Adult Green Dragon/AdultGreenDragon.png"), 16, 16),
@@ -24,9 +25,10 @@ pub(crate) const SPRITE_DATA: [(&str, &[u8], u32, u32); 6] = [
     (TREASURE, include_bytes!("resources/treasure_sheet.png"), 16, 16),
 ];
 
-pub(crate) const SPRITE_FOLDERS: [(&str, &str); 2] = [
+pub(crate) const SPRITE_FOLDERS: [(&str, &str); 3] = [
     (SLASH_ATTACK, "src/ui/asset/sprite/attacks/slash"),
-    (LIGHTNING_ZAP, "src/ui/asset/sprite/attacks/lightning/VFX1")
+    (LIGHTNING_ZAP, "src/ui/asset/sprite/attacks/lightning/VFX1"),
+    (GRASS, "src/ui/asset/sprite/terrain/grass")
 ];
 
 #[derive(Clone)]

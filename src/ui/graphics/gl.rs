@@ -12,6 +12,7 @@ use rustc_hash::FxHashMap;
 use std::f32::consts::PI;
 use std::num::NonZeroU32;
 use std::time::Instant;
+use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, GRASS};
 
 pub fn draw_map(gl: &Context, render_data: &RenderData, paintbox_rect: &Rect, renderer: &OffscreenRenderer) {
     let camera_state = &render_data.camera_state;
@@ -20,6 +21,7 @@ pub fn draw_map(gl: &Context, render_data: &RenderData, paintbox_rect: &Rect, re
 
         let mut rects = Vec::new();
         let mut colours = Vec::new();
+        let mut sprite_tiles = Vec::new();
 
         for x in 0..game_map.width {
             for y in 0..game_map.height {
@@ -32,19 +34,58 @@ pub fn draw_map(gl: &Context, render_data: &RenderData, paintbox_rect: &Rect, re
                     continue;
                 }
 
-                let colour = match tile.tile_type {
-                    TileType::Wall => Color32::from_rgb(100, 100, 100),
-                    TileType::SpawnPoint => Color32::from_rgb(0, 0, 90),
-                    TileType::Grass => Color32::from_rgb(10, 80, 10),
-                    TileType::Empty => Color32::from_rgb(0, 0, 0),
-                };
+                match tile.tile_type {
+                    TileType::Wall => {
+                        rects.push(tile_rect);
+                        colours.push(Color32::from_rgb(100, 100, 100));
+                    }
+                    TileType::SpawnPoint => {
+                        rects.push(tile_rect);
+                        colours.push(Color32::from_rgb(0, 0, 90));
+                    }
+                    TileType::Empty => {
+                        rects.push(tile_rect);
+                        colours.push(Color32::from_rgb(0, 0, 0));
+                    }
+                    TileType::Grass => {
+                        fn pseudo_random(x: i32, y: i32, seed: u32) -> u32 {
+                            // Simple deterministic noise-like hash
+                            let mut n = x.wrapping_mul(374761393).wrapping_add(y.wrapping_mul(668265263));
+                            n = (n ^ (n >> 13)).wrapping_mul(1274126177);
+                            (n ^ (n >> 16)).wrapping_add(seed as i32) as u32
+                        }
 
-                rects.push(tile_rect);
-                colours.push(colour);
+                        let patch_size = 3; // Controls the size of the "patches"
+                        let patch_x = x / patch_size;
+                        let patch_y = y / patch_size;
+
+                        let seed = 1337; // Just an arbitrary seed for variety
+
+                        let grass_index = (pseudo_random(patch_x as i32, patch_y as i32, seed) % 17) as usize;
+
+                        if let Some(sprite_sheet) = renderer.sprite_sheets.get(GRASS) {
+                            let frame = sprite_sheet.get_frame_native(grass_index); // Assuming single-frame grass sprites
+                            sprite_tiles.push(SpriteToDraw {
+                                texture: frame,
+                                rect: tile_rect,
+                                tint: Color32::WHITE,
+                                blend_target: Color32::WHITE,
+                                colour_blend_amount: 0.0,
+                                alpha_blend_amount: 0.0,
+                                rotation: 0.0,
+                            });
+                        } else {
+                            // fallback: draw as coloured rect if sprite missing
+                            rects.push(tile_rect);
+                            colours.push(Color32::from_rgb(10, 80, 10));
+                        }
+                    }
+                }
             }
         }
 
         draw_colour_rectangles(gl, &paintbox_rect, &rects, &colours, &Some(renderer.rect_shader));
+        draw_colour_sprites(gl, &paintbox_rect, &sprite_tiles, &Some(renderer.sprite_shader));
     }
 }
 
