@@ -132,6 +132,7 @@ pub fn create_window(game_data: Arc<GameData>) -> eframe::Result {
     let options = NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([settings.window_width, settings.window_height])
+            .with_resizable(false)
             .with_title(GAME_NAME),
         vsync: settings.vsync,
         centered: true,

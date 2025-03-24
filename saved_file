@@ -1,71 +1,13 @@
 {
-  "resources": [
-    {
-      "amount": {
-        "exponent": 1,
-        "mantissa": 9.432806875500027
-      },
-      "level": {
-        "exponent": 0,
-        "mantissa": 0.0
-      },
-      "name": "Points",
-      "rate": {
-        "exponent": -2,
-        "mantissa": 3.0
-      },
-      "required": {
-        "exponent": 0,
-        "mantissa": 1.0
-      },
-      "unlocked": true
-    },
-    {
-      "amount": {
-        "exponent": 0,
-        "mantissa": 0.0
-      },
-      "level": {
-        "exponent": 0,
-        "mantissa": 0.0
-      },
-      "name": "Lines",
-      "rate": {
-        "exponent": 0,
-        "mantissa": 0.0
-      },
-      "required": {
-        "exponent": 0,
-        "mantissa": 1.0
-      },
-      "unlocked": false
-    },
-    {
-      "amount": {
-        "exponent": 0,
-        "mantissa": 0.0
-      },
-      "level": {
-        "exponent": 0,
-        "mantissa": 0.0
-      },
-      "name": "Triangles",
-      "rate": {
-        "exponent": 0,
-        "mantissa": 0.0
-      },
-      "required": {
-        "exponent": 0,
-        "mantissa": 1.0
-      },
-      "unlocked": false
-    }
-  ],
+  "player_data": {
+    "resources_persistent": {},
+    "upgrades": []
+  },
   "settings": {
     "autosave_interval": 5,
     "number_format_mode": "Engineering",
     "vsync": true,
-    "window_height": 720.0,
-    "window_width": 1280.0
+    "window_height": 1080.0,
+    "window_width": 1920.0
   }
 }

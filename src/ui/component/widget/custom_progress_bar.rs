@@ -1,5 +1,3 @@
-use crate::game::resources::bignumber::BigNumber;
-use crate::game::resources::resource::Resource;
 use crate::ui::component::widget::interactive_widget::InteractiveWidget;
 use eframe::egui::{Align2, Color32, Pos2, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget};
 use eframe::emath::Rect;
@@ -10,7 +8,8 @@ const BORDER_WIDTH: f32 = 2.0;
 const BACKGROUND_COLOUR: Color32 = Color32::DARK_GRAY;
 
 pub struct CustomProgressBar<'a> {
-    resource: Resource,
+    resource_current: f64,
+    resource_max: f64,
     show_percentage: bool,
     on_click: Box<dyn FnMut() + 'a>,
     border_thickness: f32,
@@ -19,9 +18,10 @@ pub struct CustomProgressBar<'a> {
 }
 
 impl<'a> CustomProgressBar<'a> {
-    pub fn new(resource: Resource) -> Self {
+    pub fn new(resource_current: f64, resource_max: f64) -> Self {
         Self {
-            resource,
+            resource_current,
+            resource_max,
             show_percentage: false,
             on_click: Box::new(|| {}),
             border_thickness: BORDER_WIDTH,
@@ -52,7 +52,7 @@ impl<'a> InteractiveWidget for CustomProgressBar<'a> {
 
 impl<'a> Widget for CustomProgressBar<'a> {
     fn ui(mut self, ui: &mut Ui) -> Response {
-        let progress = BigNumber::to_f64(&self.resource.amount) / BigNumber::to_f64(&self.resource.required);
+        let progress = &self.resource_current / &self.resource_max;
         let progress_completed = progress >= 1.0;
         let size = Vec2::new(ui.available_width(), ui.available_height());
 

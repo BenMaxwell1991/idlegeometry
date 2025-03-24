@@ -1,3 +1,4 @@
+use crate::ui::asset::loader::DP_COMIC_FONT;
 use crate::ui::component::widget::interactive_widget::InteractiveWidget;
 use crate::ui::component::widget::label_no_interact::LabelNoInteract;
 use eframe::egui::load::SizedTexture;
@@ -6,6 +7,8 @@ use eframe::egui::{
     TextureHandle, Ui, UiBuilder, Vec2, Widget,
 };
 use eframe::emath::{Pos2, Rect};
+use std::string::ToString;
+use eframe::epaint::FontFamily;
 
 const BUTTON_SIZE: Vec2 = Vec2::new(200.0, 50.0);
 const TEXT_COLOUR: Color32 = Color32::WHITE;
@@ -14,7 +17,8 @@ const BORDER_COLOUR: Color32 = Color32::from_rgb(100, 0, 100);
 const BORDER_WIDTH: f32 = 2.0;
 const ICON_SIZE: Vec2 = Vec2::new(30.0, 30.0);
 const GAP_SIZE: f32 = 5.0;
-const FONT_SIZE: f32 = 24.0;
+const FONT_DEFAULT: &str = DP_COMIC_FONT;
+const FONT_SIZE: f32 = 32.0;
 
 pub struct CustomButton<'a> {
     pub icon: Option<TextureHandle>,
@@ -26,6 +30,7 @@ pub struct CustomButton<'a> {
     pub background_colour: Color32,
     pub icon_size: Vec2,
     pub gap_size: f32,
+    pub font: String,
     pub font_size: f32,
     pub align: Align,
 }
@@ -46,12 +51,13 @@ impl<'a> CustomButton<'a> {
             background_colour: BACKGROUND_COLOUR,
             icon_size: ICON_SIZE,
             gap_size: GAP_SIZE,
+            font: FONT_DEFAULT.to_string(),
             font_size: FONT_SIZE,
             align: Align::Center,
         }
     }
 
-    pub fn size(mut self, size: Vec2) -> Self {
+    pub fn with_size(mut self, size: Vec2) -> Self {
         self.size = size;
         self
     }
@@ -107,7 +113,7 @@ impl<'a> Widget for CustomButton<'a> {
                     }
 
                     if let Some(text) = self.text {
-                        ui.add(LabelNoInteract::new(text, self.font_size, TEXT_COLOUR));
+                        ui.add(LabelNoInteract::new(text, self.font.clone(), self.font_size, TEXT_COLOUR));
                     }
 
                     ui.add_space(self.calculate_padding(&ui).max(0.0));
@@ -121,9 +127,11 @@ impl<'a> Widget for CustomButton<'a> {
 
 impl<'a> CustomButton<'a> {
     fn calculate_padding(&mut self, ui: &Ui) -> f32 {
+        let font_id = FontId::new(self.font_size, FontFamily::Name(self.font.clone().into()));
+
         let label_width = if let Some(text) = self.text {
             ui.fonts(|f| {
-                f.layout_no_wrap(text.to_string(), FontId::proportional(self.font_size), TEXT_COLOUR)
+                f.layout_no_wrap(text.to_string(), font_id, TEXT_COLOUR)
                     .size()
                     .x
             })

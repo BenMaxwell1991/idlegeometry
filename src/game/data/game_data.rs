@@ -1,7 +1,8 @@
 use crate::enums::gamestate::GameState;
-use crate::enums::gamestate::GameState::Ready;
+use crate::enums::gamestate::GameState::Lair;
 use crate::game::collision::spatial_hash_grid::SpatialHashGrid;
 use crate::game::data::damage_numbers::DamageNumber;
+use crate::game::data::player_data::PlayerData;
 use crate::game::data::stored_data::StoredData;
 use crate::game::map::camera_state::CameraState;
 use crate::game::map::game_map::GameMap;
@@ -39,6 +40,7 @@ pub struct GameData {
     pub player_id: Arc<RwLock<Option<u32>>>,
     pub player_position: Arc<RwLock<Option<Pos2FixedPoint>>>,
     pub player_dead: Arc<RwLock<bool>>,
+    pub player_data: Arc<RwLock<PlayerData>>,
 
     pub spatial_hash_grid: Arc<RwLock<SpatialHashGrid>>,
     pub offscreen_renderer: Arc<RwLock<Option<OffscreenRenderer>>>,
@@ -75,6 +77,7 @@ impl GameData {
             player_id: Arc::new(RwLock::new(None)),
             player_position: Arc::new(RwLock::new(None)),
             player_dead: Arc::new(RwLock::new(false)),
+            player_data: Arc::new(RwLock::new(PlayerData::default())),
 
             spatial_hash_grid: Arc::new(RwLock::new(SpatialHashGrid::new())),
             offscreen_renderer: Arc::new(RwLock::new(None)),
@@ -83,7 +86,7 @@ impl GameData {
             rect_shader: Arc::new(RwLock::new(None)),
             sprite_shader: Arc::new(RwLock::new(None)),
             key_queue: Arc::new(RwLock::new(Vec::new())),
-            game_state: Arc::new(RwLock::new(Ready)),
+            game_state: Arc::new(RwLock::new(Lair)),
             icons: Arc::new(RwLock::new(FxHashMap::default())),
             icons_inverted: Arc::new(RwLock::new(FxHashMap::default())),
 

@@ -4,11 +4,12 @@ use crate::enums::gametab::GameTab::NullGameTab;
 use crate::game::collision::detect_collision::handle_collision;
 use crate::game::constants::GAME_RATE;
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::{CURRENT_TAB, GAME_IN_FOCUS, KEY_STATE, RESOURCES};
+use crate::game::data::stored_data::{CURRENT_TAB, GAME_IN_FOCUS, KEY_STATE};
 use crate::game::loops::key_state::KeyState;
 use crate::game::maths::integers::int_sqrt_64;
-use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE, INVALID_POSITION};
-use crate::game::objects::attacks::attack_defaults::{get_basic_attack, get_modified_attack};
+use crate::game::maths::pos_2::{Pos2FixedPoint, INVALID_POSITION};
+use crate::game::objects::attacks::attack_defaults::get_modified_attack;
+use crate::game::objects::attacks::attack_stats::AttackName;
 use crate::game::objects::attacks::create_attacks::{despawn_attack, spawn_attack};
 use crate::game::objects::game_object::move_units_batched;
 use crate::game::objects::object_type::ObjectType;
@@ -19,13 +20,10 @@ use rayon::current_num_threads;
 use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use rayon::prelude::ParallelSliceMut;
 use std::cmp::max;
-use std::ops::Deref;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
-use smallvec::SmallVec;
-use crate::game::objects::attacks::attack_stats::AttackName;
 
 pub struct GameLoop {
     pub game_data: Arc<GameData>,
@@ -44,16 +42,30 @@ impl GameLoop {
         let delta_time = Instant::now().duration_since(self.updated_at).as_secs_f64();
         self.updated_at = Instant::now();
 
-        self.game_data.update_field(RESOURCES, |resources| {
-            for resource in resources.iter_mut() {
-                resource.update(delta_time);
-            }
-        });
-
         self.handle_input_actions();
         self.handle_animations(delta_time);
         self.handle_attacks(delta_time);
         self.handle_movement(delta_time);
+        self.reset_on_death();
+    }
+
+    fn reset_on_death(&mut self) {
+        let game_state = acquire_lock(&self.game_data.game_state, "game_state").clone();
+        if game_state == GameState::Dead {
+            let mut game_units = acquire_lock_mut(&self.game_data.units, "game_units");
+            let mut unit_positions = acquire_lock_mut(&self.game_data.unit_positions, "unit_positions");
+            let mut empty_unit_indexes = acquire_lock_mut(&self.game_data.empty_unit_indexes, "empty_unit_indexes");
+            let mut spatial_hash_grid = acquire_lock_mut(&self.game_data.spatial_hash_grid, "spatial_hash_grid");
+            let mut damage_numbers = acquire_lock_mut(&self.game_data.damage_numbers, "damage_numbers");
+            let mut game_map = acquire_lock_mut(&self.game_data.game_map, "game_map");
+
+            game_units.clear();
+            unit_positions.clear();
+            empty_unit_indexes.clear();
+            spatial_hash_grid.clear();
+            damage_numbers.clear();
+            *game_map = None;
+        }
     }
 
     fn handle_input_actions(&self) {
@@ -78,7 +90,7 @@ impl GameLoop {
                         }
                     }
                     Keycode::Escape => {
-                        self.game_data.set_game_state(GameState::Ready);
+                        self.game_data.set_game_state(GameState::Paused);
                     }
                     _ => {}
                 }

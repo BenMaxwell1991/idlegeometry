@@ -19,8 +19,14 @@ pub const DRAGON_IMAGE_BYTES: &[u8] = include_bytes!("image/dragon.png");
 
 // Fonts
 pub const SUPER_SHINY_FONT: &str = "super_shiny";
+pub const DP_COMIC_FONT: &str = "dp_comic";
 pub const SUPER_SHINY_FONT_BYTES: &[u8] = include_bytes!("font/super_shiny.ttf");
+pub const DP_COMIC_FONT_BYTES: &[u8] = include_bytes!("font/dpcomic.ttf");
 
+const FONTS_DATA: [(&str, &[u8]); 2] = [
+    (SUPER_SHINY_FONT, SUPER_SHINY_FONT_BYTES),
+    (DP_COMIC_FONT, DP_COMIC_FONT_BYTES),
+];
 
 const ICON_DATA: [(&str, &[u8]); 8] = [
     ("adventure", ADVENTURE_IMAGE_BYTES),
@@ -83,15 +89,18 @@ pub fn load_icons_inverted(ctx: &Context, game_data: &GameData) {
 pub fn register_custom_font(ctx: &Context) {
     let mut fonts = FontDefinitions::default();
 
-    fonts.font_data.insert(
-        SUPER_SHINY_FONT.to_owned(),
-        Arc::from(FontData::from_static(SUPER_SHINY_FONT_BYTES)),
-    );
 
-    fonts.families
-        .entry(FontFamily::Name(SUPER_SHINY_FONT.into()))
-        .or_default()
-        .push(SUPER_SHINY_FONT.to_owned());
+    for (name, bytes) in FONTS_DATA {
+        fonts.font_data.insert(
+            name.to_owned(),
+            Arc::from(FontData::from_static(bytes)),
+        );
+
+        fonts.families
+            .entry(FontFamily::Name(name.into()))
+            .or_default()
+            .push(name.to_owned());
+    }
 
     ctx.set_fonts(fonts);
 }

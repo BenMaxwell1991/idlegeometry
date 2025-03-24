@@ -7,7 +7,6 @@ use rustc_hash::FxHashMap;
 use std::any::Any;
 use std::marker::PhantomData;
 use std::sync::Arc;
-use steamworks::Client;
 
 pub struct StoredData<T: Any + Send + Sync> {
     pub id: &'static str,

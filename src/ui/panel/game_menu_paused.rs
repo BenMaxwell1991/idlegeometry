@@ -6,7 +6,7 @@ use eframe::egui::{Color32, Rect, Ui, Vec2};
 use eframe::emath::Align;
 use egui::{CentralPanel, Layout, UiBuilder};
 
-pub fn show_game_menu(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
+pub fn show_game_menu_paused(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
     let menu_rect = Rect::from_center_size(game_rect.center(), Vec2::new(300.0, 250.0));
     let painter = ui.painter();
     painter.rect_filled(menu_rect, 10.0, Color32::from_rgb(20, 20, 20));

@@ -61,7 +61,7 @@ pub fn get_basic_attack(attack_name: AttackName) -> GameObject {
 
     match attack_name {
         AttackName::Proximity => {
-            stats.damage = 5.0;
+            stats.damage = 10.0;
             stats.cooldown = 0.5;
             stats.speed = 0;
             stats.lifetime = 0.2;

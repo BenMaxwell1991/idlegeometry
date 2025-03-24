@@ -23,7 +23,7 @@ pub fn show_shop(ui: &mut egui::Ui, game_data: &GameData) {
                 println!("Button clicked by: {}", user_name)
                 // initiate_purchase(steam_client.clone(), "gold_pack_1000");
             }))
-                .size(Vec2::new(300.0, 50.0))
+                .with_size(Vec2::new(300.0, 50.0))
         );
     }
 }

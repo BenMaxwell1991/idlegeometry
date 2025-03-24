@@ -1,7 +1,6 @@
 use egui::ColorImage;
 use glow::{HasContext, NativeTexture, PixelUnpackData};
 use image::{DynamicImage, RgbaImage};
-use std::fs;
 use std::fs::{create_dir_all, read, read_dir};
 use std::path::PathBuf;
 

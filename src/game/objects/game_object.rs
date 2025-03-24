@@ -1,3 +1,4 @@
+use crate::enums::gamestate::GameState;
 use crate::game::data::game_data::GameData;
 use crate::game::maths::pos_2::{Pos2FixedPoint, INVALID_POSITION};
 use crate::game::objects::animation::Animation;
@@ -8,13 +9,12 @@ use crate::game::objects::object_type::ObjectType;
 use crate::game::objects::on_death::OnDeath;
 use crate::game::objects::unit_defaults::collectable_01_basic_monster;
 use crate::game::objects::upgrades::{Upgrade, UpgradeType};
-use crate::helper::lock_helper::{acquire_lock, acquire_lock_mut};
+use crate::helper::lock_helper::acquire_lock_mut;
 use rayon::iter::*;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::mem::swap;
 use std::sync::Arc;
 use std::time::Instant;
-use crate::enums::gamestate::GameState;
 
 #[derive(Clone, Debug)]
 pub struct GameObject {

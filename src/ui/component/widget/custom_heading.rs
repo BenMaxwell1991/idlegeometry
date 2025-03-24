@@ -1,11 +1,14 @@
+use std::string::ToString;
 use crate::ui::component::widget::label_no_interact::LabelNoInteract;
 use eframe::egui::{Color32, Response, Stroke, StrokeKind, Ui, Vec2, Widget};
 use egui::Sense;
+use crate::ui::asset::loader::DP_COMIC_FONT;
 
 const HEADING_SIZE: Vec2 = Vec2::new(200.0, 50.0);
 const BACKGROUND_COLOUR: Option<Color32> = None;
 const BORDER_COLOUR: Option<Color32> = None;
 const BORDER_WIDTH: f32 = 1.0;
+const FONT_DEFAULT: &str = DP_COMIC_FONT;
 const FONT_SIZE: f32 = 50.0;
 const FONT_COLOUR: Color32 = Color32::WHITE;
 const SHADOW_COLOUR: Color32 = Color32::from_rgba_premultiplied(100, 0, 100, 50);
@@ -17,10 +20,12 @@ pub struct CustomHeading<'a> {
     pub border_thickness: f32,
     pub border_colour: Option<Color32>,
     pub background_colour: Option<Color32>,
+    pub font: String,
     pub font_size: f32,
     pub font_colour: Color32,
     pub shadow_colour: Color32,
     pub shadow_offset: Vec2,
+    pub text_wrapping: bool,
 }
 
 impl<'a> CustomHeading<'a> {
@@ -31,10 +36,12 @@ impl<'a> CustomHeading<'a> {
             border_thickness: BORDER_WIDTH,
             border_colour: BORDER_COLOUR,
             background_colour: BACKGROUND_COLOUR,
+            font: FONT_DEFAULT.to_string(),
             font_size: FONT_SIZE,
             font_colour: FONT_COLOUR,
             shadow_colour: SHADOW_COLOUR,
             shadow_offset: SHADOW_OFFSET,
+            text_wrapping: false,
         }
     }
 }
@@ -56,7 +63,7 @@ impl<'a> Widget for CustomHeading<'a> {
             );
         }
 
-        let label = LabelNoInteract::new(self.text, self.font_size, self.font_colour).with_shadow(self.shadow_colour, self.shadow_offset);
+        let label = LabelNoInteract::new(self.text, self.font, self.font_size, self.font_colour).with_shadow(self.shadow_colour, self.shadow_offset).with_wrapping(self.text_wrapping);
         ui.put(rect, label);
 
         response
