@@ -10,10 +10,12 @@ use crate::ui::panel::death_menu::show_death_menu;
 use crate::ui::panel::game_menu_lair::show_begin_adventure;
 use crate::ui::panel::game_menu_paused::show_game_menu_paused;
 use eframe::{egui, Frame};
-use egui::{Align, Color32, FontFamily, FontId, Image, Layout, Pos2, Rect, RichText, StrokeKind, Ui, UiBuilder, Vec2};
+use egui::{scroll_area, Align, Color32, FontFamily, FontId, Image, Layout, Pos2, Rect, RichText, ScrollArea, Sense, StrokeKind, Ui, UiBuilder, Vec2};
 use std::process::exit;
 use std::sync::{Arc, OnceLock};
+use egui::WidgetType::Label;
 use uuid::Uuid;
+use crate::ui::component::widget::label_no_interact::LabelNoInteract;
 use crate::ui::component::widget::lair_object::LairObject;
 
 static GAME_GRAPHICS_ID: OnceLock<Uuid> = OnceLock::new();
@@ -35,7 +37,6 @@ fn handle_game_state_lair(ui: &mut Ui, game_data: &GameData) {
     ui.add(CustomHeading::new("Dragons Lair"));
     ui.separator();
     let game_rect = ui.available_rect_before_wrap();
-
 
     draw_background_lair(ui, game_data, game_rect);
     draw_lair_objects(ui, game_data, game_rect);
@@ -108,8 +109,8 @@ fn draw_lair_objects(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
     let image = icons.get("dragons_heart").cloned();
 
     let widget_size = Vec2::new(500.0, 100.0);
-    let spacing = 30.0;
-    let num_objects = 7;
+    let spacing = 20.0;
+    let num_objects = 50;
 
     let mut objects = Vec::new();
     let mut top = game_rect.top() + 20.0;
@@ -125,19 +126,28 @@ fn draw_lair_objects(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
         top += widget_size.y + spacing;
     }
 
-    let total_height = num_objects as f32 * (widget_size.y + spacing);
-    let list_rect = Rect::from_center_size(game_rect.center(), Vec2::new(widget_size.x, total_height));
+    let scroll_area_width = widget_size.x;
+    let scroll_area_height = game_rect.height() * 0.75;
+    let scroll_origin_x = game_rect.center().x - scroll_area_width / 2.0;
+    let scroll_rect = Rect::from_min_size(
+        Pos2::new(scroll_origin_x, game_rect.top()),
+        Vec2::new(scroll_area_width, scroll_area_height),
+    );
 
     ui.allocate_new_ui(
         UiBuilder::new()
-            .max_rect(list_rect)
-            .layout(Layout::top_down(Align::Center)),
-        |ui| {
-            for lair_object in objects {
-                ui.add(lair_object);
-                ui.add_space(spacing);
-            }
-        },
+            .max_rect(scroll_rect)
+            .layout(Layout::top_down(Align::Center)), |ui| {
+            ScrollArea::vertical()
+                .auto_shrink([true; 2])
+                .max_height(scroll_area_height)
+                .max_width(scroll_area_width)
+                .show(ui, |ui| {
+                for lair_object in objects.iter() {
+                    ui.add(lair_object.clone());
+                    ui.add_space(spacing);
+                }
+            })}
     );
 }
 

@@ -1,3 +1,4 @@
+use crate::game::data::resource_cost::ResourceAmount;
 use crate::ui::asset::loader::DP_COMIC_FONT;
 use crate::ui::component::widget::label_no_interact::LabelNoInteract;
 use eframe::egui::{
@@ -6,8 +7,8 @@ use eframe::egui::{
 };
 use egui::{Align, Color32, Frame, Image, Layout, Stroke, TextureHandle, UiBuilder, Vec2};
 use uuid::Uuid;
-use crate::game::data::resource_cost::ResourceAmount;
 
+#[derive(Clone)]
 pub struct LairObject {
     pub name: String,
     pub level: u64,
@@ -36,21 +37,21 @@ impl LairObject {
 impl Widget for LairObject {
     fn ui(self, ui: &mut Ui) -> Response {
         let id = ui.make_persistent_id(Uuid::new_v4());
-        let response = ui.interact(self.rect, id, Sense::click());
+        let (rect, response) = ui.allocate_exact_size(self.rect.size(), Sense::click());
 
         ui.allocate_new_ui(
             UiBuilder::new()
-                .max_rect(self.rect)
+                .max_rect(rect)
                 .layout(Layout::top_down_justified(Align::Center)),
             |ui| {
                 Frame::group(ui.style())
                     .stroke(Stroke::new(2.0, Color32::PURPLE))
                     .fill(Color32::from_rgba_premultiplied(0, 0, 0, 100))
                     .show(ui, |ui| {
-                        ui.set_min_size(self.rect.size());
+                        ui.set_min_size(rect.size());
                         ui.horizontal(|ui| {
                             ui.allocate_ui_with_layout(
-                                Vec2::new(self.rect.height(), self.rect.height()),
+                                Vec2::new(rect.height(), rect.height()),
                                 Layout::top_down_justified(Align::Min),
                                 |ui| {
                                     if let Some(icon) = &self.icon {
@@ -65,7 +66,7 @@ impl Widget for LairObject {
 
                             // Right: remaining space
                             ui.allocate_ui_with_layout(
-                                Vec2::new(ui.available_width(), self.rect.height()),
+                                Vec2::new(ui.available_width(), rect.height()),
                                 Layout::top_down(Align::Min),
                                 |ui| {
                                     ui.vertical(|ui| {
