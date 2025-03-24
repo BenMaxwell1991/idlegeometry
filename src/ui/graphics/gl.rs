@@ -1,6 +1,7 @@
 use crate::game::map::tile_type::TileType;
 use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 use crate::game::objects::object_type::ObjectType;
+use crate::ui::asset::sprite::sprite_sheet::GRASS;
 use crate::ui::component::widget::game_graphics::world_to_screen;
 use crate::ui::graphics::offscreen_renderer::OffscreenRenderer;
 use crate::ui::graphics::rendering_data::RenderData;
@@ -12,7 +13,6 @@ use rustc_hash::FxHashMap;
 use std::f32::consts::PI;
 use std::num::NonZeroU32;
 use std::time::Instant;
-use crate::ui::asset::sprite::sprite_sheet::{BABY_GREEN_DRAGON, GRASS};
 
 pub fn draw_map(gl: &Context, render_data: &RenderData, paintbox_rect: &Rect, renderer: &OffscreenRenderer) {
     let camera_state = &render_data.camera_state;
@@ -55,16 +55,16 @@ pub fn draw_map(gl: &Context, render_data: &RenderData, paintbox_rect: &Rect, re
                             (n ^ (n >> 16)).wrapping_add(seed as i32) as u32
                         }
 
-                        let patch_size = 3; // Controls the size of the "patches"
+                        let patch_size = 1;
                         let patch_x = x / patch_size;
                         let patch_y = y / patch_size;
 
-                        let seed = 1337; // Just an arbitrary seed for variety
+                        let seed = 1337;
 
                         let grass_index = (pseudo_random(patch_x as i32, patch_y as i32, seed) % 17) as usize;
 
                         if let Some(sprite_sheet) = renderer.sprite_sheets.get(GRASS) {
-                            let frame = sprite_sheet.get_frame_native(grass_index); // Assuming single-frame grass sprites
+                            let frame = sprite_sheet.get_frame_native(grass_index);
                             sprite_tiles.push(SpriteToDraw {
                                 texture: frame,
                                 rect: tile_rect,
@@ -125,81 +125,55 @@ pub fn draw_units(gl: &Context, render_data: &RenderData, paintbox_rect: &Rect, 
 
     for unit_option in game_units.iter() {
         if let Some(unit) = unit_option {
-            let unit_screen_position = world_to_screen(unit_positions[unit.id as usize], &camera_state, paintbox_rect);
+            if let Some(animation) = &unit.animation {
+                let unit_screen_position = world_to_screen(unit_positions[unit.id as usize], &camera_state, paintbox_rect);
 
-            let unit_size = Vec2::new(unit.animation.size.0 as f32, unit.animation.size.1 as f32) * camera_state.get_zoom_scaled();
-            let unit_rect = Rect::from_center_size(unit_screen_position, unit_size);
+                let unit_size = Vec2::new(animation.size.0 as f32, animation.size.1 as f32) * camera_state.get_zoom_scaled();
+                let unit_rect = Rect::from_center_size(unit_screen_position, unit_size);
 
-            if !unit_rect.intersects(Rect::from_min_size(Pos2::new(0.0, 0.0), paintbox_rect.size())) {
-                continue;
-            }
-
-            if (unit_size.x < 5.0 || unit_size.y < 5.0) && unit.object_type != ObjectType::Player {
-                rects_to_draw.push(unit_rect);
-                colours_to_draw.push(Color32::RED);
-                continue;
-            }
-
-            if let Some(sprite_sheet) = sprite_sheets.get(&unit.animation.sprite_key) {
-                let frame_index = unit.animation.fixed_frame_index.unwrap_or_else(|| {
-                    (unit.animation.animation_frame * sprite_sheet.get_frame_count_native() as f32).trunc() as usize
-                });
-
-                let last_damage_taken = unit.animation.last_damage_time.clone();
-                let frame = sprite_sheet.get_frame_native(frame_index);
-
-                let shadow_scale = 1.2;
-                let shadow_size = unit_size * Vec2::new(shadow_scale, shadow_scale * 0.4);
-                let shadow_offset = Vec2::new(unit_size.x * 0.07, unit_size.y * 0.35);
-                let shadow_rect = Rect::from_center_size(unit_screen_position + shadow_offset, shadow_size);
-
-                let mut offset = 0.0;
-                if let Some(animation_offset) = unit.animation.rotation_offset {
-                    offset = animation_offset;
+                if !unit_rect.intersects(Rect::from_min_size(Pos2::new(0.0, 0.0), paintbox_rect.size())) {
+                    continue;
                 }
 
-                match unit.object_type {
-                    ObjectType::Player => {
-                        player_to_draw.push(SpriteToDraw {
-                            texture: frame,
-                            rect: unit_rect,
-                            tint: Color32::WHITE,
-                            blend_target: Color32::WHITE,
-                            colour_blend_amount: get_colour_blend_amount(last_damage_taken),
-                            alpha_blend_amount: 1.0,
-                            rotation: offset,
-                        });
+                if (unit_size.x < 5.0 || unit_size.y < 5.0) && unit.object_type != ObjectType::Player {
+                    rects_to_draw.push(unit_rect);
+                    colours_to_draw.push(Color32::RED);
+                    continue;
+                }
 
-                        let health_bar_height = 4.0 * camera_state.get_zoom_scaled();
-                        let health_bar_width = unit_size.x * 0.9;
-                        let current_health_width = health_bar_width * (unit.health_current / unit.health_max);
+                if let Some(sprite_sheet) = sprite_sheets.get(&animation.sprite_key) {
+                    let frame_index = animation.fixed_frame_index.unwrap_or_else(|| {
+                        (animation.animation_frame * sprite_sheet.get_frame_count_native() as f32).trunc() as usize
+                    });
 
-                        let health_bar_bg_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
-                        let health_bar_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
+                    let last_damage_taken = animation.last_damage_time.clone();
+                    let frame = sprite_sheet.get_frame_native(frame_index);
 
-                        let health_bar_bg_rect = Rect::from_min_size(health_bar_bg_min, Vec2::new(health_bar_width, health_bar_height));
-                        let health_bar_rect = Rect::from_min_size(health_bar_min, Vec2::new(current_health_width, health_bar_height));
+                    let shadow_scale = 1.2;
+                    let shadow_size = unit_size * Vec2::new(shadow_scale, shadow_scale * 0.4);
+                    let shadow_offset = Vec2::new(unit_size.x * 0.07, unit_size.y * 0.35);
+                    let shadow_rect = Rect::from_center_size(unit_screen_position + shadow_offset, shadow_size);
 
-                        health_bar_rects.push(health_bar_bg_rect);
-                        health_bar_colours.push(Color32::BLACK);
-                        health_bar_rects.push(health_bar_rect);
-                        health_bar_colours.push(Color32::GREEN);
-                    },
-                    ObjectType::Enemy => {
-                        images_to_draw.push(SpriteToDraw {
-                            texture: frame,
-                            rect: unit_rect,
-                            tint: Color32::WHITE,
-                            blend_target: Color32::WHITE,
-                            colour_blend_amount: get_colour_blend_amount(last_damage_taken),
-                            alpha_blend_amount: 0.0,
-                            rotation: offset,
-                        });
+                    let mut offset = 0.0;
+                    if let Some(animation_offset) = animation.rotation_offset {
+                        offset = animation_offset;
+                    }
 
-                        if unit.health_current != unit.health_max {
-                            let health_bar_height = 3.0 * camera_state.get_zoom_scaled();
-                            let health_bar_width = unit_size.x * 0.7;
-                            let current_health_width = health_bar_width * (unit.health_current / unit.health_max).max(0.0);
+                    match unit.object_type {
+                        ObjectType::Player => {
+                            player_to_draw.push(SpriteToDraw {
+                                texture: frame,
+                                rect: unit_rect,
+                                tint: Color32::WHITE,
+                                blend_target: Color32::WHITE,
+                                colour_blend_amount: get_colour_blend_amount(last_damage_taken),
+                                alpha_blend_amount: 1.0,
+                                rotation: offset,
+                            });
+
+                            let health_bar_height = 4.0 * camera_state.get_zoom_scaled();
+                            let health_bar_width = unit_size.x * 0.9;
+                            let current_health_width = health_bar_width * (unit.health_current / unit.health_max);
 
                             let health_bar_bg_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
                             let health_bar_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
@@ -210,61 +184,89 @@ pub fn draw_units(gl: &Context, render_data: &RenderData, paintbox_rect: &Rect, 
                             health_bar_rects.push(health_bar_bg_rect);
                             health_bar_colours.push(Color32::BLACK);
                             health_bar_rects.push(health_bar_rect);
-                            health_bar_colours.push(Color32::RED);
+                            health_bar_colours.push(Color32::GREEN);
+                        },
+                        ObjectType::Enemy => {
+                            images_to_draw.push(SpriteToDraw {
+                                texture: frame,
+                                rect: unit_rect,
+                                tint: Color32::WHITE,
+                                blend_target: Color32::WHITE,
+                                colour_blend_amount: get_colour_blend_amount(last_damage_taken),
+                                alpha_blend_amount: 0.0,
+                                rotation: offset,
+                            });
+
+                            if unit.health_current != unit.health_max {
+                                let health_bar_height = 3.0 * camera_state.get_zoom_scaled();
+                                let health_bar_width = unit_size.x * 0.7;
+                                let current_health_width = health_bar_width * (unit.health_current / unit.health_max).max(0.0);
+
+                                let health_bar_bg_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
+                                let health_bar_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
+
+                                let health_bar_bg_rect = Rect::from_min_size(health_bar_bg_min, Vec2::new(health_bar_width, health_bar_height));
+                                let health_bar_rect = Rect::from_min_size(health_bar_min, Vec2::new(current_health_width, health_bar_height));
+
+                                health_bar_rects.push(health_bar_bg_rect);
+                                health_bar_colours.push(Color32::BLACK);
+                                health_bar_rects.push(health_bar_rect);
+                                health_bar_colours.push(Color32::RED);
+                            }
+                        }
+                        ObjectType::Collectable => {
+                            images_to_draw.push(SpriteToDraw {
+                                texture: frame,
+                                rect: unit_rect,
+                                tint: Color32::WHITE,
+                                blend_target: Color32::WHITE,
+                                colour_blend_amount: 0.0,
+                                alpha_blend_amount: 0.0,
+                                rotation: offset,
+                            });
+
+                            if unit.health_current != unit.health_max {
+                                let health_bar_height = 3.0 * camera_state.get_zoom_scaled();
+                                let health_bar_width = unit_size.x * 0.7;
+                                let current_health_width = health_bar_width * (unit.health_current / unit.health_max).max(0.0);
+
+                                let health_bar_bg_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
+                                let health_bar_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
+
+                                let health_bar_bg_rect = Rect::from_min_size(health_bar_bg_min, Vec2::new(health_bar_width, health_bar_height));
+                                let health_bar_rect = Rect::from_min_size(health_bar_min, Vec2::new(current_health_width, health_bar_height));
+
+                                health_bar_rects.push(health_bar_bg_rect);
+                                health_bar_colours.push(Color32::BLACK);
+                                health_bar_rects.push(health_bar_rect);
+                                health_bar_colours.push(Color32::RED);
+                            }
+                        }
+                        ObjectType::Attack => {
+                            if let Some(stats) = &unit.attack_stats {
+                                offset += stats.direction.1.atan2(stats.direction.0).to_degrees();
+                            }
+                            images_to_draw.push(SpriteToDraw {
+                                texture: frame,
+                                rect: unit_rect,
+                                tint: Color32::WHITE,
+                                blend_target: Color32::WHITE,
+                                colour_blend_amount: 0.0,
+                                alpha_blend_amount: 0.0,
+                                rotation: offset,
+                            });
                         }
                     }
-                    ObjectType::Collectable => {
-                        images_to_draw.push(SpriteToDraw {
-                            texture: frame,
-                            rect: unit_rect,
-                            tint: Color32::WHITE,
-                            blend_target: Color32::WHITE,
-                            colour_blend_amount: 0.0,
-                            alpha_blend_amount: 0.0,
-                            rotation: offset,
-                        });
-
-                        if unit.health_current != unit.health_max {
-                            let health_bar_height = 3.0 * camera_state.get_zoom_scaled();
-                            let health_bar_width = unit_size.x * 0.7;
-                            let current_health_width = health_bar_width * (unit.health_current / unit.health_max).max(0.0);
-
-                            let health_bar_bg_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
-                            let health_bar_min = unit_screen_position + Vec2::new(-health_bar_width / 2.0, -unit_size.y * 0.5);
-
-                            let health_bar_bg_rect = Rect::from_min_size(health_bar_bg_min, Vec2::new(health_bar_width, health_bar_height));
-                            let health_bar_rect = Rect::from_min_size(health_bar_min, Vec2::new(current_health_width, health_bar_height));
-
-                            health_bar_rects.push(health_bar_bg_rect);
-                            health_bar_colours.push(Color32::BLACK);
-                            health_bar_rects.push(health_bar_rect);
-                            health_bar_colours.push(Color32::RED);
-                        }
-                    }
-                    ObjectType::Attack => {
-                        if let Some(stats) = &unit.attack_stats {
-                            offset += stats.direction.1.atan2(stats.direction.0).to_degrees();
-                        }
-                        images_to_draw.push(SpriteToDraw {
-                            texture: frame,
-                            rect: unit_rect,
-                            tint: Color32::WHITE,
-                            blend_target: Color32::WHITE,
-                            colour_blend_amount: 0.0,
-                            alpha_blend_amount: 0.0,
-                            rotation: offset,
-                        });
-                    }
+                    shadow_sprites_to_draw.push(SpriteToDraw {
+                        texture: frame,
+                        rect: shadow_rect,
+                        tint: Color32::from_rgba_premultiplied(0, 0, 0, 192),
+                        blend_target: Color32::WHITE,
+                        colour_blend_amount: 0.0,
+                        alpha_blend_amount: 0.0,
+                        rotation: offset,
+                    });
                 }
-                shadow_sprites_to_draw.push(SpriteToDraw {
-                    texture: frame,
-                    rect: shadow_rect,
-                    tint: Color32::from_rgba_premultiplied(0, 0, 0, 192),
-                    blend_target: Color32::WHITE,
-                    colour_blend_amount: 0.0,
-                    alpha_blend_amount: 0.0,
-                    rotation: offset,
-                });
             }
         }
     }

@@ -18,6 +18,13 @@ impl ObjectShape {
     pub fn bounding_box(&self, position: Pos2FixedPoint) -> (Pos2FixedPoint, Pos2FixedPoint) {
         let half_width = self.width >> 1;
         let half_height = self.height >> 1;
+
+        debug_assert!(
+            position.x >= i32::MIN + half_width && position.y >= i32::MIN + half_height,
+            "Underflow in bounding_box! pos=({},{}) shape=({}, {})",
+            position.x, position.y, self.width, self.height
+        );
+
         (
             Pos2FixedPoint::new(position.x - half_width, position.y - half_height),
             Pos2FixedPoint::new(position.x + half_width, position.y + half_height),

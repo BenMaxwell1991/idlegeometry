@@ -1,5 +1,5 @@
 use crate::game::data::game_data::GameData;
-use crate::game::maths::pos_2::{normalize_i64_upscaled, project_onto_i64, Pos2FixedPoint, FIXED_POINT_SCALE};
+use crate::game::maths::pos_2::{normalize_i64_upscaled, project_onto_i64, Pos2FixedPoint, FIXED_POINT_SCALE, INVALID_POS2};
 use crate::game::objects::game_object::{add_units, remove_units, GameObject};
 use crate::game::objects::object_shape::ObjectShape;
 use crate::game::objects::object_type::ObjectType;
@@ -9,20 +9,22 @@ use rayon::slice::ParallelSliceMut;
 use crate::game::data::damage_numbers::DamageNumber;
 use crate::game::map::game_map::GameMap;
 use crate::game::maths::integers::int_sqrt_64;
+use crate::game::objects::attacks::attack_defaults::get_modified_attack;
 use crate::game::objects::attacks::attack_landed::AttackLanded;
-use crate::game::objects::attacks::attack_stats::AttackStats;
+use crate::game::objects::attacks::attack_stats::{AttackName, AttackStats};
 use crate::game::objects::loot::Loot;
 use crate::game::resources::loot::collect_loot;
 use crate::helper::lock_helper::{acquire_lock, acquire_lock_mut};
 use egui::Color32;
 use rustc_hash::FxHashSet;
+use smallvec::SmallVec;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
-use smallvec::SmallVec;
 
-pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2FixedPoint)], game_data: Arc<GameData>, delta_time: f64) {
+pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2FixedPoint)], game_data: Arc<GameData>, delta_time: f64) -> Vec<(AttackName, Pos2FixedPoint, u32)> {
     let collectables_collected = Arc::new(Mutex::new(Vec::new()));
     let mut units_to_remove = FxHashSet::default();
+    let mut attacks_to_spawn: Vec<(AttackName, Pos2FixedPoint, u32)> = Vec::new();
 
     {
         let mut units = acquire_lock_mut(&game_data.units, "objects");
@@ -41,10 +43,11 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
 
         let mut attack_hits_to_process = Arc::new(Mutex::new(Vec::default()));
 
-        unit_positions_updates
+        attacks_to_spawn = unit_positions_updates
             .par_chunks_mut(chunk_size)
-            .for_each(|chunk| {
+            .map(|chunk| {
                 let mut nearby_unit_ids = SmallVec::<[u32; 64]>::new();
+                let mut local_attacks_to_spawn = Vec::new();
 
                 for (unit_id, old_position, new_position) in chunk {
                     let Some(unit) = units.get(*unit_id as usize).and_then(|u| u.as_ref()) else { continue; };
@@ -57,6 +60,9 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
                             continue
                         },
                         ObjectType::Collectable => {
+                            if player_position == INVALID_POS2 {
+                                continue;
+                            }
                             let collectable_shape = &unit.object_shape;
                             if rectangles_collide(*new_position, collectable_shape, player_position, &unit.object_shape) {
                                 collectables_collected.lock().unwrap().push(*unit_id);
@@ -68,7 +74,20 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
                                     let attack = unit;
                                     let attack_id = unit.id;
                                     let attack_pos = unit_positions[attack_id as usize];
-                                    let attack_shape = &unit.object_shape;
+
+                                    let attack_shape =  if attack_stats.use_parent_shape {
+                                        if let Some(parent_id) = unit.parent_unit_id {
+                                            if let Some(Some(parent)) = units.get(parent_id as usize) {
+                                                parent.object_shape.clone()
+                                            }  else {
+                                                ObjectShape::new(0,0)
+                                            }
+                                        } else {
+                                            ObjectShape::new(0, 0)
+                                        }
+                                    } else {
+                                        unit.object_shape.clone()
+                                    };
 
                                     spatial_grid.get_nearby_units_into(*new_position, &mut nearby_unit_ids);
                                     for &nearby_unit_id in &nearby_unit_ids {
@@ -102,15 +121,13 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
                                 }
                             }
                         },
-                        _ => {
+                        ObjectType::Enemy => {
                             let unit_shape = &unit.object_shape;
-
-                            // let now = Instant::now();
                             spatial_grid.get_nearby_units_into(*new_position, &mut nearby_unit_ids);
-                            // println!("elapsed 1: {}", now.elapsed().as_nanos());
 
                             let mut collision_normals = Vec::new();
                             let mut nearby_positions = Vec::new();
+                            let mut collided_with_player = false;
 
                             for &other_unit_id in &nearby_unit_ids {
                                 if *unit_id == other_unit_id {
@@ -120,6 +137,7 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
                                 let Some(other_unit) = units.get(other_unit_id as usize).and_then(|u| u.as_ref()) else { continue; };
 
                                 if other_unit.object_type == ObjectType::Collectable { continue; }
+                                if other_unit.object_type == ObjectType::Attack { continue; }
 
                                 let other_unit_shape = &other_unit.object_shape;
                                 let other_unit_pos = unit_positions[other_unit_id as usize];
@@ -128,6 +146,26 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
                                     let collision_normal = compute_collision_normal_upscaled(*new_position, unit_shape, other_unit_pos, other_unit_shape);
                                     collision_normals.push(collision_normal);
                                     nearby_positions.push(other_unit_pos);
+
+                                    if other_unit.object_type == ObjectType::Player {
+                                        collided_with_player = true;
+                                    }
+                                }
+                            }
+
+                            // Collided with player, handle proximity attack:
+                            if collided_with_player {
+                                for (attack_name, cooldown) in unit.attack_cooldowns.iter() {
+                                    if *cooldown > 0.0 {
+                                        continue;
+                                    }
+
+                                    let attack = get_modified_attack(&unit.upgrades, attack_name.clone());
+                                    if let Some(attack_stats) = attack.attack_stats {
+                                        if attack_stats.proximity_attack {
+                                            local_attacks_to_spawn.push((attack_name.clone(), *new_position, *unit_id));
+                                        }
+                                    }
                                 }
                             }
 
@@ -160,7 +198,15 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
                         }
                     }
                 }
-            });
+                local_attacks_to_spawn
+            })
+            .reduce(
+                || Vec::new(),
+                |mut a, mut b| {
+                    a.append(&mut b);
+                    a
+                },
+            );
 
         let mut damage_numbers = acquire_lock_mut(&game_data.damage_numbers, "damage_numbers");
         for attack_to_process in attack_hits_to_process.lock().unwrap().iter() {
@@ -224,6 +270,8 @@ pub fn handle_collision(unit_positions_updates: &mut [(u32, Pos2FixedPoint, Pos2
         let (collectable_units, collectable_positions): (Vec<GameObject>, Vec<Pos2FixedPoint>) = collectables.into_iter().unzip();
         add_units(collectable_units, collectable_positions, &game_data);
     }
+
+    attacks_to_spawn
 }
 
 pub fn handle_terrain(new_position: &mut Pos2FixedPoint, old_position: &Pos2FixedPoint, unit_shape: &ObjectShape, game_map: &GameMap, tile_size: i32) {

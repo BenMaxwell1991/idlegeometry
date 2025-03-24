@@ -12,56 +12,36 @@ use std::time::Duration;
 
 pub fn get_basic_attack(attack_name: AttackName) -> GameObject {
     let animation = match attack_name {
-        AttackName::Swipe => Animation::new(SLASH_ATTACK, Duration::from_millis(500), (200, 70)).with_rotation_offset(0.0),
-        AttackName::FireBolt => Animation::new(BABY_GREEN_DRAGON, Duration::from_millis(300), (40, 40)).with_rotation_offset(90.0),
-        AttackName::LightningBolt => Animation::new(LIGHTNING_ZAP, Duration::from_millis(300), (40, 40)).with_rotation_offset(0.0),
-    };
-
-    let mut attack_stats = AttackStats {
-        name: attack_name.clone(),
-        ..AttackStats::default()
-    };
-
-    match attack_name {
+        AttackName::Proximity => {
+            None
+        }
         AttackName::Swipe => {
-            attack_stats.damage = 2.5;
-            attack_stats.range = 50.0;
-            attack_stats.cooldown = 3.0;
-            attack_stats.speed = 0 * FIXED_POINT_SCALE;
-            attack_stats.lifetime = 0.5;
-            attack_stats.direction = (1.0, 0.0);
-            attack_stats.damage_duration = 0.1;
-            attack_stats.area = 2000.0;
-            attack_stats.max_targets = u32::MAX;
-            attack_stats.cast_sounds = vec![SOUND_01.to_string()];
+            Some(Animation::new(SLASH_ATTACK, Duration::from_millis(300), (200, 70))
+                .with_rotation_offset(0.0))
         }
         AttackName::FireBolt => {
-            attack_stats.damage = 4.0;
-            attack_stats.lifetime = 3.0;
-            attack_stats.range = 80.0;
-            attack_stats.cooldown = 2.0;
-            attack_stats.speed = 200 * FIXED_POINT_SCALE;
-            attack_stats.projectile_count = 1;
-            attack_stats.cast_sounds = vec![SOUND_01.to_string()];
+            Some(Animation::new(BABY_GREEN_DRAGON, Duration::from_millis(300), (40, 40))
+                .with_rotation_offset(90.0))
         }
         AttackName::LightningBolt => {
-            attack_stats.damage = 0.5;
-            attack_stats.lifetime = 2.0;
-            attack_stats.range = 80.0;
-            attack_stats.cooldown = 4.0;
-            attack_stats.speed = 400 * FIXED_POINT_SCALE;
-            attack_stats.projectile_count = 60;
-            attack_stats.spread_angle = 360.0;
-            attack_stats.starting_angle = 90.0;
-            attack_stats.cast_sounds = vec![SOUND_01.to_string()];
+            Some(Animation::new(LIGHTNING_ZAP, Duration::from_millis(300), (40, 40))
+                .with_rotation_offset(0.0))
         }
-    }
+    };
 
-    GameObject {
+    let shape = animation
+        .as_ref()
+        .map(|a| ObjectShape::new(
+            FIXED_POINT_SCALE * a.size.0 as i32,
+            FIXED_POINT_SCALE * a.size.1 as i32,
+        ))
+        .unwrap_or_else(|| ObjectShape::new(0, 0));
+
+    let mut obj = GameObject {
         id: u32::MAX,
         object_type: ObjectType::Attack,
-        object_shape: ObjectShape::new(FIXED_POINT_SCALE * animation.size.0 as i32, FIXED_POINT_SCALE * animation.size.1 as i32),
-        move_speed: attack_stats.speed,
+        object_shape: shape,
+        move_speed: 0,
         health_max: 1.0,
         health_current: 1.0,
         animation,
@@ -71,8 +51,60 @@ pub fn get_basic_attack(attack_name: AttackName) -> GameObject {
         loot: None,
         on_death: OnDeath::default(),
         parent_unit_id: None,
-        attack_stats: Some(attack_stats),
+        attack_stats: None,
+    };
+
+    let mut stats = AttackStats {
+        name: attack_name.clone(),
+        ..AttackStats::default()
+    };
+
+    match attack_name {
+        AttackName::Proximity => {
+            stats.damage = 5.0;
+            stats.cooldown = 0.5;
+            stats.speed = 0;
+            stats.lifetime = 0.2;
+            stats.direction = (1.0, 0.0);
+            stats.damage_duration = 0.1;
+            stats.max_targets = u32::MAX;
+            stats.cast_sounds = vec![SOUND_01.to_string()];
+            stats.use_parent_shape = true;
+            stats.proximity_attack = true;
+        }
+        AttackName::Swipe => {
+            stats.damage = 2.5;
+            stats.cooldown = 3.0;
+            stats.speed = 0;
+            stats.lifetime = 0.3;
+            stats.direction = (1.0, 0.0);
+            stats.damage_duration = 0.1;
+            stats.max_targets = u32::MAX;
+            stats.cast_sounds = vec![SOUND_01.to_string()];
+        }
+        AttackName::FireBolt => {
+            stats.damage = 4.0;
+            stats.cooldown = 2.0;
+            stats.speed = 200 * FIXED_POINT_SCALE;
+            stats.lifetime = 3.0;
+            stats.projectile_count = 1;
+            stats.cast_sounds = vec![SOUND_01.to_string()];
+        }
+        AttackName::LightningBolt => {
+            stats.damage = 0.5;
+            stats.cooldown = 4.0;
+            stats.speed = 400 * FIXED_POINT_SCALE;
+            stats.lifetime = 2.0;
+            stats.projectile_count = 60;
+            stats.spread_angle = 360.0;
+            stats.starting_angle = 90.0;
+            stats.cast_sounds = vec![SOUND_01.to_string()];
+        }
     }
+
+    obj.move_speed = stats.speed;
+    obj.attack_stats = Some(stats);
+    obj
 }
 
 pub fn get_modified_attack(upgrades: &Vec<Upgrade>, attack_name: AttackName) -> GameObject {
@@ -88,10 +120,8 @@ pub fn get_modified_attack(upgrades: &Vec<Upgrade>, attack_name: AttackName) -> 
                     attack_stats.cooldown *= 1.0 - (0.05 * upgrade.level as f32);
                 }
                 UpgradeType::IncreaseAOE => {
-                    attack_stats.area += 2.0 * FIXED_POINT_SCALE as f32 * upgrade.level as f32;
                 }
                 UpgradeType::IncreaseRange => {
-                    attack_stats.range += 10.0 * FIXED_POINT_SCALE as f32 * upgrade.level as f32;
                 }
                 UpgradeType::IncreaseSpeed => {
                     attack_stats.speed += 1 * FIXED_POINT_SCALE * upgrade.level as i32;

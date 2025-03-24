@@ -5,11 +5,9 @@ use serde::{Deserialize, Serialize};
 pub struct AttackStats {
     pub name: AttackName,
     pub damage: f64,
-    pub range: f32,
     pub cooldown: f32,
     pub direction: (f32, f32),
     pub speed: i32,
-    pub area: f32,
     pub lifetime: f32,
     pub elapsed: f32,
     pub damage_point: f32,
@@ -19,6 +17,8 @@ pub struct AttackStats {
     pub max_targets: u32,
     pub units_hit: Vec<u32>,
     pub cast_sounds: Vec<String>,
+    pub use_parent_shape: bool,
+    pub proximity_attack: bool,
 
     // Multi-projectile settings:
     pub projectile_count: u32,
@@ -31,6 +31,7 @@ pub struct AttackStats {
 
 #[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Debug, Copy)]
 pub enum AttackName {
+    Proximity,
     Swipe,
     FireBolt,
     LightningBolt,
@@ -41,11 +42,9 @@ impl Default for AttackStats {
         AttackStats {
             name: AttackName::FireBolt,
             damage: 1.0,
-            range: 50.0,
             cooldown: 8.0,
             direction: (1.0, 0.0),
             speed: 300 * FIXED_POINT_SCALE,
-            area: 0.0,
             lifetime: 2.0,
             elapsed: 0.0,
             damage_point: 0.0,
@@ -55,6 +54,8 @@ impl Default for AttackStats {
             max_targets: 1,
             units_hit: Vec::new(),
             cast_sounds: vec![],
+            use_parent_shape: false,
+            proximity_attack: false,
 
             // Multi-projectile defaults:
             projectile_count: 1,  // Single shot by default

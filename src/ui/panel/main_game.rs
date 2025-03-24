@@ -1,7 +1,7 @@
 use crate::enums::gamestate::GameState;
 use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::{RESOURCES, SETTINGS};
-use crate::ui::asset::loader::SUPER_SHINY_FONT;
+use crate::ui::asset::loader::{DRAGON_IMAGE_BYTES, SUPER_SHINY_FONT};
 use crate::ui::component::widget::custom_heading::CustomHeading;
 use crate::ui::component::widget::custom_progress_bar::CustomProgressBar;
 use crate::ui::component::widget::game_graphics::GameGraphics;
@@ -15,6 +15,7 @@ static GAME_GRAPHICS_ID: OnceLock<Uuid> = OnceLock::new();
 static RESOURCE_HUD_ID: OnceLock<Uuid> = OnceLock::new();
 
 pub fn show_main_game(ui: &mut Ui, game_data: Arc<GameData>, frame: &mut Frame) {
+    let icons = game_data.icons.read().unwrap();
     let game_state = *game_data.game_state.read().unwrap();
     let hud_id = RESOURCE_HUD_ID.get_or_init(Uuid::new_v4);
 
@@ -30,6 +31,14 @@ pub fn show_main_game(ui: &mut Ui, game_data: Arc<GameData>, frame: &mut Frame) 
         }
         GameState::Playing => {
             ui.put(game_rect, GameGraphics::new(Arc::clone(&game_data), frame));
+        },
+        GameState::Dead => {
+            let dragon_picture = icons.get("dragon").cloned();
+            if let Some(dragon) = &dragon_picture {
+                ui.add(Image::new(dragon).fit_to_exact_size(Vec2::new(1400.0, 1200.0)));
+            } else {
+                ui.label("No death background loaded.");
+            }
         }
         _ => {}
     }

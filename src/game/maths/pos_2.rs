@@ -5,6 +5,10 @@ pub const INVALID_POSITION: i32 = i32::MIN; // -2,147,483,648
 pub const FIXED_POINT_SCALE: i32 = 1024;
 pub const FIXED_POINT_SHIFT: i32 = 10;
 
+pub const INVALID_POS2: Pos2FixedPoint = Pos2FixedPoint {
+    x: INVALID_POSITION,
+    y: INVALID_POSITION,
+};
 
 #[derive(Clone, Copy, Default, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Pos2FixedPoint {

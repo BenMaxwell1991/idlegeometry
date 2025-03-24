@@ -6,7 +6,7 @@ use crate::game::map::camera_state::CameraState;
 use crate::game::map::game_map::GameMap;
 use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
 use crate::game::objects::animation::Animation;
-use crate::game::objects::attacks::attack_defaults::get_basic_attack;
+use crate::game::objects::attacks::attack_defaults::{get_basic_attack, get_modified_attack};
 use crate::game::objects::attacks::attack_stats::AttackName;
 use crate::game::objects::game_object::{add_units, GameObject};
 use crate::game::objects::object_shape::ObjectShape;
@@ -23,16 +23,16 @@ use std::sync::Arc;
 use std::time::Duration;
 
 const TILE_SIZE: i32 = 40 * FIXED_POINT_SCALE;
-const X_TILE_COUNT: usize = 50;
-const Y_TILE_COUNT: usize = 50;
+const X_TILE_COUNT: usize = 60;
+const Y_TILE_COUNT: usize = 60;
 const X_CENTER: i32 = TILE_SIZE * X_TILE_COUNT as i32 / 2;
 const Y_CENTER: i32 = TILE_SIZE * Y_TILE_COUNT as i32 / 2;
 
 pub fn init(game_data: GameData) -> GameData {
 
-    // let (steam_client, single) = steamworks::Client::init_app(480).expect("Failed to initialize Steam");
+    // let (steam_client, single) = steamworks::Client::init_app(3585270).expect("Failed to initialize Steam");
     // println!("Logged in as: {}", steam_client.friends().name());
-    // game_data.set_field(STEAM_CLIENT, steam_client);
+    // *acquire_lock_mut(&game_data.steam_client, "steam_client") = Some(steam_client);
 
     init_map(&game_data);
     println!("Initialised Map");
@@ -91,6 +91,7 @@ fn init_map(game_data: &GameData) {
 
 fn init_attacks(game_data: &GameData) {
     let pool_config = vec![
+        (AttackName::Proximity, 2000),
         (AttackName::Swipe, 200),
         (AttackName::FireBolt, 1000),
         (AttackName::LightningBolt, 3000),
@@ -101,20 +102,22 @@ fn init_attacks(game_data: &GameData) {
 
 fn init_player(game_data: &GameData) {
     let animation = Animation::new(BABY_GREEN_DRAGON, Duration::from_secs(2), (50, 50));
-    let mut player = GameObject::new(ObjectType::Player, ObjectShape::new(40 * FIXED_POINT_SCALE, 40 * FIXED_POINT_SCALE), DEFAULT_MOVE_SPEED, 10.0, 5.0, animation);
+    let mut player = GameObject::new(ObjectType::Player, ObjectShape::new(40 * FIXED_POINT_SCALE, 40 * FIXED_POINT_SCALE), DEFAULT_MOVE_SPEED, 100.0, 100.0, Some(animation));
 
     let upgrade = Upgrade {
         upgrade_type: UpgradeType::DecreaseCooldown,
         level: 2,
     };
 
-    player.attack_cooldowns.insert(AttackName::Swipe, 2.0);
-    player.attack_cooldowns.insert(AttackName::FireBolt, 3.0);
-    player.attack_cooldowns.insert(AttackName::LightningBolt, 5.0);
+    for name in [AttackName::Swipe, AttackName::FireBolt, AttackName::LightningBolt] {
+        player.attack_cooldowns.insert(name, get_modified_attack(&vec!(upgrade.clone()), name).attack_stats.unwrap().cooldown);
+    }
+
     player.upgrades.push(upgrade);
     player.pickup_radius = Some(300 * FIXED_POINT_SCALE);
 
-    add_units(vec![player], vec![Pos2FixedPoint::new(X_CENTER, Y_CENTER)], game_data);
+    let player_position = Pos2FixedPoint::new(X_CENTER, Y_CENTER);
+    add_units(vec![player], vec![player_position], game_data);
 
     let player_id = game_data.units.read().unwrap()
         .iter()
@@ -124,6 +127,8 @@ fn init_player(game_data: &GameData) {
 
     let mut player_id_lock = game_data.player_id.write().unwrap();
     *player_id_lock = player_id;
+    let mut player_position_lock = game_data.player_position.write().unwrap();
+    *player_position_lock = Some(player_position);
 }
 
 fn init_enemies(game_data: &GameData) {

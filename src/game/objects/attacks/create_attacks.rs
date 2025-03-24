@@ -69,7 +69,10 @@ pub fn spawn_attack(
             if let Some(pool) = attack_pools.get_mut(&attack_name) {
                 if let Some(mut attack_unit) = pool.pop() {
                     attack_unit.parent_unit_id = unit_id;
-                    attack_unit.animation.animation_frame = 0.0;
+
+                    if let Some(mut animation) = attack_unit.animation.as_mut() {
+                        animation.animation_frame = 0.0;
+                    }
 
                     if let Some(attack_stats) = &mut attack_unit.attack_stats {
                         attack_stats.enabled = true;

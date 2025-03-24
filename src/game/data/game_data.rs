@@ -19,12 +19,14 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
+use steamworks::Client;
 
 #[derive(Clone)]
 pub struct GameData {
     pub game_loop_active: Arc<AtomicBool>,
 
     pub store: Arc<RwLock<HashMap<String, Arc<RwLock<Box<dyn Any + Send + Sync>>>>>>,
+    pub steam_client: Arc<RwLock<Option<Client>>>,
     pub resources: Arc<RwLock<FxHashMap<String, f64>>>,
     pub game_map: Arc<RwLock<Option<GameMap>>>,
 
@@ -35,6 +37,8 @@ pub struct GameData {
     pub damage_numbers: Arc<RwLock<Vec<DamageNumber>>>,
 
     pub player_id: Arc<RwLock<Option<u32>>>,
+    pub player_position: Arc<RwLock<Option<Pos2FixedPoint>>>,
+    pub player_dead: Arc<RwLock<bool>>,
 
     pub spatial_hash_grid: Arc<RwLock<SpatialHashGrid>>,
     pub offscreen_renderer: Arc<RwLock<Option<OffscreenRenderer>>>,
@@ -58,6 +62,7 @@ impl GameData {
             game_loop_active: Arc::new(AtomicBool::new(false)),
 
             store: Arc::new(RwLock::new(HashMap::new())),
+            steam_client: Arc::new(RwLock::new(None)),
             resources: Arc::new(RwLock::new(FxHashMap::default())),
             game_map: Arc::new(RwLock::new(None)),
 
@@ -68,6 +73,8 @@ impl GameData {
             damage_numbers: Arc::new(RwLock::new(Vec::new())),
 
             player_id: Arc::new(RwLock::new(None)),
+            player_position: Arc::new(RwLock::new(None)),
+            player_dead: Arc::new(RwLock::new(false)),
 
             spatial_hash_grid: Arc::new(RwLock::new(SpatialHashGrid::new())),
             offscreen_renderer: Arc::new(RwLock::new(None)),

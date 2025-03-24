@@ -8,12 +8,13 @@ use crate::game::objects::object_type::ObjectType;
 use crate::game::objects::on_death::OnDeath;
 use crate::game::objects::unit_defaults::collectable_01_basic_monster;
 use crate::game::objects::upgrades::{Upgrade, UpgradeType};
-use crate::helper::lock_helper::acquire_lock_mut;
+use crate::helper::lock_helper::{acquire_lock, acquire_lock_mut};
 use rayon::iter::*;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::mem::swap;
 use std::sync::Arc;
 use std::time::Instant;
+use crate::enums::gamestate::GameState;
 
 #[derive(Clone, Debug)]
 pub struct GameObject {
@@ -23,7 +24,7 @@ pub struct GameObject {
     pub move_speed: i32,
     pub health_max: f32,
     pub health_current: f32,
-    pub animation: Animation,
+    pub animation: Option<Animation>,
     pub attack_cooldowns: FxHashMap<AttackName, f32>,
     pub upgrades: Vec<Upgrade>,
     pub pickup_radius: Option<i32>,
@@ -35,7 +36,7 @@ pub struct GameObject {
 }
 
 impl GameObject {
-    pub fn new(object_type: ObjectType, object_shape: ObjectShape, move_speed: i32, health_max: f32, health_current: f32, animation: Animation) -> Self {
+    pub fn new(object_type: ObjectType, object_shape: ObjectShape, move_speed: i32, health_max: f32, health_current: f32, animation: Option<Animation>) -> Self {
         Self {
             id: u32::MAX,
             object_type,
@@ -54,9 +55,13 @@ impl GameObject {
         }
     }
     pub fn apply_damage(&mut self, damage: f64) -> bool {
-        self.health_current -= damage as f32;
-        self.animation.last_damage_time = Some(Instant::now());
-        self.health_current <= 0.0
+        if let Some(mut animation) = self.animation.as_mut() {
+            self.health_current -= damage as f32;
+            animation.last_damage_time = Some(Instant::now());
+            self.health_current <= 0.0
+        } else {
+            false
+        }
     }
 }
 
@@ -102,6 +107,11 @@ pub fn remove_units(unit_ids: Vec<u32>, game_data: Arc<GameData>) -> Vec<(GameOb
                     sounds_to_play.insert(sound.clone());
                 }
 
+                if unit.object_type == ObjectType::Player {
+                    *acquire_lock_mut(&game_data.player_dead, "player_dead") = true;
+                    *acquire_lock_mut(&game_data.game_state, "game_state") = GameState::Dead;
+                }
+
                 // If the unit is an enemy with loot, return a collectable
                 if unit.object_type == ObjectType::Enemy {
                     if let Some(loot) = unit.loot {
@@ -138,6 +148,8 @@ pub fn move_units_batched(unit_positions_updates: &[(u32, Pos2FixedPoint, Pos2Fi
 
     if let Some(id) = player_id {
         if let Some((_, _, new_pos)) = unit_positions_updates.iter().find(|&&(unit_id, _, _)| unit_id == id) {
+            let mut player_position_lock = game_data.player_position.write().unwrap();
+            *player_position_lock = Some(*new_pos);
             camera_state.set_target(*new_pos);
             camera_state.move_to_target();
         }

@@ -15,13 +15,14 @@ pub const UPGRADE_IMAGE_BYTES: &[u8] = include_bytes!("icon/upgrade.png");
 pub const EXIT_IMAGE_BYTES: &[u8] = include_bytes!("icon/exit.png");
 pub const COIN_IMAGE_BYTES: &[u8] = include_bytes!("icon/icon_coin.png");
 pub const RUBY_IMAGE_BYTES: &[u8] = include_bytes!("icon/icon_ruby.png");
+pub const DRAGON_IMAGE_BYTES: &[u8] = include_bytes!("image/dragon.png");
 
 // Fonts
 pub const SUPER_SHINY_FONT: &str = "super_shiny";
 pub const SUPER_SHINY_FONT_BYTES: &[u8] = include_bytes!("font/super_shiny.ttf");
 
 
-const ICON_DATA: [(&str, &[u8]); 7] = [
+const ICON_DATA: [(&str, &[u8]); 8] = [
     ("adventure", ADVENTURE_IMAGE_BYTES),
     ("settings", SETTINGS_IMAGE_BYTES),
     ("shop", SHOP_IMAGE_BYTES),
@@ -29,6 +30,7 @@ const ICON_DATA: [(&str, &[u8]); 7] = [
     ("exit", EXIT_IMAGE_BYTES),
     ("coin", COIN_IMAGE_BYTES),
     ("ruby", RUBY_IMAGE_BYTES),
+    ("dragon", DRAGON_IMAGE_BYTES),
 ];
 
 pub fn load_icons(ctx: &Context, game_data: &GameData) {

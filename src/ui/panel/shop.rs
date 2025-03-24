@@ -1,5 +1,5 @@
 use crate::game::data::game_data::GameData;
-use crate::game::data::stored_data::STEAM_CLIENT;
+use crate::helper::lock_helper::acquire_lock;
 use crate::ui::component::widget::custom_button::CustomButton;
 use crate::ui::component::widget::custom_heading::CustomHeading;
 use eframe::egui;
@@ -10,7 +10,7 @@ pub fn show_shop(ui: &mut egui::Ui, game_data: &GameData) {
     ui.add(CustomHeading::new("Shop Coming Soon"));
     ui.separator();
 
-    if let Some(steam_client) = game_data.get_field(STEAM_CLIENT) {
+    if let Some(steam_client) = acquire_lock(&game_data.steam_client, "steam_client").as_ref() {
         user_name = steam_client.friends().name();
     }
 

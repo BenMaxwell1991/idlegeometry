@@ -9,6 +9,7 @@ use crate::game::objects::sound::Sound;
 use crate::ui::asset::sprite::sprite_sheet::{ADULT_WHITE_DRAGON, AQUA_DRAKE, TREASURE, YOUNG_RED_DRAGON};
 use crate::ui::sound::kira_audio::SOUND_01;
 use std::time::Duration;
+use crate::game::objects::attacks::attack_stats::AttackName;
 
 pub fn create_01_baby_dragon() -> GameObject {
     let animation = Animation::new(YOUNG_RED_DRAGON, Duration::from_secs(2), (25, 25));
@@ -19,8 +20,10 @@ pub fn create_01_baby_dragon() -> GameObject {
         25 * FIXED_POINT_SCALE,
         1.0,
         1.0,
-        animation
+        Some(animation)
     );
+
+    unit.attack_cooldowns.insert(AttackName::Proximity, 2.0);
 
     let loot = Loot {
         gold: 1.0,
@@ -45,7 +48,7 @@ pub fn create_02_aqua_drake() -> GameObject {
         40 * FIXED_POINT_SCALE,
         10.0,
         10.0,
-        animation
+        Some(animation)
     );
 
     let loot = Loot {
@@ -71,7 +74,7 @@ pub fn create_03_adult_white_dragon() -> GameObject {
         30 * FIXED_POINT_SCALE,
         100.0,
         100.0,
-        animation
+        Some(animation)
     );
 
     let loot = Loot {
@@ -99,7 +102,7 @@ pub fn collectable_01_basic_monster(loot: Option<Loot>) -> GameObject {
         30 * FIXED_POINT_SCALE,
         100.0,
         100.0,
-        animation
+        Some(animation)
     );
 
     let sound = Sound {

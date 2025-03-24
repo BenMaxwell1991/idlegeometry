@@ -27,6 +27,5 @@ pub const CURRENT_TAB: StoredData<GameTab> = StoredData::new("current_tab");
 pub const SETTINGS: StoredData<Settings> = StoredData::new("settings");
 pub const KEY_STATE: StoredData<Arc<KeyState>> = StoredData::new("key_state");
 pub const RESOURCES: StoredData<Vec<Resource>> = StoredData::new("resources");
-pub const STEAM_CLIENT: StoredData<Client> = StoredData::new("steam_client");
 pub const SPRITE_SHEETS_NATIVE: StoredData<FxHashMap<String, SpriteSheet>> = StoredData::new("sprite_sheets_native");
 pub const GAME_IN_FOCUS: StoredData<bool> = StoredData::new("game_in_focus");
