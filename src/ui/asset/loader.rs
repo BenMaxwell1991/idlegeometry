@@ -16,6 +16,8 @@ pub const EXIT_IMAGE_BYTES: &[u8] = include_bytes!("icon/exit.png");
 pub const COIN_IMAGE_BYTES: &[u8] = include_bytes!("icon/icon_coin.png");
 pub const RUBY_IMAGE_BYTES: &[u8] = include_bytes!("icon/icon_ruby.png");
 pub const DRAGON_IMAGE_BYTES: &[u8] = include_bytes!("image/dragon.png");
+pub const DRAGONS_LAIR_IMAGE_BYTES: &[u8] = include_bytes!("image/dragons_lair.png");
+pub const DRAGON_HEART_GEMSTONE_IMAGE_BYTES: &[u8] = include_bytes!("image/dragon_heart_gemstone.png");
 
 // Fonts
 pub const SUPER_SHINY_FONT: &str = "super_shiny";
@@ -28,7 +30,7 @@ const FONTS_DATA: [(&str, &[u8]); 2] = [
     (DP_COMIC_FONT, DP_COMIC_FONT_BYTES),
 ];
 
-const ICON_DATA: [(&str, &[u8]); 8] = [
+const ICON_DATA: [(&str, &[u8]); 10] = [
     ("adventure", ADVENTURE_IMAGE_BYTES),
     ("settings", SETTINGS_IMAGE_BYTES),
     ("shop", SHOP_IMAGE_BYTES),
@@ -37,6 +39,8 @@ const ICON_DATA: [(&str, &[u8]); 8] = [
     ("coin", COIN_IMAGE_BYTES),
     ("ruby", RUBY_IMAGE_BYTES),
     ("dragon", DRAGON_IMAGE_BYTES),
+    ("dragons_lair", DRAGONS_LAIR_IMAGE_BYTES),
+    ("dragons_heart", DRAGON_HEART_GEMSTONE_IMAGE_BYTES),
 ];
 
 pub fn load_icons(ctx: &Context, game_data: &GameData) {

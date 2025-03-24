@@ -6,6 +6,7 @@ use crate::ui::asset::loader::DP_COMIC_FONT;
 
 pub struct LabelNoInteract<'a> {
     pub text: &'a str,
+    pub font: String,
     pub font_size: f32,
     pub colour: Color32,
     pub shadow_colour: Option<Color32>,
@@ -15,7 +16,7 @@ pub struct LabelNoInteract<'a> {
 
 impl<'a> LabelNoInteract<'a> {
     pub fn new(text: &'a str, font: String, font_size: f32, colour: Color32) -> Self {
-        Self { text, font_size, colour, shadow_colour: None, shadow_offset: None, text_wrapped: false }
+        Self { text, font, font_size, colour, shadow_colour: None, shadow_offset: None, text_wrapped: false }
     }
 
     pub fn with_shadow(mut self, shadow_colour: Color32, shadow_offset: Vec2) -> Self {
@@ -32,7 +33,7 @@ impl<'a> LabelNoInteract<'a> {
 
 impl<'a> Widget for LabelNoInteract<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
-        let font_id = FontId::new(self.font_size, FontFamily::Name(DP_COMIC_FONT.into()));
+        let font_id = FontId::new(self.font_size, FontFamily::Name(self.font.clone().into()));
 
         let galley = ui.fonts(|fonts| {
             if self.text_wrapped {

@@ -7,44 +7,52 @@ use crate::ui::component::widget::custom_heading::CustomHeading;
 use crate::ui::component::widget::custom_progress_bar::CustomProgressBar;
 use crate::ui::component::widget::game_graphics::GameGraphics;
 use crate::ui::panel::death_menu::show_death_menu;
-use crate::ui::panel::game_menu_lair::show_game_menu_lair;
+use crate::ui::panel::game_menu_lair::show_begin_adventure;
 use crate::ui::panel::game_menu_paused::show_game_menu_paused;
 use eframe::{egui, Frame};
 use egui::{Align, Color32, FontFamily, FontId, Image, Layout, Pos2, Rect, RichText, StrokeKind, Ui, UiBuilder, Vec2};
 use std::process::exit;
 use std::sync::{Arc, OnceLock};
 use uuid::Uuid;
+use crate::ui::component::widget::lair_object::LairObject;
 
 static GAME_GRAPHICS_ID: OnceLock<Uuid> = OnceLock::new();
 static RESOURCE_HUD_ID: OnceLock<Uuid> = OnceLock::new();
 
 pub fn show_main_game(ui: &mut Ui, game_data: Arc<GameData>, frame: &mut Frame) {
-    ui.add(CustomHeading::new("Adventure Mode"));
-    ui.separator();
-
-    let game_rect = ui.available_rect_before_wrap();
-    let game_state = *game_data.game_state.read().unwrap();
-
+    let game_state = acquire_lock(&game_data.game_state, "game_state").clone();
 
     match game_state {
-        GameState::Lair => handle_game_state_lair(ui, &game_data, game_rect),
-        GameState::Playing => handle_game_state_playing(ui, &game_data, frame, game_rect),
-        GameState::Paused => handle_game_state_paused(ui, &game_data, game_rect),
-        GameState::Dead => handle_game_state_dead(ui, &game_data, game_rect),
+        GameState::Lair => handle_game_state_lair(ui, &game_data),
+        GameState::Playing => handle_game_state_playing(ui, &game_data, frame),
+        GameState::Paused => handle_game_state_paused(ui, &game_data),
+        GameState::Dead => handle_game_state_dead(ui, &game_data),
         GameState::Quitting => handle_game_state_quitting(),
     }
 }
 
-fn handle_game_state_lair(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
-    show_game_menu_lair(ui, game_data, game_rect);
+fn handle_game_state_lair(ui: &mut Ui, game_data: &GameData) {
+    ui.add(CustomHeading::new("Dragons Lair"));
+    ui.separator();
+    let game_rect = ui.available_rect_before_wrap();
+
+
+    draw_background_lair(ui, game_data, game_rect);
+    draw_lair_objects(ui, game_data, game_rect);
+
 
     let hud_size = Vec2::new(210.0, 100.0);
     let hud_pos = Pos2::new(game_rect.min.x + 20.0, game_rect.min.y + 20.0);
     let hud_rect = Rect::from_min_size(hud_pos, hud_size);
+    show_begin_adventure(ui, game_data, game_rect);
     draw_resource_hud_lair(ui, game_data, hud_rect);
 }
 
-fn handle_game_state_playing(ui: &mut Ui, game_data: &Arc<GameData>, frame: &mut Frame, game_rect: Rect) {
+fn handle_game_state_playing(ui: &mut Ui, game_data: &Arc<GameData>, frame: &mut Frame) {
+    ui.add(CustomHeading::new("Adventure Mode"));
+    ui.separator();
+    let game_rect = ui.available_rect_before_wrap();
+
     ui.put(game_rect, GameGraphics::new(Arc::clone(game_data), frame));
 
     let (hud_rect, progress_rect) = get_hud_rects(&game_rect);
@@ -61,11 +69,19 @@ fn handle_game_state_playing(ui: &mut Ui, game_data: &Arc<GameData>, frame: &mut
     }
 }
 
-fn handle_game_state_paused(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
+fn handle_game_state_paused(ui: &mut Ui, game_data: &GameData) {
+    ui.add(CustomHeading::new("Adventure Mode"));
+    ui.separator();
+    let game_rect = ui.available_rect_before_wrap();
+
     show_game_menu_paused(ui, game_data, game_rect);
 }
 
-fn handle_game_state_dead(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
+fn handle_game_state_dead(ui: &mut Ui, game_data: &GameData) {
+    ui.add(CustomHeading::new("Adventure Mode"));
+    ui.separator();
+    let game_rect = ui.available_rect_before_wrap();
+
     let icons = game_data.icons.read().unwrap();
     let dragon_picture = icons.get("dragon").cloned();
 
@@ -87,6 +103,56 @@ fn handle_game_state_quitting() {
     exit(0);
 }
 
+fn draw_lair_objects(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
+    let widget_size = Vec2::new(450.0, 100.0);
+    let spacing = 10.0;
+    let num_objects = 7;
+
+    let mut objects = Vec::new();
+    let mut top = game_rect.top() + 20.0;
+
+    for i in 0..num_objects {
+        let center_x = game_rect.center().x;
+        let rect = Rect::from_center_size(
+            Pos2::new(center_x, top + widget_size.y / 2.0),
+            widget_size,
+        );
+
+        objects.push(LairObject::new("Basic Worker", i + 1, rect));
+        top += widget_size.y + spacing;
+    }
+
+    let total_height = num_objects as f32 * (widget_size.y + spacing);
+    let list_rect = Rect::from_center_size(game_rect.center(), Vec2::new(widget_size.x, total_height));
+
+    ui.allocate_new_ui(
+        UiBuilder::new()
+            .max_rect(list_rect)
+            .layout(Layout::top_down(Align::Center)),
+        |ui| {
+            for lair_object in objects {
+                ui.add(lair_object);
+                ui.add_space(spacing);
+            }
+        },
+    );
+}
+
+fn draw_background_lair(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
+    let icons = game_data.icons.read().unwrap();
+    let dragons_lair_image = icons.get("dragons_lair").cloned();
+
+    if let Some(image) = &dragons_lair_image {
+        let max = game_rect.width().max(game_rect.height());
+        ui.add(
+            Image::new(image)
+                .fit_to_exact_size(Vec2::new(max, max))
+                .tint(Color32::from_rgba_unmultiplied(196, 196, 196, 255)),
+        );
+    } else {
+        ui.label("No lair background loaded.");
+    }
+}
 
 fn draw_resource_hud_lair(ui: &mut Ui, game_data: &GameData, hud_rect: Rect) {
     let settings = game_data.get_field(SETTINGS).unwrap();

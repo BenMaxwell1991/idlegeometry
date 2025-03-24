@@ -7,8 +7,8 @@ use eframe::egui::{
     TextureHandle, Ui, UiBuilder, Vec2, Widget,
 };
 use eframe::emath::{Pos2, Rect};
-use std::string::ToString;
 use eframe::epaint::FontFamily;
+use std::string::ToString;
 
 const BUTTON_SIZE: Vec2 = Vec2::new(200.0, 50.0);
 const TEXT_COLOUR: Color32 = Color32::WHITE;
