@@ -7,7 +7,7 @@
     "autosave_interval": 5,
     "number_format_mode": "Engineering",
     "vsync": true,
-    "window_height": 1080.0,
-    "window_width": 1920.0
+    "window_height": 720.0,
+    "window_width": 1280.0
   }
 }

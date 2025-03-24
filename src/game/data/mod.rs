@@ -5,3 +5,4 @@ pub mod stored_data;
 pub mod damage_numbers;
 pub mod player_data;
 pub mod initialise_adventure;
+pub mod resource_cost;

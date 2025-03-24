@@ -104,8 +104,11 @@ fn handle_game_state_quitting() {
 }
 
 fn draw_lair_objects(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
-    let widget_size = Vec2::new(450.0, 100.0);
-    let spacing = 10.0;
+    let icons = game_data.icons.read().unwrap();
+    let image = icons.get("dragons_heart").cloned();
+
+    let widget_size = Vec2::new(500.0, 100.0);
+    let spacing = 30.0;
     let num_objects = 7;
 
     let mut objects = Vec::new();
@@ -116,9 +119,9 @@ fn draw_lair_objects(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
         let rect = Rect::from_center_size(
             Pos2::new(center_x, top + widget_size.y / 2.0),
             widget_size,
-        );
+    );
 
-        objects.push(LairObject::new("Basic Worker", i + 1, rect));
+        objects.push(LairObject::new("Basic Worker", i + 1, rect, image.clone()));
         top += widget_size.y + spacing;
     }
 
