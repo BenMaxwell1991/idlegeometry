@@ -1,6 +1,7 @@
 use std::time::Duration;
 use rand::random_range;
 use crate::game::data::game_data::GameData;
+use crate::game::data::resource_cost::ResourceAmount;
 use crate::game::map::camera_state::CameraState;
 use crate::game::map::game_map::GameMap;
 use crate::game::maths::pos_2::{Pos2FixedPoint, FIXED_POINT_SCALE};
@@ -109,19 +110,5 @@ fn init_enemies(game_data: &GameData) {
 }
 
 fn init_resources(game_data: &GameData) {
-    {
-        let mut resources = game_data.resources.write().unwrap();
-        if !resources.contains_key("Gold") {
-            resources.insert("Gold".to_string(), 0.0);
-            println!("Gold initialized to 0.0");
-        }
-        if !resources.contains_key("Ruby") {
-            resources.insert("Ruby".to_string(), 0.0);
-            println!("Ruby initialized to 0.0");
-        }
-        if !resources.contains_key("Food") {
-            resources.insert("Ruby".to_string(), 0.0);
-            println!("Food initialized to 0.0");
-        }
-    }
+    *acquire_lock_mut(&game_data.resource_amounts, "resource_amounts") = ResourceAmount::default();
 }

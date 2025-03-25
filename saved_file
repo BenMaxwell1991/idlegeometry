@@ -1,6 +1,14 @@
 {
   "player_data": {
-    "resources_persistent": {},
+    "resources_persistent": {
+      "exp": null,
+      "experience": null,
+      "fire": null,
+      "food": null,
+      "gemstone": null,
+      "gold": null,
+      "ruby": null
+    },
     "upgrades": []
   },
   "settings": {

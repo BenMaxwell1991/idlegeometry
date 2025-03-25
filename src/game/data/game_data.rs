@@ -21,6 +21,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 use steamworks::Client;
+use crate::game::data::resource_cost::ResourceAmount;
 
 #[derive(Clone)]
 pub struct GameData {
@@ -28,7 +29,7 @@ pub struct GameData {
 
     pub store: Arc<RwLock<HashMap<String, Arc<RwLock<Box<dyn Any + Send + Sync>>>>>>,
     pub steam_client: Arc<RwLock<Option<Client>>>,
-    pub resources: Arc<RwLock<FxHashMap<String, f64>>>,
+    pub resource_amounts: Arc<RwLock<ResourceAmount>>,
     pub game_map: Arc<RwLock<Option<GameMap>>>,
 
     pub units: Arc<RwLock<Vec<Option<GameObject>>>>,
@@ -65,7 +66,7 @@ impl GameData {
 
             store: Arc::new(RwLock::new(HashMap::new())),
             steam_client: Arc::new(RwLock::new(None)),
-            resources: Arc::new(RwLock::new(FxHashMap::default())),
+            resource_amounts: Arc::new(RwLock::new(ResourceAmount::default())),
             game_map: Arc::new(RwLock::new(None)),
 
             units: Arc::new(RwLock::new(Vec::new())),

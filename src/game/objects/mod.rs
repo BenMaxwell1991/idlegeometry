@@ -9,4 +9,3 @@ pub mod unit_defaults;
 pub mod on_death;
 pub mod sound;
 pub mod attacks;
-pub mod lair_object;

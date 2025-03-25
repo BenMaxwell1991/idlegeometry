@@ -8,6 +8,18 @@ use std::sync::Arc;
 
 
 // Icons
+pub const ADVENTURE_IMAGE: &str = "adventure";
+pub const SETTINGS_IMAGE: &str = "settings";
+pub const SHOP_IMAGE: &str = "shop";
+pub const UPGRADE_IMAGE: &str = "upgrade";
+pub const EXIT_IMAGE: &str = "exit";
+pub const COIN_IMAGE: &str = "coin";
+pub const RUBY_IMAGE: &str = "ruby";
+pub const DRAGON_IMAGE: &str = "dragon";
+pub const DRAGONS_LAIR_IMAGE: &str = "dragons_lair";
+pub const DRAGON_HEART_GEMSTONE_IMAGE: &str = "dragons_heart";
+pub const IMP_CHEF_IMAGE: &str = "imp_chef";
+
 pub const ADVENTURE_IMAGE_BYTES: &[u8] = include_bytes!("icon/adventure.png");
 pub const SETTINGS_IMAGE_BYTES: &[u8] = include_bytes!("icon/settings.png");
 pub const SHOP_IMAGE_BYTES: &[u8] = include_bytes!("icon/shop.png");
@@ -18,6 +30,7 @@ pub const RUBY_IMAGE_BYTES: &[u8] = include_bytes!("icon/icon_ruby.png");
 pub const DRAGON_IMAGE_BYTES: &[u8] = include_bytes!("image/dragon.png");
 pub const DRAGONS_LAIR_IMAGE_BYTES: &[u8] = include_bytes!("image/dragons_lair.png");
 pub const DRAGON_HEART_GEMSTONE_IMAGE_BYTES: &[u8] = include_bytes!("image/dragon_heart_gemstone.png");
+pub const IMP_CHEF_IMAGE_BYTES: &[u8] = include_bytes!("image/imp_chef.png");
 
 // Fonts
 pub const SUPER_SHINY_FONT: &str = "super_shiny";
@@ -30,17 +43,18 @@ const FONTS_DATA: [(&str, &[u8]); 2] = [
     (DP_COMIC_FONT, DP_COMIC_FONT_BYTES),
 ];
 
-const ICON_DATA: [(&str, &[u8]); 10] = [
-    ("adventure", ADVENTURE_IMAGE_BYTES),
-    ("settings", SETTINGS_IMAGE_BYTES),
-    ("shop", SHOP_IMAGE_BYTES),
-    ("upgrade", UPGRADE_IMAGE_BYTES),
-    ("exit", EXIT_IMAGE_BYTES),
-    ("coin", COIN_IMAGE_BYTES),
-    ("ruby", RUBY_IMAGE_BYTES),
-    ("dragon", DRAGON_IMAGE_BYTES),
-    ("dragons_lair", DRAGONS_LAIR_IMAGE_BYTES),
-    ("dragons_heart", DRAGON_HEART_GEMSTONE_IMAGE_BYTES),
+const ICON_DATA: [(&str, &[u8]); 11] = [
+    (ADVENTURE_IMAGE, ADVENTURE_IMAGE_BYTES),
+    (SETTINGS_IMAGE, SETTINGS_IMAGE_BYTES),
+    (SHOP_IMAGE, SHOP_IMAGE_BYTES),
+    (UPGRADE_IMAGE, UPGRADE_IMAGE_BYTES),
+    (EXIT_IMAGE, EXIT_IMAGE_BYTES),
+    (COIN_IMAGE, COIN_IMAGE_BYTES),
+    (RUBY_IMAGE, RUBY_IMAGE_BYTES),
+    (DRAGON_IMAGE, DRAGON_IMAGE_BYTES),
+    (DRAGONS_LAIR_IMAGE, DRAGONS_LAIR_IMAGE_BYTES),
+    (DRAGON_HEART_GEMSTONE_IMAGE, DRAGON_HEART_GEMSTONE_IMAGE_BYTES),
+    (IMP_CHEF_IMAGE, IMP_CHEF_IMAGE_BYTES),
 ];
 
 pub fn load_icons(ctx: &Context, game_data: &GameData) {

@@ -42,7 +42,7 @@ impl KiraAudio {
     pub fn new() -> Self {
         let mut manager = AudioManager::new(AudioManagerSettings::default()).unwrap_or_else(|e| {
             eprintln!("Failed to initialize audio manager: {}", e);
-            std::process::exit(1);
+            exit(1);
         });
 
         // Load sound effects (static)
@@ -50,7 +50,7 @@ impl KiraAudio {
         for (name, bytes) in SOUND_EFFECTS {
             let sound_data = StaticSoundData::from_cursor(Cursor::new(bytes)).unwrap_or_else(|e| {
                 eprintln!("Failed to load static sound effect {}: {}", name, e);
-                std::process::exit(1);
+                exit(1);
             });
             sound_effects.insert(name.to_string(), sound_data);
         }

@@ -2,21 +2,19 @@ use crate::enums::gamestate::GameState;
 use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::SETTINGS;
 use crate::helper::lock_helper::acquire_lock;
-use crate::ui::asset::loader::DP_COMIC_FONT;
+use crate::ui::asset::loader::{COIN_IMAGE, DP_COMIC_FONT, DRAGONS_LAIR_IMAGE, DRAGON_HEART_GEMSTONE_IMAGE, DRAGON_IMAGE, RUBY_IMAGE};
 use crate::ui::component::widget::custom_heading::CustomHeading;
 use crate::ui::component::widget::custom_progress_bar::CustomProgressBar;
 use crate::ui::component::widget::game_graphics::GameGraphics;
+use crate::ui::component::widget::lair_object::{get_lair_object, LairObject};
 use crate::ui::panel::death_menu::show_death_menu;
 use crate::ui::panel::game_menu_lair::show_begin_adventure;
 use crate::ui::panel::game_menu_paused::show_game_menu_paused;
 use eframe::{egui, Frame};
-use egui::{scroll_area, Align, Color32, FontFamily, FontId, Image, Layout, Pos2, Rect, RichText, ScrollArea, Sense, StrokeKind, Ui, UiBuilder, Vec2};
+use egui::{Align, Color32, FontFamily, FontId, Image, Layout, Pos2, Rect, RichText, ScrollArea, StrokeKind, Ui, UiBuilder, Vec2};
 use std::process::exit;
 use std::sync::{Arc, OnceLock};
-use egui::WidgetType::Label;
 use uuid::Uuid;
-use crate::ui::component::widget::label_no_interact::LabelNoInteract;
-use crate::ui::component::widget::lair_object::LairObject;
 
 static GAME_GRAPHICS_ID: OnceLock<Uuid> = OnceLock::new();
 static RESOURCE_HUD_ID: OnceLock<Uuid> = OnceLock::new();
@@ -34,7 +32,7 @@ pub fn show_main_game(ui: &mut Ui, game_data: Arc<GameData>, frame: &mut Frame) 
 }
 
 fn handle_game_state_lair(ui: &mut Ui, game_data: &GameData) {
-    ui.add(CustomHeading::new("Dragons Lair"));
+    ui.add(CustomHeading::new("Dragon's Lair"));
     ui.separator();
     let game_rect = ui.available_rect_before_wrap();
 
@@ -60,7 +58,9 @@ fn handle_game_state_playing(ui: &mut Ui, game_data: &Arc<GameData>, frame: &mut
 
     draw_resource_hud_active(ui, game_data, hud_rect);
 
-    if let Some(food_value) = acquire_lock(&game_data.resources, "resources").get("Food").cloned() {
+    let resource_amounts = acquire_lock(&game_data.resource_amounts, "resource_amounts").clone();
+
+    if let food_value = resource_amounts.food.unwrap_or(0.0) {
         ui.put(
             progress_rect,
             CustomProgressBar::new(food_value, 100.0)
@@ -84,7 +84,7 @@ fn handle_game_state_dead(ui: &mut Ui, game_data: &GameData) {
     let game_rect = ui.available_rect_before_wrap();
 
     let icons = game_data.icons.read().unwrap();
-    let dragon_picture = icons.get("dragon").cloned();
+    let dragon_picture = icons.get(DRAGON_IMAGE).cloned();
 
     if let Some(dragon) = &dragon_picture {
         let max = game_rect.width().max(game_rect.height());
@@ -105,25 +105,25 @@ fn handle_game_state_quitting() {
 }
 
 fn draw_lair_objects(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
-    let icons = game_data.icons.read().unwrap();
-    let image = icons.get("dragons_heart").cloned();
+    let icons = acquire_lock(&game_data.icons, "icons").clone();
 
     let widget_size = Vec2::new(500.0, 100.0);
-    let spacing = 20.0;
-    let num_objects = 50;
+    let spacing = 10.0;
+    let num_objects = 3;
 
     let mut objects = Vec::new();
     let mut top = game_rect.top() + 20.0;
 
     for i in 0..num_objects {
-        let center_x = game_rect.center().x;
-        let rect = Rect::from_center_size(
-            Pos2::new(center_x, top + widget_size.y / 2.0),
-            widget_size,
-    );
-
-        objects.push(LairObject::new("Basic Worker", i + 1, rect, image.clone()));
-        top += widget_size.y + spacing;
+        let mut object = get_lair_object(i, 0);
+        object.size = Some(widget_size);
+        if let Some(icon_name) = &object.icon_name {
+            object.icon = icons.get(icon_name).cloned();
+        }
+        if object.unlocked {
+            objects.push(object);
+            top += widget_size.y + spacing;
+        }
     }
 
     let scroll_area_width = widget_size.x;
@@ -133,6 +133,8 @@ fn draw_lair_objects(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
         Pos2::new(scroll_origin_x, game_rect.top()),
         Vec2::new(scroll_area_width, scroll_area_height),
     );
+
+    ui.painter().rect_filled(scroll_rect, 5.0, Color32::from_rgba_unmultiplied(0,0,0,196));
 
     ui.allocate_new_ui(
         UiBuilder::new()
@@ -153,7 +155,7 @@ fn draw_lair_objects(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
 
 fn draw_background_lair(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
     let icons = game_data.icons.read().unwrap();
-    let dragons_lair_image = icons.get("dragons_lair").cloned();
+    let dragons_lair_image = icons.get(DRAGONS_LAIR_IMAGE).cloned();
 
     if let Some(image) = &dragons_lair_image {
         let max = game_rect.width().max(game_rect.height());
@@ -169,14 +171,14 @@ fn draw_background_lair(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
 
 fn draw_resource_hud_lair(ui: &mut Ui, game_data: &GameData, hud_rect: Rect) {
     let settings = game_data.get_field(SETTINGS).unwrap();
-    let resources = game_data.resources.read().unwrap();
-    let icons = game_data.icons.read().unwrap();
+    let resources = acquire_lock(&game_data.player_data, "player_data").resources_persistent.clone();
+    let icons = acquire_lock(&game_data.icons, "icons").clone();
 
-    let gold = resources.get("Food").cloned().unwrap_or(0.0);
-    let ruby = resources.get("Ruby").cloned().unwrap_or(0.0);
+    let gold = resources.gold.unwrap_or(0.0);
+    let ruby = resources.ruby.unwrap_or(0.0);
 
-    let gold_icon = icons.get("coin").cloned();
-    let ruby_icon = icons.get("ruby").cloned();
+    let gold_icon = icons.get(COIN_IMAGE).cloned();
+    let ruby_icon = icons.get(RUBY_IMAGE).cloned();
 
     let painter = ui.painter();
 
@@ -219,14 +221,14 @@ fn draw_resource_hud_lair(ui: &mut Ui, game_data: &GameData, hud_rect: Rect) {
 }
 fn draw_resource_hud_active(ui: &mut Ui, game_data: &GameData, hud_rect: Rect) {
     let settings = game_data.get_field(SETTINGS).unwrap();
-    let resources = game_data.resources.read().unwrap();
-    let icons = game_data.icons.read().unwrap();
+    let resources = acquire_lock(&game_data.resource_amounts, "player_data").clone();
+    let icons = acquire_lock(&game_data.icons, "icons").clone();
 
-    let gold = resources.get("Gold").cloned().unwrap_or(0.0);
-    let ruby = resources.get("Ruby").cloned().unwrap_or(0.0);
+    let gold = resources.gold.unwrap_or(0.0);
+    let ruby = resources.ruby.unwrap_or(0.0);
 
-    let gold_icon = icons.get("coin").cloned();
-    let ruby_icon = icons.get("ruby").cloned();
+    let gold_icon = icons.get(COIN_IMAGE).cloned();
+    let ruby_icon = icons.get(RUBY_IMAGE).cloned();
 
     let painter = ui.painter();
 

@@ -4,6 +4,7 @@ use crate::game::data::stored_data::CURRENT_TAB;
 use crate::ui::component::widget::custom_button::CustomButton;
 use crate::ui::component::widget::custom_heading::CustomHeading;
 use egui::{Context, SidePanel};
+use crate::ui::asset::loader::{ADVENTURE_IMAGE, EXIT_IMAGE, SETTINGS_IMAGE, SHOP_IMAGE, UPGRADE_IMAGE};
 
 pub fn show_side_menu(ctx: &Context, game_data: &GameData) {
     SidePanel::left("side_panel")
@@ -15,10 +16,10 @@ pub fn show_side_menu(ctx: &Context, game_data: &GameData) {
             ui.separator();
 
             let buttons = vec![
-                ("adventure", "Adventure", GameTab::Adventure),
-                ("upgrade", "Upgrades", GameTab::Upgrades),
-                ("settings", "Settings", GameTab::Settings),
-                ("shop", "Shop", GameTab::Shop),
+                (ADVENTURE_IMAGE, "Adventure", GameTab::Adventure),
+                (UPGRADE_IMAGE, "Upgrades", GameTab::Upgrades),
+                (SETTINGS_IMAGE, "Settings", GameTab::Settings),
+                (SHOP_IMAGE, "Shop", GameTab::Shop),
             ];
 
             for (icon_name, text, tab) in buttons {
@@ -36,7 +37,7 @@ pub fn show_side_menu(ctx: &Context, game_data: &GameData) {
                 }
             }
 
-            if let Some(icon) = game_data.icons_inverted.read().unwrap().get("exit") {
+            if let Some(icon) = game_data.icons_inverted.read().unwrap().get(EXIT_IMAGE) {
                 ui.add(CustomButton::new(
                     Some(icon.clone()),
                     Some("Exit Game"),

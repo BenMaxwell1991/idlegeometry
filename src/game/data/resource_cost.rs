@@ -2,21 +2,25 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceAmount {
-    pub gold: f64,
-    pub ruby: f64,
-    pub gemstone: f64,
-    pub experience: f64,
-    pub fire: f64,
+    pub food: Option<f64>,
+    pub gold: Option<f64>,
+    pub exp: Option<f64>,
+    pub ruby: Option<f64>,
+    pub gemstone: Option<f64>,
+    pub experience: Option<f64>,
+    pub fire: Option<f64>,
 }
 
 impl Default for ResourceAmount {
     fn default() -> Self {
         Self {
-            gold: 0.0,
-            ruby: 0.0,
-            gemstone: 0.0,
-            experience: 0.0,
-            fire: 0.0,
+            food: None,
+            gold: None,
+            exp: None,
+            ruby: None,
+            gemstone: None,
+            experience: None,
+            fire: None,
         }
     }
 }

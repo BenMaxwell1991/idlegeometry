@@ -4,6 +4,7 @@ use crate::ui::component::widget::custom_button::CustomButton;
 use crate::ui::component::widget::custom_heading::CustomHeading;
 use eframe::egui;
 use egui::Vec2;
+use crate::ui::asset::loader::EXIT_IMAGE;
 
 pub fn show_shop(ui: &mut egui::Ui, game_data: &GameData) {
     let mut user_name = String::from("Not Loaded");
@@ -14,7 +15,7 @@ pub fn show_shop(ui: &mut egui::Ui, game_data: &GameData) {
         user_name = steam_client.friends().name();
     }
 
-    if let Some(icon) = game_data.icons_inverted.read().unwrap().get("exit") {
+    if let Some(icon) = game_data.icons_inverted.read().unwrap().get(EXIT_IMAGE) {
         ui.add(
             CustomButton::new(
                 Some(icon.clone()),
