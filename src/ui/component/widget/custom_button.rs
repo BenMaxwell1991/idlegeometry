@@ -1,3 +1,4 @@
+use std::panic::Location;
 use crate::ui::asset::loader::DP_COMIC_FONT;
 use crate::ui::component::widget::interactive_widget::InteractiveWidget;
 use crate::ui::component::widget::label_no_interact::LabelNoInteract;
@@ -9,6 +10,7 @@ use eframe::egui::{
 use eframe::emath::{Pos2, Rect};
 use eframe::epaint::FontFamily;
 use std::string::ToString;
+use uuid::Uuid;
 
 const BUTTON_SIZE: Vec2 = Vec2::new(200.0, 50.0);
 const TEXT_COLOUR: Color32 = Color32::WHITE;
@@ -21,6 +23,7 @@ const FONT_DEFAULT: &str = DP_COMIC_FONT;
 const FONT_SIZE: f32 = 32.0;
 
 pub struct CustomButton<'a> {
+    pub id: String,
     pub icon: Option<TextureHandle>,
     pub text: Option<&'a str>,
     pub on_click: Box<dyn FnMut() + 'a>,
@@ -42,6 +45,7 @@ impl<'a> CustomButton<'a> {
         on_click: Box<dyn FnMut() + 'a>
     ) -> Self {
         Self {
+            id: text.unwrap_or("").to_string(),
             icon,
             text,
             on_click,
@@ -67,6 +71,11 @@ impl<'a> CustomButton<'a> {
         self.font_size = font_size;
         self
     }
+
+    pub fn with_id(mut self, id: String) -> Self {
+        self.id = id;
+        self
+    }
 }
 
 impl<'a> InteractiveWidget for CustomButton<'a> {
@@ -79,6 +88,7 @@ impl<'a> InteractiveWidget for CustomButton<'a> {
 }
 
 impl<'a> Widget for CustomButton<'a> {
+    #[track_caller]
     fn ui(mut self, ui: &mut Ui) -> Response {
         let parent_rect = ui.available_rect_before_wrap();
         let mut rect = ui.allocate_exact_size(self.size, Sense::empty()).0;
@@ -87,13 +97,13 @@ impl<'a> Widget for CustomButton<'a> {
             rect = Rect::from_min_size(Pos2::new(parent_rect.center().x - self.size.x / 2.0, rect.min.y), self.size);
         }
 
-        let response = ui.interact(rect, ui.make_persistent_id(self.text.unwrap_or("button")), Sense::click());
+        let response = ui.interact(rect, ui.make_persistent_id(self.id.clone()), Sense::click());
 
         let button_clicked = self.button_clicked(ui, &response);
         let click_released_inside = self.released_inside(ui, &response);
         let base_colours = vec![self.background_colour, self.border_colour];
         let [background_colour, border_colour]: [Color32; 2] =
-            self.determine_colour(base_colours, button_clicked, response.contains_pointer())
+            self.determine_colour(ui, base_colours, button_clicked, response.contains_pointer())
                 .try_into()
                 .expect("Invalid Array Size");
 

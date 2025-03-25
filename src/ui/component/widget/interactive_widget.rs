@@ -3,6 +3,9 @@ use eframe::egui::{Color32, Response, Ui};
 
 pub trait InteractiveWidget {
     fn button_clicked(&self, ui: &mut Ui, response: &Response) -> bool {
+        if !ui.is_enabled() {
+            return false;
+        }
         let button_id = response.id;
         let mut click_started_inside = ui.data(|data| data.get_temp::<bool>(button_id)).unwrap_or(false);
         let is_mouse_down = response.ctx.input(|i| i.pointer.primary_down());
@@ -17,6 +20,9 @@ pub trait InteractiveWidget {
     }
 
     fn released_inside(&self, ui: &mut Ui, response: &Response) -> bool {
+        if !ui.is_enabled() {
+            return false;
+        }
         let button_id = response.id;
         let click_started_inside = ui.data(|data| data.get_temp::<bool>(button_id)).unwrap_or(false);
         let is_mouse_up = response.ctx.input(|i| i.pointer.primary_released());
@@ -27,10 +33,14 @@ pub trait InteractiveWidget {
 
     fn determine_colour(
         &self,
+        ui: &mut Ui,
         base_colours: Vec<Color32>,
         button_clicked: bool,
         hovering: bool,
     ) -> Vec<Color32> {
+        if !ui.is_enabled() {
+            return base_colours;
+        }
         let click_colours = self.click_colours();
         let hover_colours = self.hover_colours();
 

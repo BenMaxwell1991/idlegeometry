@@ -40,8 +40,8 @@ impl<'a> CustomProgressBar<'a> {
         }
     }
 
-    pub fn show_percentage(mut self) -> Self {
-        self.show_percentage = true;
+    pub fn show_percentage(mut self, show: bool) -> Self {
+        self.show_percentage = show;
         self
     }
 
@@ -118,7 +118,7 @@ impl<'a> Widget for CustomProgressBar<'a> {
         let click_released_inside = self.released_inside(ui, &response);
         let base_colours = vec!(bar_colour, self.background_colour, self.border_colour);
         let [bar_colour, background_colour, border_colour]: [Color32; 3] =
-            self.determine_colour(base_colours, button_clicked, response.contains_pointer())
+            self.determine_colour(ui, base_colours, button_clicked, response.contains_pointer())
                 .try_into()
                 .expect("Invalid Array Size");
 

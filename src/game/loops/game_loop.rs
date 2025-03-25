@@ -24,6 +24,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
+use crate::game::data::resource_cost::ResourceAmount;
 use crate::game::loops::idle_loop::IdleLoop;
 
 pub struct GameLoop {
@@ -64,9 +65,10 @@ impl GameLoop {
             let mut player_data = acquire_lock_mut(&self.game_data.player_data, "game_map");
 
             let persistent_resources = &mut player_data.resources_persistent;
-            let current_resources = acquire_lock(&self.game_data.resource_amounts, "game_map").clone();
+            let mut current_resources = acquire_lock(&self.game_data.resource_amounts, "game_map").clone();
 
-            IdleLoop::add_production(persistent_resources, &current_resources);
+            current_resources.food = None;
+            ResourceAmount::add_production(persistent_resources, &current_resources);
             game_units.clear();
             unit_positions.clear();
             empty_unit_indexes.clear();

@@ -6,9 +6,9 @@ use crate::game::objects::attacks::attack_defaults::get_basic_attack;
 use crate::game::objects::attacks::attack_stats::AttackName;
 use crate::game::settings::Settings;
 use std::sync::Arc;
-use eframe::emath::Vec2;
-use crate::helper::lock_helper::{acquire_lock, acquire_lock_mut};
-use crate::ui::component::widget::lair_object::get_lair_object;
+use std::time::Instant;
+use crate::game::data::player_data::PlayerData;
+use crate::helper::lock_helper::acquire_lock_mut;
 
 pub fn initialise_data(game_data: GameData) -> GameData {
 
@@ -18,6 +18,9 @@ pub fn initialise_data(game_data: GameData) -> GameData {
 
     init_attacks(&game_data);
     println!("Initialised Attacks");
+
+    init_lair(&game_data);
+    println!("Initialised Lair");
 
     game_data.set_field(KEY_STATE, Arc::new(KeyState::new()));
     game_data.set_field(CURRENT_TAB, GameTab::default());
@@ -39,6 +42,16 @@ fn init_attacks(game_data: &GameData) {
     ];
 
     initialise_attack_pools(game_data, &pool_config);
+}
+
+fn init_lair(game_data: &GameData) {
+    let mut player_data = acquire_lock_mut(&game_data.player_data, "player_data");
+    if player_data.lair_objects.is_empty() {
+        player_data.lair_objects = PlayerData::initialize_lair_objects();
+        println!("Initialized default lair objects");
+    } else {
+        println!("Loaded existing lair objects");
+    }
 }
 
 pub fn initialise_attack_pools(game_data: &GameData, pool_sizes: &[(AttackName, usize)]) {

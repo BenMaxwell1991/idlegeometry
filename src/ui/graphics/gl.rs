@@ -123,11 +123,13 @@ pub fn draw_units(gl: &Context, render_data: &RenderData, paintbox_rect: &Rect, 
     let mut health_bar_colours = Vec::new();
     let mut shadow_sprites_to_draw = Vec::new();
 
+    println!("game units len: {}", game_units.len());
+    println!("unit_positions len: {}", unit_positions.len());
+
     for unit_option in game_units.iter() {
         if let Some(unit) = unit_option {
             if let Some(animation) = &unit.animation {
                 let unit_screen_position = world_to_screen(unit_positions[unit.id as usize], &camera_state, paintbox_rect);
-
                 let unit_size = Vec2::new(animation.size.0 as f32, animation.size.1 as f32) * camera_state.get_zoom_scaled();
                 let unit_rect = Rect::from_center_size(unit_screen_position, unit_size);
 

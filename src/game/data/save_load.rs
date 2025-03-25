@@ -7,6 +7,7 @@ use chrono::Local;
 use rustc_hash::FxHashMap;
 use serde_json::{from_str, from_value, to_string_pretty, to_value, Map, Value};
 use std::fs;
+use std::fs::read_to_string;
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
@@ -17,7 +18,7 @@ const SAVE_FILE: &str = "saved_file";
 pub fn load_game_or_new() -> GameData {
     let game_data = GameData::new();
 
-    if let Ok(save_data) = fs::read_to_string(SAVE_FILE) {
+    if let Ok(save_data) = read_to_string(SAVE_FILE) {
         if let Ok(json_data) = from_str::<Value>(&save_data) {
             if let Some(player_data) = json_data.get("player_data")
                 .and_then(|v| from_value::<PlayerData>(v.clone()).ok()) {

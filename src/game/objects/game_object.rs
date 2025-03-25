@@ -136,9 +136,10 @@ pub fn remove_units(unit_ids: Vec<u32>, game_data: Arc<GameData>) -> Vec<(GameOb
 }
 
 pub fn move_units_batched(unit_positions_updates: &[(u32, Pos2FixedPoint, Pos2FixedPoint)], game_data: &GameData, player_id: Option<u32>) {
-    let mut unit_positions = game_data.unit_positions.write().unwrap();
-    let mut spatial_grid = game_data.spatial_hash_grid.write().unwrap();
-    let mut camera_state = game_data.camera_state.write().unwrap();
+    let mut game_units = acquire_lock_mut(&game_data.units, "game_units");
+    let mut unit_positions = acquire_lock_mut(&game_data.unit_positions, "unit_positions");
+    let mut spatial_grid = acquire_lock_mut(&game_data.spatial_hash_grid, "spatial_hash_grid");
+    let mut camera_state = acquire_lock_mut(&game_data.camera_state, "camera_state");
 
     unit_positions.clear();
     let mut new_positions: Vec<Pos2FixedPoint> = Vec::with_capacity(unit_positions_updates.len());

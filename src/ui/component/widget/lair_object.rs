@@ -21,6 +21,7 @@ pub struct LairObject {
     pub experience_data: ExperienceData,
     pub quantity: u32,
     pub icon_name: Option<String>,
+    pub active: bool,
     pub unlocked: bool,
     pub production_duration: u64,
     pub production_amount: ResourceAmount,
@@ -44,6 +45,7 @@ impl LairObject {
             size,
             icon,
             icon_name,
+            active: false,
             unlocked: false,
             production_duration: u64::MAX,
             upgrade_cost: ResourceAmount::default(),
@@ -57,7 +59,6 @@ impl LairObject {
 impl Widget for LairObject {
     fn ui(self, ui: &mut Ui) -> Response {
         let ui_size = self.size.unwrap_or(Vec2::new(300.0, 80.0));
-
         let (rect, response) = ui.allocate_exact_size(ui_size, Sense::click());
 
         ui.allocate_new_ui(
@@ -65,92 +66,106 @@ impl Widget for LairObject {
                 .max_rect(rect)
                 .layout(Layout::top_down_justified(Align::Center)),
             |ui| {
-                Frame::group(ui.style())
-                    .stroke(Stroke::new(2.0, Color32::PURPLE))
-                    .fill(Color32::from_rgba_premultiplied(0, 0, 0, 100))
-                    .show(ui, |ui| {
-                        ui.set_min_size(rect.size());
+                ui.scope(|ui| {
+                    if !self.unlocked {
+                        ui.disable();
+                    }
+                    Frame::group(ui.style())
+                        .stroke(Stroke::new(2.0, Color32::PURPLE))
+                        .fill(Color32::from_rgba_premultiplied(0, 0, 0, 100))
+                        .show(ui, |ui| {
+                            ui.set_min_size(rect.size());
 
-                        ui.horizontal(|ui| {
-                            // Lair Object Icon
-                            if let Some(icon) = &self.icon {
-                                ui.allocate_ui_with_layout(
-                                    Vec2::new(rect.height(), rect.height()),
-                                    Layout::top_down_justified(Align::Min),
-                                    |ui| {
-                                        ui.add(Image::new(icon).fit_to_exact_size(ui.available_size()));
-                                    },
-                                );
-                            }
+                            ui.horizontal(|ui| {
+                                // Lair Object Icon
+                                if let Some(icon) = &self.icon {
+                                    ui.allocate_ui_with_layout(
+                                        Vec2::new(rect.height(), rect.height()),
+                                        Layout::top_down_justified(Align::Min),
+                                        |ui| {
+                                            ui.add(Image::new(icon).fit_to_exact_size(ui.available_size()));
+                                        },
+                                    );
+                                }
 
-                            ui.scope(|ui| {
-                                ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0);
-                                ui.vertical(|ui| {
-                                    let remaining_size = ui.available_size();
-                                    let widget_width = remaining_size.x - 150.0;
-                                    let widget_height = remaining_size.y / 3.5;
-                                    let widget_spacing = remaining_size.y / 20.0;
+                                ui.scope(|ui| {
+                                    ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0);
+                                    ui.vertical(|ui| {
+                                        let remaining_size = ui.available_size();
+                                        let widget_width = remaining_size.x - 150.0;
+                                        let widget_height = remaining_size.y / 3.5;
+                                        let widget_spacing = remaining_size.y / 20.0;
 
-                                    // Title Bar
-                                    Frame::group(ui.style())
-                                        .stroke(Stroke::new(1.0, Color32::LIGHT_GREEN))
-                                        .inner_margin(Margin::same(0))
-                                        .outer_margin(Margin::same(0))
-                                        .show(ui, |ui| {
-                                            ui.horizontal(|ui| {
-                                                let text = format!("{}   Lvl {}", self.name, self.experience_data.level);
-                                                ui.add_sized([widget_width, widget_height], LabelNoInteract::new(&text, DP_COMIC_FONT.to_string(), 20.0, Color32::WHITE));
+                                        // Title Bar
+                                        Frame::group(ui.style())
+                                            .stroke(Stroke::new(1.0, Color32::LIGHT_GREEN))
+                                            .inner_margin(Margin::same(0))
+                                            .outer_margin(Margin::same(0))
+                                            .show(ui, |ui| {
+                                                ui.horizontal(|ui| {
+                                                    let text = format!("{}   Lvl {}", self.name, self.experience_data.level);
+                                                    ui.add_sized([widget_width, widget_height], LabelNoInteract::new(&text, DP_COMIC_FONT.to_string(), 20.0, Color32::WHITE));
+                                                });
                                             });
-                                        });
 
-                                    ui.add_space(widget_spacing);
+                                        ui.add_space(widget_spacing);
 
-                                    // Experience bar
-                                    let exp_for_level_up = 100.0 + 10.0 * self.experience_data.level as f64;
-                                    let progress = (self.experience_data.experience).min(exp_for_level_up);
-                                    let font_id = FontId::new(20.0, FontFamily::Name(DP_COMIC_FONT.into()));
-                                    ui.add_sized(
-                                        [widget_width, widget_height],
-                                        CustomProgressBar::new(progress, exp_for_level_up)
-                                            .show_percentage()
-                                            .with_completed_text("Level Up".to_string(), font_id)
-                                            .set_on_click(Box::new(|| println!("Experience Bar Clicked")))
-                                    );
+                                        // Experience bar
+                                        let exp_for_level_up = 100.0 + 10.0 * self.experience_data.level as f64;
+                                        let progress = (self.experience_data.experience).min(exp_for_level_up);
+                                        let font_id = FontId::new(20.0, FontFamily::Name(DP_COMIC_FONT.into()));
+                                        ui.add_sized(
+                                            [widget_width, widget_height],
+                                            CustomProgressBar::new(progress, exp_for_level_up)
+                                                .show_percentage(true)
+                                                .with_completed_text("Level Up".to_string(), font_id)
+                                                .set_on_click(Box::new(|| println!("Experience Bar Clicked")))
+                                        );
 
-                                    ui.add_space(widget_spacing);
+                                        ui.add_space(widget_spacing);
 
-                                    // Progress Bar for Production
-                                    let elapsed_ms = Instant::now().duration_since(self.last_produced).as_millis() as u64;
-                                    let progress = (elapsed_ms as f64).min(self.production_duration as f64);
-                                    let font_id = FontId::new(20.0, FontFamily::Name(DP_COMIC_FONT.into()));
-                                    ui.add_sized(
-                                        [widget_width, widget_height],
-                                        CustomProgressBar::new(progress, self.production_duration as f64)
-                                            .show_percentage()
-                                            .with_completed_text("Production Ready".to_string(), font_id)
-                                            .set_on_click(Box::new(|| println!("Progress Bar Clicked")))
-                                    );
+                                        // Progress Bar for Production
+                                        let elapsed_ms = Instant::now().duration_since(self.last_produced).as_millis() as u64;
+                                        let progress = (elapsed_ms as f64).min(self.production_duration as f64);
+                                        let font_id = FontId::new(20.0, FontFamily::Name(DP_COMIC_FONT.into()));
+                                        ui.add_sized(
+                                            [widget_width, widget_height],
+                                            CustomProgressBar::new(progress, self.production_duration as f64)
+                                                .show_percentage(self.active)
+                                                .with_completed_text("Production Ready".to_string(), font_id)
+                                                .set_on_click(Box::new(|| println!("Progress Bar Clicked")))
+                                        );
+                                    });
                                 });
-                            });
 
-                            // Upgrade Buttons:
-                            ui.scope(|ui| {
-                                ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0);
-                                ui.vertical(|ui| {
-                                    let remaining_size = ui.available_size();
-                                    let widget_width = remaining_size.x;
-                                    let widget_height = remaining_size.y / 2.0;
+                                // Upgrade Buttons:
+                                ui.scope(|ui| {
+                                    ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0);
+                                    ui.vertical(|ui| {
+                                        let remaining_size = ui.available_size();
+                                        let widget_width = remaining_size.x;
+                                        let widget_height = remaining_size.y / 2.0;
 
-                                    let button_size = Vec2::new(widget_width, widget_height);
+                                        let button_size = Vec2::new(widget_width, widget_height);
+                                        let button_id = format!("{}-purchase-button", self.name);
 
-                                    ui.add_sized(
-                                        [widget_width, widget_height],
-                                        CustomButton::new(self.icon, Some("Purchase"), Box::new(move || {})).with_size(button_size).with_font(DP_COMIC_FONT.to_string(), 10.0)
-                                    )
+                                        ui.add_sized(
+                                            [widget_width, widget_height],
+                                            CustomButton::new(self.icon, Some("Purchase"), Box::new(move || {}))
+                                                .with_size(button_size)
+                                                .with_font(DP_COMIC_FONT.to_string(), 10.0)
+                                                .with_id(button_id)
+                                        )
+                                    });
                                 });
                             });
                         });
-                    });
+                });
+                if !self.active {
+                    let full_rect = ui.min_rect();
+                    let painter = ui.painter_at(full_rect);
+                    painter.rect_filled(full_rect, 2.0, Color32::from_rgba_premultiplied(0, 0, 0, 0));
+                }
             },
         );
         response
@@ -166,6 +181,7 @@ impl Default for LairObject {
             size: None,
             icon: None,
             icon_name: None,
+            active: false,
             unlocked: false,
             production_duration: u64::MAX,
             production_amount: ResourceAmount::default(),
@@ -207,6 +223,7 @@ pub fn lair_object_00_heart(experience_data: ExperienceData, quantity: u32) -> L
         size: None,
         icon: None,
         icon_name: Some(DRAGON_HEART_GEMSTONE_IMAGE.to_string()),
+        active: true,
         unlocked: true,
         production_duration: 5_000,
         production_amount,
@@ -238,6 +255,7 @@ pub fn lair_object_01_imp_chef(experience_data: ExperienceData, quantity: u32) -
         size: None,
         icon: None,
         icon_name: Some(IMP_CHEF_IMAGE.to_string()),
+        active: false,
         unlocked: false,
         production_duration: 50_000,
         production_amount,

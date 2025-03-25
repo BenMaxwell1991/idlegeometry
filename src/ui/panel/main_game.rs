@@ -64,7 +64,7 @@ fn handle_game_state_playing(ui: &mut Ui, game_data: &Arc<GameData>, frame: &mut
         ui.put(
             progress_rect,
             CustomProgressBar::new(food_value, 100.0)
-                .show_percentage()
+                .show_percentage(true)
                 .set_on_click(Box::new(|| println!("Progress Bar Clicked"))),
         );
     }
@@ -111,20 +111,6 @@ fn draw_lair_objects(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
     let widget_size = Vec2::new(500.0, 100.0);
     let spacing = 10.0;
     let num_objects = 2;
-
-    if lair_objects.is_empty() {
-        let mut objects = Vec::new();
-        for i in 0..num_objects {
-            let mut object = get_lair_object(i, ExperienceData::default());
-            if object.unlocked {
-                objects.push(object);
-            }
-        }
-        if let mut player_data = acquire_lock_mut(&game_data.player_data, "player_data") {
-            player_data.lair_objects = objects.clone();
-            lair_objects = objects.clone();
-        }
-    }
 
     let mut top = game_rect.top() + 20.0;
 
@@ -197,6 +183,9 @@ fn draw_resource_hud_lair(ui: &mut Ui, game_data: &GameData, hud_rect: Rect) {
     painter.rect_filled(hud_rect, 10.0, Color32::from_rgb(65, 35, 10));
     painter.rect_stroke(hud_rect, 10.0, (2.0, Color32::from_rgb(128, 0, 128)), StrokeKind::Inside);
 
+    let icon_size = Vec2::new(18.0,18.0);
+    let font_size = 22.0;
+
     ui.allocate_new_ui(
         UiBuilder::new()
             .max_rect(hud_rect)
@@ -207,22 +196,22 @@ fn draw_resource_hud_lair(ui: &mut Ui, game_data: &GameData, hud_rect: Rect) {
                 ui.horizontal(|ui| {
                     ui.add_space(10.0);
                     if let Some(icon) = &food_icon {
-                        ui.add(Image::new(icon).fit_to_exact_size(Vec2::new(35.0, 35.0)));
+                        ui.add(Image::new(icon).fit_to_exact_size(icon_size));
                     }
                     ui.label(
                         RichText::new(format!("Food: {:.0}", food))
-                            .font(FontId::new(42.0, FontFamily::Name(DP_COMIC_FONT.into())))
+                            .font(FontId::new(font_size, FontFamily::Name(DP_COMIC_FONT.into())))
                             .color(Color32::DARK_RED)
                     );
                 });
                 ui.horizontal(|ui| {
                     ui.add_space(10.0);
                     if let Some(icon) = &gold_icon {
-                        ui.add(Image::new(icon).fit_to_exact_size(Vec2::new(35.0, 35.0)));
+                        ui.add(Image::new(icon).fit_to_exact_size(icon_size));
                     }
                     ui.label(
                         RichText::new(format!("Gold: {:.0}", gold))
-                            .font(FontId::new(42.0, FontFamily::Name(DP_COMIC_FONT.into())))
+                            .font(FontId::new(font_size, FontFamily::Name(DP_COMIC_FONT.into())))
                             .color(Color32::GOLD)
                     );
                 });
@@ -230,11 +219,11 @@ fn draw_resource_hud_lair(ui: &mut Ui, game_data: &GameData, hud_rect: Rect) {
                 ui.horizontal(|ui| {
                     ui.add_space(10.0);
                     if let Some(icon) = &ruby_icon {
-                        ui.add(Image::new(icon).fit_to_exact_size(Vec2::new(35.0, 35.0)));
+                        ui.add(Image::new(icon).fit_to_exact_size(icon_size));
                     }
                     ui.label(
                         RichText::new(format!("Rubies: {:.0}", ruby))
-                            .font(FontId::new(42.0, FontFamily::Name(DP_COMIC_FONT.into())))
+                            .font(FontId::new(font_size, FontFamily::Name(DP_COMIC_FONT.into())))
                             .color(Color32::from_rgb(255, 50, 50)),
                     );
                 });

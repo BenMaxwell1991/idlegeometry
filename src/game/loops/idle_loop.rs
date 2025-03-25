@@ -1,12 +1,11 @@
-use std::cmp::max;
+use crate::game::constants::GAME_RATE;
 use crate::game::data::game_data::GameData;
-use crate::game::data::resource_cost::ResourceAmount;
 use crate::helper::lock_helper::acquire_lock_mut;
+use std::cmp::max;
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
-use crate::game::constants::GAME_RATE;
+use crate::game::data::resource_cost::ResourceAmount;
 
 pub struct IdleLoop {
     pub game_data: Arc<GameData>,
@@ -38,7 +37,7 @@ impl IdleLoop {
         let mut updated_last_produced_times = vec![];
 
         for object in lair_objects_clone.iter() {
-            if !object.unlocked {
+            if !object.active {
                 updated_last_produced_times.push(Instant::now());
                 continue;
             }
@@ -46,13 +45,16 @@ impl IdleLoop {
             let duration_secs = object.production_duration as f64 / 1000.0;
             let elapsed = object.last_produced.elapsed().as_secs_f64() + delta_time;
 
-            let ticks = (elapsed / duration_secs).floor() as u64;
-            let mut produced_any = false;
+            let mut ticks = 0;
+            if elapsed > duration_secs {
+                ticks = (delta_time / duration_secs).ceil() as u64;
+            }
 
+            let mut produced_any = false;
             for _ in 0..ticks {
-                if Self::can_afford(resources, &object.production_cost) {
-                    Self::pay_cost(resources, &object.production_cost);
-                    Self::add_production(resources, &object.production_amount);
+                if ResourceAmount::can_afford(resources, &object.production_cost) {
+                    ResourceAmount::pay_cost(resources, &object.production_cost);
+                    ResourceAmount::add_production(resources, &object.production_amount);
                     produced_any = true;
                 } else {
                     break;
@@ -88,56 +90,5 @@ impl IdleLoop {
                 sleep(Duration::from_millis(20));
             }
         }
-    }
-
-    fn can_afford(resources: &ResourceAmount, cost: &ResourceAmount) -> bool {
-        macro_rules! afford_field {
-            ($field:ident) => {
-                cost.$field.map_or(true, |required| {
-                    resources.$field.unwrap_or(0.0) >= required
-                })
-            };
-        }
-
-        afford_field!(gold)
-            && afford_field!(ruby)
-            && afford_field!(gemstone)
-            && afford_field!(experience)
-            && afford_field!(fire)
-            && afford_field!(food)
-    }
-
-    fn pay_cost(resources: &mut ResourceAmount, cost: &ResourceAmount) {
-        macro_rules! pay_field {
-            ($field:ident) => {
-                if let Some(amount) = cost.$field {
-                    *resources.$field.get_or_insert(0.0) -= amount;
-                }
-            };
-        }
-
-        pay_field!(gold);
-        pay_field!(ruby);
-        pay_field!(gemstone);
-        pay_field!(experience);
-        pay_field!(fire);
-        pay_field!(food);
-    }
-
-    pub fn add_production(resources: &mut ResourceAmount, production: &ResourceAmount) {
-        macro_rules! add_field {
-            ($field:ident) => {
-                if let Some(amount) = production.$field {
-                    *resources.$field.get_or_insert(0.0) += amount;
-                }
-            };
-        }
-
-        add_field!(gold);
-        add_field!(ruby);
-        add_field!(gemstone);
-        add_field!(experience);
-        add_field!(fire);
-        add_field!(food);
     }
 }

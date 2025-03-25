@@ -114,7 +114,9 @@ fn init_enemies(game_data: &GameData) {
 }
 
 fn init_resources(game_data: &GameData) {
-    *acquire_lock_mut(&game_data.resource_amounts, "resource_amounts") = ResourceAmount::default();
+    let mut player_data = acquire_lock_mut(&game_data.player_data, "player_data");
+    let mut adventure_resources = acquire_lock_mut(&game_data.resource_amounts, "resources");
+    ResourceAmount::provision_for_adventure(&mut player_data.resources_persistent, &mut adventure_resources, &ResourceAmount::default_provisions());
 }
 
 fn init_reset(game_data: &GameData) {
