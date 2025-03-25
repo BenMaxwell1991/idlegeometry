@@ -6,3 +6,4 @@ pub mod damage_numbers;
 pub mod player_data;
 pub mod initialise_adventure;
 pub mod resource_cost;
+pub mod experience_data;

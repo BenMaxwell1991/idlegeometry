@@ -15,6 +15,7 @@ use egui::{Align, Color32, FontFamily, FontId, Image, Layout, Pos2, Rect, RichTe
 use std::process::exit;
 use std::sync::{Arc, OnceLock};
 use uuid::Uuid;
+use crate::game::data::experience_data::ExperienceData;
 
 static GAME_GRAPHICS_ID: OnceLock<Uuid> = OnceLock::new();
 static RESOURCE_HUD_ID: OnceLock<Uuid> = OnceLock::new();
@@ -114,7 +115,7 @@ fn draw_lair_objects(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
     if lair_objects.is_empty() {
         let mut objects = Vec::new();
         for i in 0..num_objects {
-            let mut object = get_lair_object(i, 0);
+            let mut object = get_lair_object(i, ExperienceData::default());
             if object.unlocked {
                 objects.push(object);
             }

@@ -2,8 +2,11 @@
   "player_data": {
     "lair_objects": [
       {
+        "experience_data": {
+          "experience": 0.0,
+          "level": 0
+        },
         "icon_name": "dragons_heart",
-        "level": 0,
         "name": "Dragon's Heart",
         "production_amount": {
           "exp": null,
@@ -41,7 +44,7 @@
       "exp": null,
       "experience": null,
       "fire": null,
-      "food": 6.0,
+      "food": 190.0,
       "gemstone": null,
       "gold": 99.0,
       "ruby": null

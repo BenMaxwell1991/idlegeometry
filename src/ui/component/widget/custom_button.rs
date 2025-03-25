@@ -61,6 +61,12 @@ impl<'a> CustomButton<'a> {
         self.size = size;
         self
     }
+
+    pub fn with_font(mut self, font: String, font_size: f32) -> Self {
+        self.font = font;
+        self.font_size = font_size;
+        self
+    }
 }
 
 impl<'a> InteractiveWidget for CustomButton<'a> {
