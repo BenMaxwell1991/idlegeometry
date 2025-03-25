@@ -24,6 +24,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
+use crate::game::loops::idle_loop::IdleLoop;
 
 pub struct GameLoop {
     pub game_data: Arc<GameData>,
@@ -51,20 +52,28 @@ impl GameLoop {
 
     fn reset_on_death(&mut self) {
         let game_state = acquire_lock(&self.game_data.game_state, "game_state").clone();
-        if game_state == GameState::Dead {
+        let reset_complete = self.game_data.reset_complete.load(Ordering::Relaxed);
+
+        if game_state == GameState::Dead && !reset_complete {
             let mut game_units = acquire_lock_mut(&self.game_data.units, "game_units");
             let mut unit_positions = acquire_lock_mut(&self.game_data.unit_positions, "unit_positions");
             let mut empty_unit_indexes = acquire_lock_mut(&self.game_data.empty_unit_indexes, "empty_unit_indexes");
             let mut spatial_hash_grid = acquire_lock_mut(&self.game_data.spatial_hash_grid, "spatial_hash_grid");
             let mut damage_numbers = acquire_lock_mut(&self.game_data.damage_numbers, "damage_numbers");
             let mut game_map = acquire_lock_mut(&self.game_data.game_map, "game_map");
+            let mut player_data = acquire_lock_mut(&self.game_data.player_data, "game_map");
 
+            let persistent_resources = &mut player_data.resources_persistent;
+            let current_resources = acquire_lock(&self.game_data.resource_amounts, "game_map").clone();
+
+            IdleLoop::add_production(persistent_resources, &current_resources);
             game_units.clear();
             unit_positions.clear();
             empty_unit_indexes.clear();
             spatial_hash_grid.clear();
             damage_numbers.clear();
             *game_map = None;
+            self.game_data.reset_complete.store(true, Ordering::Relaxed);
         }
     }
 

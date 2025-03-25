@@ -1,12 +1,12 @@
 use crate::enums::gamestate::GameState;
 use crate::game::data::game_data::GameData;
 use crate::game::data::stored_data::SETTINGS;
-use crate::helper::lock_helper::acquire_lock;
-use crate::ui::asset::loader::{COIN_IMAGE, DP_COMIC_FONT, DRAGONS_LAIR_IMAGE, DRAGON_HEART_GEMSTONE_IMAGE, DRAGON_IMAGE, RUBY_IMAGE};
+use crate::helper::lock_helper::{acquire_lock, acquire_lock_mut};
+use crate::ui::asset::loader::{COIN_IMAGE, DP_COMIC_FONT, DRAGONS_LAIR_IMAGE, DRAGON_IMAGE, FOOD_IMAGE, RUBY_IMAGE};
 use crate::ui::component::widget::custom_heading::CustomHeading;
 use crate::ui::component::widget::custom_progress_bar::CustomProgressBar;
 use crate::ui::component::widget::game_graphics::GameGraphics;
-use crate::ui::component::widget::lair_object::{get_lair_object, LairObject};
+use crate::ui::component::widget::lair_object::get_lair_object;
 use crate::ui::panel::death_menu::show_death_menu;
 use crate::ui::panel::game_menu_lair::show_begin_adventure;
 use crate::ui::panel::game_menu_paused::show_game_menu_paused;
@@ -39,8 +39,7 @@ fn handle_game_state_lair(ui: &mut Ui, game_data: &GameData) {
     draw_background_lair(ui, game_data, game_rect);
     draw_lair_objects(ui, game_data, game_rect);
 
-
-    let hud_size = Vec2::new(210.0, 100.0);
+    let hud_size = Vec2::new(210.0, 150.0);
     let hud_pos = Pos2::new(game_rect.min.x + 20.0, game_rect.min.y + 20.0);
     let hud_rect = Rect::from_min_size(hud_pos, hud_size);
     show_begin_adventure(ui, game_data, game_rect);
@@ -106,24 +105,34 @@ fn handle_game_state_quitting() {
 
 fn draw_lair_objects(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
     let icons = acquire_lock(&game_data.icons, "icons").clone();
+    let mut lair_objects = acquire_lock(&game_data.player_data, "player_data").clone().lair_objects;
 
     let widget_size = Vec2::new(500.0, 100.0);
     let spacing = 10.0;
-    let num_objects = 3;
+    let num_objects = 2;
 
-    let mut objects = Vec::new();
+    if lair_objects.is_empty() {
+        let mut objects = Vec::new();
+        for i in 0..num_objects {
+            let mut object = get_lair_object(i, 0);
+            if object.unlocked {
+                objects.push(object);
+            }
+        }
+        if let mut player_data = acquire_lock_mut(&game_data.player_data, "player_data") {
+            player_data.lair_objects = objects.clone();
+            lair_objects = objects.clone();
+        }
+    }
+
     let mut top = game_rect.top() + 20.0;
 
-    for i in 0..num_objects {
-        let mut object = get_lair_object(i, 0);
-        object.size = Some(widget_size);
-        if let Some(icon_name) = &object.icon_name {
-            object.icon = icons.get(icon_name).cloned();
+    for mut obj in lair_objects.iter_mut() {
+        obj.size = Some(widget_size);
+        if let Some(icon_name) = &obj.icon_name {
+            obj.icon = icons.get(icon_name).cloned();
         }
-        if object.unlocked {
-            objects.push(object);
-            top += widget_size.y + spacing;
-        }
+        top += widget_size.y + spacing;
     }
 
     let scroll_area_width = widget_size.x;
@@ -145,7 +154,7 @@ fn draw_lair_objects(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
                 .max_height(scroll_area_height)
                 .max_width(scroll_area_width)
                 .show(ui, |ui| {
-                for lair_object in objects.iter() {
+                for lair_object in lair_objects.iter() {
                     ui.add(lair_object.clone());
                     ui.add_space(spacing);
                 }
@@ -174,9 +183,11 @@ fn draw_resource_hud_lair(ui: &mut Ui, game_data: &GameData, hud_rect: Rect) {
     let resources = acquire_lock(&game_data.player_data, "player_data").resources_persistent.clone();
     let icons = acquire_lock(&game_data.icons, "icons").clone();
 
+    let food = resources.food.unwrap_or(0.0);
     let gold = resources.gold.unwrap_or(0.0);
     let ruby = resources.ruby.unwrap_or(0.0);
 
+    let food_icon = icons.get(FOOD_IMAGE).cloned();
     let gold_icon = icons.get(COIN_IMAGE).cloned();
     let ruby_icon = icons.get(RUBY_IMAGE).cloned();
 
@@ -192,6 +203,17 @@ fn draw_resource_hud_lair(ui: &mut Ui, game_data: &GameData, hud_rect: Rect) {
         |ui| {
             ui.vertical(|ui| {
                 ui.add_space(10.0);
+                ui.horizontal(|ui| {
+                    ui.add_space(10.0);
+                    if let Some(icon) = &food_icon {
+                        ui.add(Image::new(icon).fit_to_exact_size(Vec2::new(35.0, 35.0)));
+                    }
+                    ui.label(
+                        RichText::new(format!("Food: {:.0}", food))
+                            .font(FontId::new(42.0, FontFamily::Name(DP_COMIC_FONT.into())))
+                            .color(Color32::DARK_RED)
+                    );
+                });
                 ui.horizontal(|ui| {
                     ui.add_space(10.0);
                     if let Some(icon) = &gold_icon {

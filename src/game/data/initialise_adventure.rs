@@ -1,3 +1,4 @@
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 use rand::random_range;
 use crate::game::data::game_data::GameData;
@@ -35,6 +36,9 @@ pub fn initialise_adventure(game_data: &GameData) {
 
     init_resources(game_data);
     println!("Adventure Resources Initialized");
+
+    init_reset(game_data);
+    println!("Reset complete flagged as false");;
 }
 
 fn init_map(game_data: &GameData) {
@@ -111,4 +115,8 @@ fn init_enemies(game_data: &GameData) {
 
 fn init_resources(game_data: &GameData) {
     *acquire_lock_mut(&game_data.resource_amounts, "resource_amounts") = ResourceAmount::default();
+}
+
+fn init_reset(game_data: &GameData) {
+    game_data.reset_complete.store(false, Ordering::Relaxed);
 }

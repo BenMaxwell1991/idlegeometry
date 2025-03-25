@@ -6,7 +6,9 @@ use crate::game::objects::attacks::attack_defaults::get_basic_attack;
 use crate::game::objects::attacks::attack_stats::AttackName;
 use crate::game::settings::Settings;
 use std::sync::Arc;
-
+use eframe::emath::Vec2;
+use crate::helper::lock_helper::{acquire_lock, acquire_lock_mut};
+use crate::ui::component::widget::lair_object::get_lair_object;
 
 pub fn initialise_data(game_data: GameData) -> GameData {
 
@@ -38,8 +40,6 @@ fn init_attacks(game_data: &GameData) {
 
     initialise_attack_pools(game_data, &pool_config);
 }
-
-
 
 pub fn initialise_attack_pools(game_data: &GameData, pool_sizes: &[(AttackName, usize)]) {
     let mut attack_pools = game_data.attack_pools.write().unwrap();

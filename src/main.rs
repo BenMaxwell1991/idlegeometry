@@ -7,6 +7,7 @@ use rayon::prelude::ParallelSliceMut;
 use rayon::ThreadPoolBuilder;
 use std::sync::Arc;
 use std::thread;
+use crate::game::loops::idle_loop::IdleLoop;
 
 mod game;
 mod ui;
@@ -33,13 +34,13 @@ fn main() {
     let game_data_five = Arc::clone(&game_data_arc);
 
     let game_loop = GameLoop::new(game_data_one);
-    println!("2");
     let input_listener = InputListener::new(game_data_two);
-    println!("3");
+    let idle_loop = IdleLoop::new(game_data_three);
 
     thread::spawn(move || game_loop.start_game());
+    thread::spawn(move || idle_loop.start_idle_loop());
     thread::spawn(move || input_listener.listen());
-    thread::spawn(move || auto_save(game_data_three));
+    thread::spawn(move || auto_save(game_data_four));
     thread::spawn(move || { testing.play_soundtrack_looping(); });
 
     create_window(game_data_five).expect("Failed to start UI");

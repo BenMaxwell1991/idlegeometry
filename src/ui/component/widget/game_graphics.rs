@@ -26,8 +26,6 @@ impl<'a> Widget for GameGraphics<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
         let available_size = ui.available_size_before_wrap();
         let (rect, response) = ui.allocate_exact_size(available_size, Sense::click());
-
-        let now = Instant::now();
         let render_data = RenderData::from(Arc::clone(&self.game_data));
 
         let mut renderer_lock = self.game_data.offscreen_renderer.write().unwrap();

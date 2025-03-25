@@ -13,6 +13,7 @@ pub const SETTINGS_IMAGE: &str = "settings";
 pub const SHOP_IMAGE: &str = "shop";
 pub const UPGRADE_IMAGE: &str = "upgrade";
 pub const EXIT_IMAGE: &str = "exit";
+pub const FOOD_IMAGE: &str = "food";
 pub const COIN_IMAGE: &str = "coin";
 pub const RUBY_IMAGE: &str = "ruby";
 pub const DRAGON_IMAGE: &str = "dragon";
@@ -25,6 +26,7 @@ pub const SETTINGS_IMAGE_BYTES: &[u8] = include_bytes!("icon/settings.png");
 pub const SHOP_IMAGE_BYTES: &[u8] = include_bytes!("icon/shop.png");
 pub const UPGRADE_IMAGE_BYTES: &[u8] = include_bytes!("icon/upgrade.png");
 pub const EXIT_IMAGE_BYTES: &[u8] = include_bytes!("icon/exit.png");
+pub const FOOD_IMAGE_BYTES: &[u8] = include_bytes!("icon/food.png");
 pub const COIN_IMAGE_BYTES: &[u8] = include_bytes!("icon/icon_coin.png");
 pub const RUBY_IMAGE_BYTES: &[u8] = include_bytes!("icon/icon_ruby.png");
 pub const DRAGON_IMAGE_BYTES: &[u8] = include_bytes!("image/dragon.png");
@@ -43,12 +45,13 @@ const FONTS_DATA: [(&str, &[u8]); 2] = [
     (DP_COMIC_FONT, DP_COMIC_FONT_BYTES),
 ];
 
-const ICON_DATA: [(&str, &[u8]); 11] = [
+const ICON_DATA: [(&str, &[u8]); 12] = [
     (ADVENTURE_IMAGE, ADVENTURE_IMAGE_BYTES),
     (SETTINGS_IMAGE, SETTINGS_IMAGE_BYTES),
     (SHOP_IMAGE, SHOP_IMAGE_BYTES),
     (UPGRADE_IMAGE, UPGRADE_IMAGE_BYTES),
     (EXIT_IMAGE, EXIT_IMAGE_BYTES),
+    (FOOD_IMAGE, FOOD_IMAGE_BYTES),
     (COIN_IMAGE, COIN_IMAGE_BYTES),
     (RUBY_IMAGE, RUBY_IMAGE_BYTES),
     (DRAGON_IMAGE, DRAGON_IMAGE_BYTES),

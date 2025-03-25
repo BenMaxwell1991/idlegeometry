@@ -1,6 +1,10 @@
 use crate::ui::component::widget::interactive_widget::InteractiveWidget;
 use eframe::egui::{Align2, Color32, Pos2, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget};
-use eframe::emath::Rect;
+use eframe::emath::{Align, Rect};
+use eframe::epaint::FontId;
+use egui::{Direction, Layout, RichText, UiBuilder};
+use crate::ui::asset::loader::DP_COMIC_FONT;
+use crate::ui::component::widget::label_no_interact::LabelNoInteract;
 
 const TEXT_COLOUR: Color32 = Color32::WHITE;
 const BORDER_COLOUR: Color32 = Color32::from_rgb(100, 0, 100);
@@ -15,6 +19,9 @@ pub struct CustomProgressBar<'a> {
     border_thickness: f32,
     border_colour: Color32,
     background_colour: Color32,
+    draw_completed: bool,
+    completed_text: Option<String>,
+    completed_font_id: Option<FontId>,
 }
 
 impl<'a> CustomProgressBar<'a> {
@@ -27,6 +34,9 @@ impl<'a> CustomProgressBar<'a> {
             border_thickness: BORDER_WIDTH,
             border_colour: BORDER_COLOUR,
             background_colour: BACKGROUND_COLOUR,
+            draw_completed: true,
+            completed_text: None,
+            completed_font_id: None,
         }
     }
 
@@ -34,9 +44,54 @@ impl<'a> CustomProgressBar<'a> {
         self.show_percentage = true;
         self
     }
+
     pub fn set_on_click(mut self, on_click: Box<dyn FnMut() + 'a>) -> Self {
         self.on_click = on_click;
         self
+    }
+
+    pub fn with_completed_text(mut self, text_str: String, font_id: FontId) -> Self {
+        self.draw_completed = true;
+        self.completed_text = Some(text_str.clone());
+        self.completed_font_id = Some(font_id.clone());
+        self
+    }
+
+    fn draw_completed(&self, ui: &mut Ui, response: &Response) {
+        let painter = ui.painter();
+        let rect = response.rect;
+        let text_pos = Pos2::new(rect.center().x, rect.center().y);
+
+        if let Some(font_id) = self.completed_font_id.clone() {
+            if let Some(font_text) = &self.completed_text {
+                let label_size = if let Some(text) = &self.completed_text {
+                    ui.fonts(|f| {
+                        f.layout_no_wrap(text.to_string(), font_id.clone(), TEXT_COLOUR)
+                            .size()
+                    })
+                } else {
+                    Vec2::default()
+                };
+
+                let label_rect = Rect::from_center_size(text_pos, label_size);
+
+                ui.allocate_new_ui(
+                    UiBuilder::new()
+                        .max_rect(label_rect)
+                        .layout(Layout::centered_and_justified(Direction::TopDown)),
+                    |ui| {
+                        ui.add(LabelNoInteract::new(font_text, DP_COMIC_FONT.to_string(), 25.0, Color32::PURPLE));
+                    });
+            }
+        } else {
+            painter.text(
+                text_pos,
+                Align2::CENTER_CENTER,
+                "Level Up!",
+                FontId::proportional(14.0),
+                Color32::PURPLE,
+            );
+        }
     }
 }
 
@@ -84,29 +139,14 @@ impl<'a> Widget for CustomProgressBar<'a> {
         };
         painter.rect_filled(filled_rect, 4.0, bar_colour);
 
-        if progress_completed {
-            draw_completed(ui, &response);
+        if progress_completed && self.draw_completed {
+            self.draw_completed(ui, &response);
         } else if self.show_percentage {
-            draw_percentage(ui, progress, &response);
+            draw_percentage(ui, progress.min(1.0), &response);
         }
 
         response
     }
-}
-
-fn draw_completed(ui: &Ui, response: &Response) {
-
-    let painter = ui.painter();
-    let rect = response.rect;
-    let text_pos = Pos2::new(rect.center().x, rect.center().y);
-
-    painter.text(
-        text_pos,
-        Align2::CENTER_CENTER,
-        "Level Up!",
-        egui::FontId::proportional(14.0),
-        Color32::PURPLE,
-    );
 }
 
 fn draw_percentage(ui: &Ui, progress: f64, response: &Response) {

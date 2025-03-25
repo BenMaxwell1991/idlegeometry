@@ -1,12 +1,49 @@
 {
   "player_data": {
+    "lair_objects": [
+      {
+        "icon_name": "dragons_heart",
+        "level": 0,
+        "name": "Dragon's Heart",
+        "production_amount": {
+          "exp": null,
+          "experience": null,
+          "fire": null,
+          "food": 1.0,
+          "gemstone": null,
+          "gold": null,
+          "ruby": null
+        },
+        "production_cost": {
+          "exp": null,
+          "experience": null,
+          "fire": null,
+          "food": null,
+          "gemstone": null,
+          "gold": 5.0,
+          "ruby": null
+        },
+        "production_duration": 5000,
+        "quantity": 1,
+        "unlocked": true,
+        "upgrade_cost": {
+          "exp": null,
+          "experience": null,
+          "fire": null,
+          "food": null,
+          "gemstone": null,
+          "gold": null,
+          "ruby": null
+        }
+      }
+    ],
     "resources_persistent": {
       "exp": null,
       "experience": null,
       "fire": null,
-      "food": null,
+      "food": 6.0,
       "gemstone": null,
-      "gold": null,
+      "gold": 99.0,
       "ruby": null
     },
     "upgrades": []
@@ -15,7 +52,7 @@
     "autosave_interval": 5,
     "number_format_mode": "Engineering",
     "vsync": true,
-    "window_height": 1080.0,
-    "window_width": 1920.0
+    "window_height": 720.0,
+    "window_width": 1280.0
   }
 }
