@@ -60,8 +60,8 @@ pub struct GameData {
     pub fonts: Arc<RwLock<FxHashMap<String, String>>>
 }
 
-impl GameData {
-    pub fn new() -> Self {
+impl Default for GameData {
+    fn default() -> Self {
         Self {
             game_loop_active: Arc::new(AtomicBool::new(false)),
             reset_complete: Arc::new(AtomicBool::new(false)),
@@ -98,7 +98,9 @@ impl GameData {
             fonts: Arc::new(RwLock::new(FxHashMap::default())),
         }
     }
+}
 
+impl GameData {
     pub fn set_game_state(&self, game_state: GameState) {
         *acquire_lock_mut(&self.game_state, "game_state") = game_state;
         self.game_loop_active.store(game_state.is_game_active(), Ordering::Relaxed);

@@ -110,10 +110,8 @@ fn draw_lair_objects(ui: &mut Ui, game_data: &GameData, game_rect: Rect) {
 
     let widget_size = Vec2::new(500.0, 100.0);
     let spacing = 10.0;
-    let num_objects = 2;
 
     let mut top = game_rect.top() + 20.0;
-
     for mut obj in lair_objects.iter_mut() {
         obj.size = Some(widget_size);
         if let Some(icon_name) = &obj.icon_name {

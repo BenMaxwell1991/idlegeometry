@@ -1,6 +1,8 @@
 use crate::game::data::experience_data::ExperienceData;
+use crate::game::data::game_data::GameData;
 use crate::game::data::resource_cost::ResourceAmount;
 use crate::ui::asset::loader::{DP_COMIC_FONT, DRAGON_HEART_GEMSTONE_IMAGE, IMP_CHEF_IMAGE};
+use crate::ui::component::widget::custom_button::CustomButton;
 use crate::ui::component::widget::custom_progress_bar::CustomProgressBar;
 use crate::ui::component::widget::label_no_interact::LabelNoInteract;
 use derivative::Derivative;
@@ -9,14 +11,18 @@ use eframe::egui::{
     , Widget,
 };
 use eframe::epaint::FontFamily;
-use egui::{Align, Color32, Direction, FontId, Frame, Image, Layout, Margin, Stroke, TextureHandle, UiBuilder, Vec2};
+use egui::{Align, Color32, FontId, Frame, Image, Layout, Margin, Stroke, TextureHandle, UiBuilder, Vec2};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use std::time::Instant;
-use crate::ui::component::widget::custom_button::CustomButton;
+use crate::helper::lock_helper::acquire_lock_mut;
 
 #[derive(Clone, Serialize, Deserialize, Derivative)]
 #[derivative(Debug)]
 pub struct LairObject {
+    #[serde(skip)]
+    #[derivative(Debug = "ignore")]
+    pub game_data: Arc<GameData>,
     pub name: String,
     pub experience_data: ExperienceData,
     pub quantity: u32,
@@ -36,9 +42,20 @@ pub struct LairObject {
     pub last_produced: Instant,
 }
 
+pub trait Purchaseable {
+    fn purchase_cost(&self) -> ResourceAmount;
+}
+
+impl Purchaseable for LairObject {
+    fn purchase_cost(&self) -> ResourceAmount {
+        self.production_cost.clone()
+    }
+}
+
 impl LairObject {
-    pub fn new(name: impl Into<String>, experience_data: ExperienceData, quantity: u32, size: Option<Vec2>, icon: Option<TextureHandle>, icon_name: Option<String>) -> Self {
+    pub fn new(game_data: Arc<GameData>, name: impl Into<String>, experience_data: ExperienceData, quantity: u32, size: Option<Vec2>, icon: Option<TextureHandle>, icon_name: Option<String>) -> Self {
         Self {
+            game_data: Arc::clone(&game_data),
             name: name.into(),
             experience_data,
             quantity,
@@ -52,6 +69,40 @@ impl LairObject {
             production_cost: ResourceAmount::default(),
             production_amount:  Default::default(),
             last_produced:  Instant::now(),
+        }
+    }
+
+    pub fn attempt_purchase(&self) {
+        println!("1");
+        let mut player_data = acquire_lock_mut(&self.game_data.player_data, "purchase");
+        let cost = ResourceAmount::default();
+        // let cost = self.purchase_cost();
+
+        {
+            println!("2");
+            if !ResourceAmount::can_afford(&player_data.resources_persistent, &cost) {
+                println!("3");
+                return;
+            }
+            println!("4");
+            ResourceAmount::pay_cost(&mut player_data.resources_persistent, &cost);
+        }
+
+        println!("Attempting to purchase lair object: '{}'", self.name);
+        for obj in &player_data.lair_objects {
+            println!("Found lair object: '{}'", obj.name);
+
+            // NO LAIR OBJECTS LOADED FROM SAVE, or at least incorrect, so this needs fixing.
+        }
+
+        println!("5");
+        if let Some(lair_object) = player_data.lair_objects.iter_mut().find(|o| o.name == self.name) {
+            lair_object.quantity += 1;
+            println!("quantity: {}", lair_object.quantity);
+
+            // if let Some(next) = player_data.lair_objects.iter_mut().find(|o| o.name != lair_object.name && !o.unlocked) {
+            //     next.unlocked = true;
+            // }
         }
     }
 }
@@ -149,9 +200,12 @@ impl Widget for LairObject {
                                         let button_size = Vec2::new(widget_width, widget_height);
                                         let button_id = format!("{}-purchase-button", self.name);
 
+                                        let icon_clone = self.icon.clone();
+                                        let self_clone = self.clone();
+
                                         ui.add_sized(
                                             [widget_width, widget_height],
-                                            CustomButton::new(self.icon, Some("Purchase"), Box::new(move || {}))
+                                            CustomButton::new(icon_clone, Some("Purchase"), Box::new(move || { self_clone.attempt_purchase() }))
                                                 .with_size(button_size)
                                                 .with_font(DP_COMIC_FONT.to_string(), 10.0)
                                                 .with_id(button_id)
@@ -175,6 +229,7 @@ impl Widget for LairObject {
 impl Default for LairObject {
     fn default() -> Self {
         Self {
+            game_data: Arc::default(),
             name: "Empty".to_string(),
             experience_data: ExperienceData::default(),
             quantity: 0,
@@ -192,15 +247,15 @@ impl Default for LairObject {
     }
 }
 
-pub fn get_lair_object(n: u32, experience_data: ExperienceData) -> LairObject {
+pub fn get_lair_object(game_data: Arc<GameData>, n: u32, experience_data: ExperienceData) -> LairObject {
     match n {
-        0 => { lair_object_00_heart(experience_data, 1) }
-        1 => { lair_object_01_imp_chef(experience_data, 0) }
+        0 => { lair_object_00_heart(game_data, experience_data, 1) }
+        1 => { lair_object_01_imp_chef(game_data, experience_data, 0) }
         _ => { LairObject::default() }
     }
 }
 
-pub fn lair_object_00_heart(experience_data: ExperienceData, quantity: u32) -> LairObject {
+pub fn lair_object_00_heart(game_data: Arc<GameData>, experience_data: ExperienceData, quantity: u32) -> LairObject {
 
     let level = experience_data.level;
 
@@ -217,6 +272,7 @@ pub fn lair_object_00_heart(experience_data: ExperienceData, quantity: u32) -> L
     };
 
     LairObject {
+        game_data: Arc::clone(&game_data),
         name: "Dragon's Heart".to_string(),
         experience_data,
         quantity,
@@ -233,7 +289,7 @@ pub fn lair_object_00_heart(experience_data: ExperienceData, quantity: u32) -> L
     }
 }
 
-pub fn lair_object_01_imp_chef(experience_data: ExperienceData, quantity: u32) -> LairObject {
+pub fn lair_object_01_imp_chef(game_data: Arc<GameData>, experience_data: ExperienceData, quantity: u32) -> LairObject {
     let level = experience_data.level;
 
     let multiplier_prod =  level + level.pow(2) / 10;
@@ -249,6 +305,7 @@ pub fn lair_object_01_imp_chef(experience_data: ExperienceData, quantity: u32) -
     };
 
     LairObject {
+        game_data: Arc::clone(&game_data),
         name: "Imp Chef".to_string(),
         experience_data,
         quantity,

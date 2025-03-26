@@ -15,8 +15,7 @@ use crate::game::data::player_data::PlayerData;
 
 const SAVE_FILE: &str = "saved_file";
 
-pub fn load_game_or_new() -> GameData {
-    let game_data = GameData::new();
+pub fn load_game_or_new(game_data: Arc<GameData>) {
 
     if let Ok(save_data) = read_to_string(SAVE_FILE) {
         if let Ok(json_data) = from_str::<Value>(&save_data) {
@@ -34,7 +33,7 @@ pub fn load_game_or_new() -> GameData {
         }
     }
 
-    initialise_data(game_data)
+    initialise_data(game_data);
 }
 
 pub fn save_game(game_data: &Arc<GameData>) {

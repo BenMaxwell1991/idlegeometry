@@ -4,6 +4,7 @@ use crate::enums::gametab::GameTab::NullGameTab;
 use crate::game::collision::detect_collision::handle_collision;
 use crate::game::constants::GAME_RATE;
 use crate::game::data::game_data::GameData;
+use crate::game::data::resource_cost::ResourceAmount;
 use crate::game::data::stored_data::{CURRENT_TAB, GAME_IN_FOCUS, KEY_STATE};
 use crate::game::loops::key_state::KeyState;
 use crate::game::maths::integers::int_sqrt_64;
@@ -24,8 +25,6 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
-use crate::game::data::resource_cost::ResourceAmount;
-use crate::game::loops::idle_loop::IdleLoop;
 
 pub struct GameLoop {
     pub game_data: Arc<GameData>,
